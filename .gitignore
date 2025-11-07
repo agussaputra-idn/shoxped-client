@@ -1,0 +1,13 @@
+# Abaikan folder dependencies (sangat besar)
+/node_modules
+/client/node_modules
+/server/node_modules
+
+# Abaikan file rahasia
+.env
+/client/.env
+/server/.env
+
+# Abaikan folder build
+/dist
+/client/dist
