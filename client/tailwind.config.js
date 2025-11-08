@@ -11,7 +11,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        orange: '#ee4d2d'
+        orange: '#F59E0B' // <-- Ini sudah benar, warnanya jadi kuning emas
       }
     }
   },
@@ -26,7 +26,7 @@ module.exports = {
           paddingRight: theme('spacing.4')
         }
       });
-    }),
-    require('@tailwindcss/line-clamp')
+    })
+    // Baris 'require('@tailwindcss/line-clamp')' sudah dihapus.
   ]
 };
