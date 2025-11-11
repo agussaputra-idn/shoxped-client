@@ -1,15 +1,12 @@
-import { useContext } from 'react';
-import { Link } from 'react-router-dom';
 import Popover from '../Popover/Popover';
-import { path } from 'src/constants/path';
-import { AuthContext } from 'src/context/authContext';
-import { useTranslation } from 'react-i18next'; // <-- 1. IMPORT HOOK
+// (Link, path, dan AuthContext dihapus karena tidak lagi dipakai)
+import { useTranslation } from 'react-i18next'; 
 
 export default function Navbar() {
-  const { isAuthenticated } = useContext(AuthContext);
-  const { i18n, t } = useTranslation(); // <-- 2. INISIALISASI HOOK (dapat 'i18n' dan 't')
+  // Kita hanya butuh 'i18n' dari hook 'useTranslation'
+  const { i18n } = useTranslation(); 
 
-  const currentLanguage = i18n.language; // <-- Cek bahasa saat ini (misal: 'id' atau 'en')
+  const currentLanguage = i18n.language; // Cek bahasa saat ini (misal: 'id')
 
   // Fungsi untuk mengganti bahasa
   const changeLanguage = (lng: 'id' | 'en') => {
@@ -18,7 +15,7 @@ export default function Navbar() {
 
   return (
     <nav className='flex justify-end'>
-      {/* === TOMBOL PENGGANTI BAHASA YANG BARU === */}
+      {/* === TOMBOL PENGGANTI BAHASA (TETAP ADA) === */}
       <Popover
         className='flex cursor-pointer items-center py-1 hover:text-gray-300'
         renderPopover={
@@ -66,35 +63,8 @@ export default function Navbar() {
         </svg>
       </Popover>
 
-      {/* === TOMBOL LOGIN/DAFTAR (SUDAH DITERJEMAHKAN) === */}
-      {isAuthenticated ? (
-        <Popover
-          className='flex cursor-pointer items-center py-1 hover:text-gray-300'
-          renderPopover={
-            <div className='relative rounded-sm border border-gray-200 bg-white shadow-md'>
-              <Link to={path.profile} className='block w-full bg-white py-2 px-3 hover:bg-slate-100'>
-                Akun Saya
-              </Link>
-              <Link to={path.historyPurchase} className='block w-full bg-white py-2 px-3 hover:bg-slate-100'>
-                Pembelian
-              </Link>
-              <button className='block w-full bg-white py-2 px-3 hover:bg-slate-100'>Logout</button>
-            </div>
-          }
-        >
-          {/* ... (kode untuk avatar, biarkan saja) ... */}
-        </Popover>
-      ) : (
-        <div className='flex items-center'>
-          <Link to={path.register} className='mx-3 capitalize hover:text-gray-300'>
-            {t('header.signUp')}
-          </Link>
-          <div className='h-4 border-r-[1px] border-r-white/40' />
-          <Link to={path.login} className='mx-3 capitalize hover:text-gray-300'>
-            {t('header.login')}
-          </Link>
-        </div>
-      )}
+      {/* === TOMBOL LOGIN/DAFTAR (SUDAH DIHAPUS) === */}
+
     </nav>
   );
 }
