@@ -11,7 +11,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        orange: '#F59E0B' // <-- Ini sudah benar, warnanya jadi kuning emas
+        // === WARNA BARU UNTUK OPSI 2 ===
+        // Warna Utama (Shopee)
+        'primary': '#EE4D2D', 
+        
+        // Warna Aksen (TikTok)
+        'secondary': '#0D9488', // Ini Cyan/Teal
+        
+        // Anda bisa tambahkan aksen Pink TikTok jika mau
+        'accent-pink': '#FF0050' 
       }
     }
   },

@@ -1,0 +1,28 @@
+{
+  "header": {
+    "searchPlaceholder": "Search for products, brands and shops...",
+    "signUp": "Sign Up",
+    "login": "Login"
+  },
+  "footer": {
+    "customerService": "CUSTOMER SERVICE",
+    "cs": {
+      "howToUse": "How to Use Shoxped",
+      "faq": "Frequently Asked Questions (FAQ)",
+      "orderIssues": "Order & Return Issues",
+      "contactUs": "Contact Us"
+    },
+    "aboutShoxped": "ABOUT SHOXPED",
+    "about": {
+      "aboutUs": "About Us",
+      "howWeWork": "How We Work",
+      "ourPartners": "Our Partners",
+      "privacyPolicy": "Privacy Policy",
+      "terms": "Terms & Conditions"
+    },
+    "followUs": "FOLLOW US",
+    "copyright": "© 2025 Shoxped. All Rights Reserved.",
+    "email": "Contact Email: customer@support.shoxped.id",
+    "disclaimer": "Shoxped is an affiliate aggregator service. We do not sell, ship, or process payments for any products. All transactions and customer service (including returns) are handled directly by Shopee and TikTok."
+  }
+}

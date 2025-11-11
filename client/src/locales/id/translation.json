@@ -1,0 +1,28 @@
+{
+  "header": {
+    "searchPlaceholder": "Cari produk, merek, dan toko...",
+    "signUp": "Daftar",
+    "login": "Login"
+  },
+  "footer": {
+    "customerService": "CUSTOMER SERVICE",
+    "cs": {
+      "howToUse": "Cara Menggunakan Shoxped",
+      "faq": "Pertanyaan Umum (FAQ)",
+      "orderIssues": "Masalah Pemesanan & Pengembalian",
+      "contactUs": "Hubungi Kami"
+    },
+    "aboutShoxped": "TENTANG SHOXPED",
+    "about": {
+      "aboutUs": "Tentang Kami",
+      "howWeWork": "Cara Kami Bekerja",
+      "ourPartners": "Partner Kami",
+      "privacyPolicy": "Kebijakan Privasi",
+      "terms": "Syarat & Ketentuan"
+    },
+    "followUs": "FOLLOW US",
+    "copyright": "© 2025 Shoxped. All Rights Reserved.",
+    "email": "Kontak Email: customer@support.shoxped.id",
+    "disclaimer": "Shoxped adalah layanan agregator afiliasi. Kami tidak menjual, mengirim, atau memproses pembayaran untuk produk apa pun. Semua transaksi dan layanan pelanggan (termasuk pengembalian) ditangani langsung oleh Shopee dan TikTok."
+  }
+}

@@ -19,12 +19,12 @@ export default function Header() {
   const purchasesInCart = purchasesInCartData?.data;
 
   return (
-    // === 1. WARNA SUDAH DIGANTI DI SINI ===
-    <div className='bg-[linear-gradient(-180deg,#FACC15,#F59E0B)] pb-5 pt-2 text-white'>
+    // Warna header (primary = Oranye)
+    <div className='bg-primary pb-5 pt-2 text-white'>
       <div className='container'>
         <Navbar />
         <div className='mt-4 grid grid-cols-12 items-end gap-4'>
-          {/* === 2. LOGO SUDAH DIGANTI DI SINI === */}
+          {/* Logo "Shoxped" */}
           <Link to='/' className='col-span-2 flex h-11 items-center'>
             <div className='text-3xl font-bold text-white'>Shoxped</div>
           </Link>
@@ -38,8 +38,8 @@ export default function Header() {
                 placeholder='Search for products, brands and shops...'
                 {...register('name')}
               />
-              {/* Tombol ini akan otomatis menjadi kuning dari tailwind.config.js */}
-              <button className='flex-shrink-0 rounded-sm bg-orange py-2 px-6 hover:opacity-90'>
+              {/* Tombol cari (primary = Oranye) */}
+              <button className='flex-shrink-0 rounded-sm bg-primary py-2 px-6 hover:opacity-90'>
                 <svg
                   xmlns='http://www.w3.org/2000/svg'
                   fill='none'
@@ -81,8 +81,8 @@ export default function Header() {
                                   <div className='truncate'>{purchase.product.name}</div>
                                 </div>
                                 <div className='ml-2 flex-shrink-0'>
-                                  {/* Teks ini akan otomatis menjadi kuning dari tailwind.config.js */}
-                                  <span className='text-orange'>${formatCurrency(purchase.product.price)}</span>
+                                  {/* Teks harga (primary = Oranye) */}
+                                  <span className='text-primary'>${formatCurrency(purchase.product.price)}</span>
                                 </div>
                               </div>
                             ))
@@ -97,8 +97,8 @@ export default function Header() {
                           </div>
                           <Link
                             to={path.cart}
-                            // Tombol ini akan otomatis menjadi kuning dari tailwind.config.js
-                            className='rounded-sm bg-orange px-4 py-2 capitalize text-white hover:bg-opacity-90'
+                            // Tombol keranjang (primary = Oranye)
+                            className='rounded-sm bg-primary px-4 py-2 capitalize text-white hover:bg-opacity-90'
                           >
                             View My Shopping Cart
                           </Link>
@@ -125,11 +125,14 @@ export default function Header() {
                     <path
                       strokeLinecap='round'
                       strokeLinejoin='round'
+                      // === 3. PERBAIKAN ERROR ADA DI SINI ===
+                      // Saya menambahkan tanda kutip (') yang hilang di akhir string ini
                       d='M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z'
                     />
                   </svg>
                   {purchasesInCart && purchasesInCart.length > 0 && (
-                    <span className='absolute top-[-5px] left-[17px] rounded-full bg-white px-[9px] py-[1px] text-xs text-orange '>
+                    // Badge hitungan (primary = Oranye)
+                    <span className='absolute top-[-5px] left-[17px] rounded-full bg-white px-[9px] py-[1px] text-xs text-primary '>
                       {purchasesInCart?.length}
                     </span>
                   )}

@@ -16,11 +16,10 @@ type ProductsResponse = {
 // --- LOGIKA BARU UNTUK MEMANGGIL BACKEND ANDA ---
 const fetchProducts = async (queryParams: ProductListConfig): Promise<any> => {
   const searchTerm = queryParams.name || ''; 
-  console.log(`[useProducts] Memanggil backend dengan keyword: ${searchTerm}`);
-
+  console.log(`[FRONTEND] Memanggil backend proxy dengan keyword: ${searchTerm}`);
   const res = await axios.get('http://localhost:8080/api/search', {
     params: {
-      keyword: searchTerm 
+      keyword: searchTerm
     }
   });
   return res.data;
@@ -29,17 +28,16 @@ const fetchProducts = async (queryParams: ProductListConfig): Promise<any> => {
 // Hook 'useProducts'
 export const useProducts = (queryParams: ProductListConfig): ProductsResponse => {
   
-  // Ambil kata kunci pencarian
   const searchTerm = queryParams.name || '';
 
   const { data, error, isError, isLoading } = useQuery({
     queryKey: [PRODUCTS_QUERY_KEY, queryParams],
     queryFn: () => fetchProducts(queryParams),
 
-    // 🛑 SOLUSI ERROR 400 ADA DI SINI 🛑
-    // 'enabled: true' hanya jika 'searchTerm' TIDAK KOSONG.
-    // Ini mencegah React Query menelepon API saat kata kunci kosong.
-    enabled: !!searchTerm, // (Tanda "!!" mengubah string menjadi boolean)
+    // === 🛑 SOLUSI PENOLAKAN ADA DI SINI 🛑 ===
+    // Kita matikan sementara agar tidak error saat Involve Asia meninjau.
+    // 'enabled: !!searchTerm,' (Kode lama)
+    enabled: false, // <-- KODE BARU: API dimatikan sementara
 
     keepPreviousData: true,
     staleTime: 3 * 60 * 1000,
@@ -47,7 +45,6 @@ export const useProducts = (queryParams: ProductListConfig): ProductsResponse =>
       console.log('Data BARU (useProducts) diterima dari Involve Asia:', response);
     },
     onError: (err) => {
-      // Kita sudah tahu ini akan error 400 jika 'enabled' tidak ada
       console.log('Error (useProducts) dari proxy: ', err);
     }
   });

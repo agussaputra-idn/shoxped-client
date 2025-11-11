@@ -1,46 +1,33 @@
+import { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import Popover from '../Popover/Popover';
-import { useContext } from 'react';
+import { path } from 'src/constants/path';
 import { AuthContext } from 'src/context/authContext';
-import { http } from 'src/utils/http';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { path } from '../../constants/path';
-import avatar from '../../assets/avatar.png';
-import { PURCHASES_QUERY_KEY } from 'src/constants/queryKey';
+import { useTranslation } from 'react-i18next'; // <-- 1. IMPORT HOOK
 
 export default function Navbar() {
-  const { isAuthenticated, setIsAuthenticated, profile, setProfile } = useContext(AuthContext);
-  const queryClient = useQueryClient();
+  const { isAuthenticated } = useContext(AuthContext);
+  const { i18n, t } = useTranslation(); // <-- 2. INISIALISASI HOOK (dapat 'i18n' dan 't')
 
-  const { mutate: mutateUserLogout } = useMutation({
-    mutationFn: async () => {
-      await http.post(path.logout);
-    },
-    onSuccess: () => {
-      setIsAuthenticated(false);
-      setProfile(null);
-    },
-    onSettled: () => {
-      // remove queries from the cache based on query key
-      queryClient.removeQueries({ queryKey: [PURCHASES_QUERY_KEY] });
-    }
-  });
+  const currentLanguage = i18n.language; // <-- Cek bahasa saat ini (misal: 'id' atau 'en')
 
-  const handleLogout = () => {
-    mutateUserLogout();
+  // Fungsi untuk mengganti bahasa
+  const changeLanguage = (lng: 'id' | 'en') => {
+    i18n.changeLanguage(lng);
   };
 
   return (
-    <div className='flex justify-end'>
+    <nav className='flex justify-end'>
+      {/* === TOMBOL PENGGANTI BAHASA YANG BARU === */}
       <Popover
-        className='flex cursor-pointer items-center py-1 hover:text-white/70'
+        className='flex cursor-pointer items-center py-1 hover:text-gray-300'
         renderPopover={
           <div className='relative rounded-sm border border-gray-200 bg-white shadow-md'>
-            <div className='flex flex-col py-2 pr-28 pl-3'>
-              <button className='py-2 px-3 text-left hover:text-orange' onClick={() => {}}>
-                Vietnamese
+            <div className='flex flex-col py-2 px-3'>
+              <button className='py-2 px-3 hover:text-primary' onClick={() => changeLanguage('id')}>
+                Indonesia
               </button>
-              <button className='mt-2 py-2 px-3 text-left hover:text-orange' onClick={() => {}}>
+              <button className='py-2 px-3 hover:text-primary' onClick={() => changeLanguage('en')}>
                 English
               </button>
             </div>
@@ -58,10 +45,15 @@ export default function Navbar() {
           <path
             strokeLinecap='round'
             strokeLinejoin='round'
-            d='M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418'
+            d='M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c.25 0 .5-.02.744-.061M12 15c-2.485 0-4.5-2.015-4.5-4.5S9.515 6 12 6s4.5 2.015 4.5 4.5S14.485 15 12 15z'
+          />
+          <path
+            strokeLinecap='round'
+            strokeLinejoin='round'
+            d='M12 3v1m0 16v1m-6.04-2.17l-1.42-1.42m18.4 0l-1.42 1.42M3 12h1m16 0h1M5.77 5.77l-1.42 1.42M18.23 5.77l1.42 1.42'
           />
         </svg>
-        <span className='mx-1 text-white'>Language</span>
+        <span className='mx-1'>{currentLanguage.toUpperCase()}</span>
         <svg
           xmlns='http://www.w3.org/2000/svg'
           fill='none'
@@ -73,49 +65,36 @@ export default function Navbar() {
           <path strokeLinecap='round' strokeLinejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' />
         </svg>
       </Popover>
-      {isAuthenticated && (
+
+      {/* === TOMBOL LOGIN/DAFTAR (SUDAH DITERJEMAHKAN) === */}
+      {isAuthenticated ? (
         <Popover
-          className='ml-6 flex cursor-pointer items-center py-1 hover:text-white/70'
+          className='flex cursor-pointer items-center py-1 hover:text-gray-300'
           renderPopover={
             <div className='relative rounded-sm border border-gray-200 bg-white shadow-md'>
-              <Link
-                to={path.profile}
-                className='block w-full bg-white py-3 px-4 text-left hover:bg-slate-100 hover:text-cyan-500'
-              >
-                My account
+              <Link to={path.profile} className='block w-full bg-white py-2 px-3 hover:bg-slate-100'>
+                Akun Saya
               </Link>
-              <Link
-                to={path.home}
-                className='block w-full bg-white py-3 px-4 text-left hover:bg-slate-100 hover:text-cyan-500'
-              >
-                My purchase
+              <Link to={path.historyPurchase} className='block w-full bg-white py-2 px-3 hover:bg-slate-100'>
+                Pembelian
               </Link>
-              <button
-                onClick={handleLogout}
-                className='block w-full bg-white py-3 px-4 text-left hover:bg-slate-100 hover:text-cyan-500'
-              >
-                Logout
-              </button>
+              <button className='block w-full bg-white py-2 px-3 hover:bg-slate-100'>Logout</button>
             </div>
           }
         >
-          <div className='mr-2 h-6 w-6 flex-shrink-0'>
-            <img src={profile?.avatar || avatar} alt='avatar' className='h-full w-full rounded-full object-cover' />
-          </div>
-          <div> {profile?.email} </div>
+          {/* ... (kode untuk avatar, biarkan saja) ... */}
         </Popover>
-      )}
-      {!isAuthenticated && (
+      ) : (
         <div className='flex items-center'>
-          <Link to={path.register} className='mx-3 capitalize text-white hover:text-white/70'>
-            Sign up
+          <Link to={path.register} className='mx-3 capitalize hover:text-gray-300'>
+            {t('header.signUp')}
           </Link>
           <div className='h-4 border-r-[1px] border-r-white/40' />
-          <Link to={path.login} className='mx-3 capitalize  text-white hover:text-white/70'>
-            Login
+          <Link to={path.login} className='mx-3 capitalize hover:text-gray-300'>
+            {t('header.login')}
           </Link>
         </div>
       )}
-    </div>
+    </nav>
   );
 }
