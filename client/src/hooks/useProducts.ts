@@ -1,68 +1,70 @@
-// Awal file (imports)
 import { useQuery } from '@tanstack/react-query';
-import axios from "axios";
 import { PRODUCTS_QUERY_KEY, PRODUCT_QUERY_KEY } from '../constants/queryKey';
-import { Product, ProductList, ProductListConfig } from '../types/product.type';
+// import { ProductList, ProductListConfig } from '../types/product.type'; // <-- Ini tidak lagi kita pakai
 import { SuccessResponseApi } from '../types/util.type';
 
-// Tipe
+// --- IMPORT DATA DUMMY KITA ---
+import dummyData from '../dummyData.json';
+
+// Definisikan tipe data untuk satu "pasangan produk"
+type ProductPair = typeof dummyData.productRows[0]['pairs'][0];
+
+// Definisikan tipe data untuk satu "baris produk"
+type ProductRow = {
+  rowCategory: string;
+  pairs: ProductPair[];
+};
+
 type ProductsResponse = {
   isLoading: boolean;
   error: unknown;
   isError: boolean;
-  data?: SuccessResponseApi<ProductList>;
+  // Kita ubah tipe data yang dikembalikan menjadi array of ProductRow
+  data?: SuccessResponseApi<{ productRows: ProductRow[] }>;
 };
 
-// --- LOGIKA BARU UNTUK MEMANGGIL BACKEND ANDA ---
-const fetchProducts = async (queryParams: ProductListConfig): Promise<any> => {
-  const searchTerm = queryParams.name || ''; 
-  console.log(`[FRONTEND] Memanggil backend proxy dengan keyword: ${searchTerm}`);
-  const res = await axios.get('http://localhost:8080/api/search', {
-    params: {
-      keyword: searchTerm
-    }
-  });
-  return res.data;
-};
-
-// Hook 'useProducts'
-export const useProducts = (queryParams: ProductListConfig): ProductsResponse => {
+// --- FUNGSI 'fetchProducts' SEKARANG MENGEMBALIKAN DATA DUMMY BARU ---
+const fetchProducts = async (): Promise<SuccessResponseApi<{ productRows: ProductRow[] }>> => {
+  console.log('[DUMMY] Mengembalikan data produk palsu (berbaris).');
   
-  const searchTerm = queryParams.name || '';
+  // Kita 'mensimulasikan' struktur data yang diharapkan oleh UI
+  return {
+    message: "Success (Dummy)",
+    data: {
+      // Kuncinya sekarang 'productRows'
+      productRows: dummyData.productRows, 
+    }
+  };
+};
 
+// --- 'useProducts' SEKARANG MENGGUNAKAN 'fetchProducts' DUMMY ---
+export const useProducts = (queryParams: any): ProductsResponse => { // queryParams di-set any untuk sementara
   const { data, error, isError, isLoading } = useQuery({
     queryKey: [PRODUCTS_QUERY_KEY, queryParams],
-    queryFn: () => fetchProducts(queryParams),
-
-    // === 🛑 SOLUSI PENOLAKAN ADA DI SINI 🛑 ===
-    // Kita matikan sementara agar tidak error saat Involve Asia meninjau.
-    // 'enabled: !!searchTerm,' (Kode lama)
-    enabled: false, // <-- KODE BARU: API dimatikan sementara
-
+    queryFn: fetchProducts,
+    enabled: true,
     keepPreviousData: true,
     staleTime: 3 * 60 * 1000,
     onSuccess: (response) => {
-      console.log('Data BARU (useProducts) diterima dari Involve Asia:', response);
+      console.log('Data DUMMY (Berbaris) berhasil dimuat:', response);
     },
     onError: (err) => {
-      console.log('Error (useProducts) dari proxy: ', err);
+      console.log('Error (useProducts): ', err);
     }
   });
   
   return { data, error, isError, isLoading };
 };
 
-// --- LOGIKA PRODUK TUNGGAL (TIDAK DIUBAH) ---
-const fetchProduct = async (productId: string): Promise<SuccessResponseApi<Product>> => {
-  const res = await axios.get(`/products/${productId}`);
-  return res.data;
+// --- LOGIKA PRODUK TUNGGAL (TIDAK BERUBAH) ---
+const fetchProduct = async (productId: string) => {
+  return null;
 };
-
 export const useProduct = (productId: string) => {
   const { data, error, isError, isLoading } = useQuery({
     queryKey: [PRODUCT_QUERY_KEY, productId],
     queryFn: () => fetchProduct(productId),
-    staleTime: 3 * 60 * 1000
+    enabled: false
   });
   return { data, error, isError, isLoading };
 };

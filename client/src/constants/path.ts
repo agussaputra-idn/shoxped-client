@@ -1,16 +1,19 @@
+// Definisikan semua path (alamat URL) yang kita gunakan
 export const path = {
-  home: '/',
-  user: '/user',
-  profile: '/user/profile',
-  changePassword: '/user/password',
-  historyPurchase: '/user/purchase',
-  login: '/login',
-  register: '/register',
-  logout: '/logout',
-  productDetail: ':nameId',
-  cart: '/cart'
+  home: '/', // Halaman utama (ProductList)
+
+  // Halaman statis
+  aboutUs: '/about-us',
+  howWeWork: '/how-we-work',
+  partners: '/partners',
+  privacyPolicy: '/privacy-policy',
+  terms: '/terms-and-conditions',
+
+  // Halaman Customer Service
+  howToUse: '/how-to-use',
+  faq: '/faq',
+  orderIssues: '/order-issues',
+  contactUs: '/contact'
+
+  // (Semua path lama seperti 'login', 'register', 'cart' sudah dihapus)
 } as const;
-
-export const purchaseUrl = 'purchases';
-
-export const API_URL = 'https://api-shopee.onrender.com/';

@@ -1,14 +1,20 @@
+import { Outlet } from 'react-router-dom'; // <-- PASTIKAN INI DI-IMPORT
 import Footer from 'src/components/Footer/Footer';
 import Header from 'src/components/Header/Header';
 
-const MainLayout = ({ children }: { children: React.ReactNode }) => {
+// Ini adalah 'pembungkus' (Header + Konten + Footer)
+export default function MainLayout() {
   return (
-    <>
+    <div>
       <Header />
-      {children}
-      <Footer />
-    </>
-  );
-};
 
-export default MainLayout;
+      {/* Outlet adalah 'jendela' 
+        tempat React Router akan meletakkan 
+        ProductList, AboutUs, atau NotFound 
+      */}
+      <Outlet /> 
+
+      <Footer />
+    </div>
+  );
+}

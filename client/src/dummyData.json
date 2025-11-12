@@ -1,0 +1,384 @@
+{
+  "productRows": [
+    {
+      "rowCategory": "Flash Sale",
+      "pairs": [
+        {
+          "id": "pair-1",
+          "conceptName": "Apple iPad 10.9 Inch Gen 10 256 GB Wi-Fi",
+          "shopeeVariant": {
+            "store": "Shopee",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=iPad+Gen+10",
+            "name": "Apple iPad 10.9 Inch Gen 10 256 GB Wi-Fi - Garansi Resmi",
+            "rating": 5.0,
+            "sold": 17,
+            "price": 13999000,
+            "price_before_discount": 14500000,
+            "promo": "Diskon 5%",
+            "promoLabel": "Diskon 5%",
+            "location": "Jakarta Selatan",
+            "dealText": "Beli di Shopee"
+          },
+          "tiktokVariant": {
+            "store": "TikTok Shop",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=iPad+Gen+10",
+            "name": "Apple iPad 10.9 Inch Gen 10 256 GB Wi-Fi - Original Resmi",
+            "rating": 5.0,
+            "sold": 17,
+            "price": 14000000,
+            "price_before_discount": 15000000,
+            "promo": "Cashback 15%",
+            "promoLabel": "Cashback 15%",
+            "location": "Jakarta Pusat",
+            "dealText": "Beli di TikTok"
+          }
+        },
+        {
+          "id": "pair-2",
+          "conceptName": "Laptop Gaming ASUS ROG Strix G15",
+          "shopeeVariant": {
+            "store": "Shopee",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=ASUS+ROG",
+            "name": "ASUS ROG Strix G15 G513RC-HN089W RTX3050 - Ryzen 7 6800H",
+            "rating": 4.9,
+            "sold": 250,
+            "price": 13500000,
+            "price_before_discount": 16000000,
+            "promo": "Gratis Mouse Gaming",
+            "promoLabel": "Hemat Rp2.5JT",
+            "location": "Surabaya",
+            "dealText": "Beli di Shopee"
+          },
+          "tiktokVariant": {
+            "store": "TikTok Shop",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=ASUS+ROG",
+            "name": "ASUS ROG Strix G15 Gaming Laptop Ryzen 7 RTX3050 New",
+            "rating": 5.0,
+            "sold": 180,
+            "price": 13700000,
+            "price_before_discount": 15500000,
+            "promo": "Cicilan 0%",
+            "promoLabel": "Promo Bundling",
+            "location": "Bandung",
+            "dealText": "Beli di TikTok"
+          }
+        },
+        {
+          "id": "pair-3",
+          "conceptName": "Xiaomi Redmi Note 13 Pro 5G",
+          "shopeeVariant": {
+            "store": "Shopee",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Redmi+Note+13",
+            "name": "Xiaomi Redmi Note 13 Pro 5G 8/256GB - Garansi Resmi Xiaomi",
+            "rating": 4.8,
+            "sold": 800,
+            "price": 3799000,
+            "price_before_discount": 4200000,
+            "promo": "Voucher Cashback",
+            "promoLabel": "Diskon Rp400RB",
+            "location": "Tangerang",
+            "dealText": "Beli di Shopee"
+          },
+          "tiktokVariant": {
+            "store": "TikTok Shop",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Redmi+Note+13",
+            "name": "Redmi Note 13 Pro 5G - RAM 8GB Internal 256GB - Free Headset",
+            "rating": 4.9,
+            "sold": 650,
+            "price": 3850000,
+            "price_before_discount": 4100000,
+            "promo": "Free Ongkir Nasional",
+            "promoLabel": "Spesial Diskon",
+            "location": "Bekasi",
+            "dealText": "Beli di TikTok"
+          }
+        }
+      ]
+    },
+    {
+      "rowCategory": "Produk Terlaris",
+      "pairs": [
+        {
+          "id": "pair-4",
+          "conceptName": "Paket Hemat 3 pcs Kaos Polos Pria Henley Waffle",
+          "shopeeVariant": {
+            "store": "Shopee",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Kaos+Polos",
+            "name": "Paket hemat 3 pcs Kaos henley polos pria bahan waffle",
+            "rating": 4.8,
+            "sold": 4300,
+            "price": 94999,
+            "price_before_discount": 120000,
+            "promo": "Diskon 10%",
+            "promoLabel": "-20%",
+            "location": "Jakarta Timur",
+            "dealText": "Beli di Shopee"
+          },
+          "tiktokVariant": {
+            "store": "TikTok Shop",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Kaos+Polos",
+            "name": "Paket hemat 3 pcs Kaos henley polos pria bahan waffle",
+            "rating": 5.0,
+            "sold": 1700,
+            "price": 120000,
+            "price_before_discount": 150000,
+            "promo": "Cashback 5%",
+            "promoLabel": "Super Sale",
+            "location": "Jakarta Utara",
+            "dealText": "Beli di TikTok"
+          }
+        },
+        {
+          "id": "pair-5",
+          "conceptName": "Rumah Wangi ARA ARCEUS Parfum Pria EDP 30ml",
+          "shopeeVariant": {
+            "store": "Shopee",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Parfum+Pria",
+            "name": "Rumah Wangi ARA ARCEUS Parfum Pria Tahan Lama EDT 30ml",
+            "rating": 4.8,
+            "sold": 4300,
+            "price": 92626,
+            "price_before_discount": 110000,
+            "promo": "Cashback 15%",
+            "promoLabel": "Gratis Box",
+            "location": "Yogyakarta",
+            "dealText": "Beli di Shopee"
+          },
+          "tiktokVariant": {
+            "store": "TikTok Shop",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Parfum+Pria",
+            "name": "ARCEUS Parfum Pria Original BPOM - Tahan 12 Jam",
+            "rating": 5.0,
+            "sold": 1700,
+            "price": 92626,
+            "price_before_discount": 105000,
+            "promo": "Diskon Rp5.000",
+            "promoLabel": "Diskon Rp5RB",
+            "location": "Semarang",
+            "dealText": "Beli di TikTok"
+          }
+        },
+        {
+          "id": "pair-6",
+          "conceptName": "Set Pisau Dapur Lengkap 6 in 1 Anti Karat",
+          "shopeeVariant": {
+            "store": "Shopee",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Pisau+Set",
+            "name": "Set Pisau Dapur Stainless Steel Anti Karat dengan Talenan",
+            "rating": 4.7,
+            "sold": 980,
+            "price": 125000,
+            "price_before_discount": 180000,
+            "promo": "Voucher Toko",
+            "promoLabel": "-30%",
+            "location": "Bandung",
+            "dealText": "Beli di Shopee"
+          },
+          "tiktokVariant": {
+            "store": "TikTok Shop",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Pisau+Set",
+            "name": "Set Pisau Dapur Cantik Full Set 6 Pcs Free Holder",
+            "rating": 4.9,
+            "sold": 750,
+            "price": 130000,
+            "price_before_discount": 160000,
+            "promo": "Flash Sale",
+            "promoLabel": "Termurah",
+            "location": "Surabaya",
+            "dealText": "Beli di TikTok"
+          }
+        }
+      ]
+    },
+    {
+      "rowCategory": "Rekomendasi Pilihan",
+      "pairs": [
+        {
+          "id": "pair-7",
+          "conceptName": "TWS Earbuds Bluetooth Wireless Headset Bass",
+          "shopeeVariant": {
+            "store": "Shopee",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=TWS+Earbuds",
+            "name": "TWS Bluetooth 5.3 Earbuds Wireless Headset Gaming Bass",
+            "rating": 4.9,
+            "sold": 1500,
+            "price": 189000,
+            "price_before_discount": 250000,
+            "promo": "Diskon Besar",
+            "promoLabel": "-24%",
+            "location": "Jakarta Barat",
+            "dealText": "Beli di Shopee"
+          },
+          "tiktokVariant": {
+            "store": "TikTok Shop",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=TWS+Earbuds",
+            "name": "TWS Headset Bluetooth Gaming Original Suara Jernih",
+            "rating": 5.0,
+            "sold": 1200,
+            "price": 195000,
+            "price_before_discount": 230000,
+            "promo": "Free Pouch",
+            "promoLabel": "Gratis Pouch",
+            "location": "Jakarta Timur",
+            "dealText": "Beli di TikTok"
+          }
+        },
+        {
+          "id": "pair-8",
+          "conceptName": "Cincin Couple Perak Anti Karat Custom Nama",
+          "shopeeVariant": {
+            "store": "Shopee",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Cincin+Couple",
+            "name": "Cincin Couple Titanium Anti Karat Ukir Nama Gratis Box",
+            "rating": 4.6,
+            "sold": 300,
+            "price": 85000,
+            "price_before_discount": 120000,
+            "promo": "Buy 1 Get 1",
+            "promoLabel": "Promo Valentine",
+            "location": "Bogor",
+            "dealText": "Beli di Shopee"
+          },
+          "tiktokVariant": {
+            "store": "TikTok Shop",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Cincin+Couple",
+            "name": "Cincin Tunangan Couple Perak S925 Murni Custom Ukir Nama",
+            "rating": 4.7,
+            "sold": 280,
+            "price": 90000,
+            "price_before_discount": 110000,
+            "promo": "Diskon Khusus",
+            "promoLabel": "Termurah",
+            "location": "Depok",
+            "dealText": "Beli di TikTok"
+          }
+        },
+        {
+          "id": "pair-9",
+          "conceptName": "Lampu Meja Belajar LED Minimalis Rechargeable",
+          "shopeeVariant": {
+            "store": "Shopee",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Lampu+Belajar",
+            "name": "Lampu Meja Belajar LED Lipat Rechargeable 3 Warna",
+            "rating": 4.9,
+            "sold": 600,
+            "price": 75000,
+            "price_before_discount": 100000,
+            "promo": "Free Baterai",
+            "promoLabel": "-25%",
+            "location": "Surakarta",
+            "dealText": "Beli di Shopee"
+          },
+          "tiktokVariant": {
+            "store": "TikTok Shop",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Lampu+Belajar",
+            "name": "Lampu Belajar Portable LED 3 Mode Cahaya Aesthetic",
+            "rating": 4.8,
+            "sold": 550,
+            "price": 78000,
+            "price_before_discount": 95000,
+            "promo": "Cashback",
+            "promoLabel": "Terlaris",
+            "location": "Malang",
+            "dealText": "Beli di TikTok"
+          }
+        }
+      ]
+    },
+    {
+      "rowCategory": "Baru Rilis",
+      "pairs": [
+        {
+          "id": "pair-10",
+          "conceptName": "Botol Minum Tumbler Starbucks Varian Terbaru",
+          "shopeeVariant": {
+            "store": "Shopee",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Tumbler+Starbucks",
+            "name": "Botol Minum Tumbler Starbucks Edition Original",
+            "rating": 4.8,
+            "sold": 150,
+            "price": 120000,
+            "price_before_discount": 150000,
+            "promo": "Diskon Launching",
+            "promoLabel": "Diskon 20%",
+            "location": "Palembang",
+            "dealText": "Beli di Shopee"
+          },
+          "tiktokVariant": {
+            "store": "TikTok Shop",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Tumbler+Starbucks",
+            "name": "Tumbler Starbucks Custom Nama Full Printing",
+            "rating": 4.9,
+            "sold": 120,
+            "price": 125000,
+            "price_before_discount": 145000,
+            "promo": "Cashback Spesial",
+            "promoLabel": "Baru Rilis",
+            "location": "Medan",
+            "dealText": "Beli di TikTok"
+          }
+        },
+        {
+          "id": "pair-11",
+          "conceptName": "Mainan Edukasi Anak Smart Robot Programmable",
+          "shopeeVariant": {
+            "store": "Shopee",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Robot+Coding",
+            "name": "Smart Robot Coding DIY Mainan Edukasi Anak Usia 6+",
+            "rating": 5.0,
+            "sold": 80,
+            "price": 280000,
+            "price_before_discount": 350000,
+            "promo": "Diskon Awal Tahun",
+            "promoLabel": "-20%",
+            "location": "Makassar",
+            "dealText": "Beli di Shopee"
+          },
+          "tiktokVariant": {
+            "store": "TikTok Shop",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Robot+Coding",
+            "name": "Robot Edukasi Programmable Mainan Anak Cerdas",
+            "rating": 4.9,
+            "sold": 60,
+            "price": 290000,
+            "price_before_discount": 330000,
+            "promo": "Free Battery",
+            "promoLabel": "Hot Deal",
+            "location": "Pontianak",
+            "dealText": "Beli di TikTok"
+          }
+        },
+        {
+          "id": "pair-12",
+          "conceptName": "Kipas Angin Portable Mini Fleksibel Rechargeable",
+          "shopeeVariant": {
+            "store": "Shopee",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Kipas+Mini",
+            "name": "Kipas Angin Mini Portable Lipat Fleksibel Genggam",
+            "rating": 4.7,
+            "sold": 700,
+            "price": 55000,
+            "price_before_discount": 80000,
+            "promo": "Hemat Harga",
+            "promoLabel": "-30%",
+            "location": "Pekanbaru",
+            "dealText": "Beli di Shopee"
+          },
+          "tiktokVariant": {
+            "store": "TikTok Shop",
+            "image": "https://placehold.co/300x300/E5E7EB/374151?text=Kipas+Mini",
+            "name": "Kipas Angin Mini Portable Rechargeable Multi Fungsi",
+            "rating": 4.8,
+            "sold": 600,
+            "price": 58000,
+            "price_before_discount": 70000,
+            "promo": "Cashback",
+            "promoLabel": "Promo Terbatas",
+            "location": "Samarinda",
+            "dealText": "Beli di TikTok"
+          }
+        }
+      ]
+    }
+  ]
+}

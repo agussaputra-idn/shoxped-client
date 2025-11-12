@@ -1,93 +1,44 @@
-import { Navigate, Outlet, useRoutes } from 'react-router-dom';
-import Login from './pages/Login/Login';
-import Register from './pages/Register/Register';
+import { useRoutes } from 'react-router-dom';
+import { path } from 'src/constants/path';
+
+// IMPORT HALAMAN YANG TERSISA
 import ProductList from './pages/ProductList/ProductList';
-import RegisterLayout from './layouts/RegisterLayout/RegisterLayout';
+import NotFound from './pages/NotFound/NotFound';
+import AboutUs from './pages/AboutUs/AboutUs'; 
 import MainLayout from './layouts/MainLayout/MainLayout';
-import Profile from './pages/Profile/Profile';
-import { useContext } from 'react';
-import { AuthContext } from './context/authContext';
-import { path } from './constants/path';
-import ProductDetail from './pages/ProductDetail/ProductDetail';
-import Cart from './pages/Cart/Cart';
-import CartLayout from './layouts/CartLayout/CartLayout';
 
-const ProtectedRoute = () => {
-  const { isAuthenticated } = useContext(AuthContext);
-  return isAuthenticated ? <Outlet /> : <Navigate to={path.login} />;
-};
-const RejectedRoute = () => {
-  const { isAuthenticated } = useContext(AuthContext);
-  return isAuthenticated ? <Navigate to={path.home} /> : <Outlet />;
-};
+// (Fungsi 'MainRoute' yang membingungkan sudah dihapus)
 
-const useRouteElements = () => {
-  const routeElement = useRoutes([
+export default function useRouteElements() {
+  const element = useRoutes([
     {
-      path: '',
-      index: true,
-      element: (
-        <MainLayout>
-          <ProductList />
-        </MainLayout>
-      )
-    },
-    {
-      path: '',
-      element: <ProtectedRoute />,
-      children: [
+      // Rute Induk (/)
+      // Kita langsung gunakan MainLayout (yang sudah punya <Outlet />)
+      path: path.home,
+      element: <MainLayout />, 
+
+      // "Anak-anak" ini akan dirender di dalam <Outlet /> MainLayout
+      children: [ 
         {
-          path: path.profile,
-          element: (
-            <MainLayout>
-              <Profile />
-            </MainLayout>
-          )
+          index: true, // Halaman default (http://localhost:3000/)
+          element: <ProductList />
         },
         {
-          path: path.cart,
-          element: (
-            <CartLayout>
-              <Cart />
-            </CartLayout>
-          )
-        }
+          path: path.aboutUs, // Path: /about-us
+          element: <AboutUs />
+        },
+        // (Anda bisa tambahkan path halaman statis lain di sini nanti)
       ]
     },
     {
-      path: '',
-      element: <RejectedRoute />,
-      children: [
-        {
-          path: path.register,
-          element: (
-            <RegisterLayout>
-              <Register />
-            </RegisterLayout>
-          )
-        },
-        {
-          path: path.login,
-          element: (
-            <RegisterLayout>
-              <Login />
-            </RegisterLayout>
-          )
-        }
-      ]
-    },
-    {
-      path: path.productDetail,
-      index: true,
+      // Path 404 (Halaman Tidak Ditemukan)
+      path: '*',
       element: (
         <MainLayout>
-          <ProductDetail />
+          <NotFound />
         </MainLayout>
       )
     }
   ]);
-
-  return routeElement;
-};
-
-export default useRouteElements;
+  return element;
+}
