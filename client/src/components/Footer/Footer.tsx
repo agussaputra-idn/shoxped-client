@@ -1,8 +1,5 @@
-// === IMPORT 'LINK' DAN 'PATH' (SANGAT PENTING!) ===
-import { Link } from 'react-router-dom'; 
-import { path } from 'src/constants/path'; 
-// =================================================
-
+import { Link } from 'react-router-dom';
+import { path } from 'src/constants/path';
 import facebook from '../../assets/images/facebook.png';
 import instagram from '../../assets/images/instagram.png';
 import tiktok from '../../assets/images/tiktok.png';
@@ -13,11 +10,12 @@ const Footer = () => {
     <footer className='bg-neutral-100 py-16'>
       <div className='container'>
         
-        {/* Menggunakan Flexbox Rata Tengah */}
-        <div className='flex flex-col md:flex-row justify-center gap-10 md:gap-20 mb-5'>
+        {/* === GRID 3 KOLOM (Presisi Sejajar dengan Bagian Atas) === */}
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-10'>
           
-          {/* === BLOK CUSTOMER SERVICE (SUDAH MENGGUNAKAN <Link>) === */}
-          <div>
+          {/* === KOLOM 1: CUSTOMER SERVICE === */}
+          {/* 'w-fit mx-auto' membuat blok ini berada PERSIS di tengah kolom 1 */}
+          <div className='w-fit mx-auto'> 
             <p className='text-sm font-semibold text-gray-600'>CUSTOMER SERVICE</p>
             <div className='mt-4 flex flex-col gap-2'>
               <Link to={path.howToUse} className='text-sm text-secondary hover:text-primary'>
@@ -35,8 +33,9 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* === BLOK ABOUT SHOXPED (SUDAH MENGGUNAKAN <Link>) === */}
-          <div>
+          {/* === KOLOM 2: ABOUT SHOXPED === */}
+          {/* 'w-fit mx-auto' membuat blok ini berada PERSIS di tengah kolom 2 */}
+          <div className='w-fit mx-auto'>
             <p className='text-sm font-semibold text-gray-600'>ABOUT SHOXPED</p>
             <div className='mt-4 flex flex-col gap-2'>
               <Link to={path.aboutUs} className='text-sm text-secondary hover:text-primary'>
@@ -57,8 +56,9 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* === BLOK FOLLOW US (Masih menggunakan <a> karena ini link EKSTERNAL) === */}
-          <div>
+          {/* === KOLOM 3: FOLLOW US === */}
+          {/* 'w-fit mx-auto' membuat blok ini berada PERSIS di tengah kolom 3 */}
+          <div className='w-fit mx-auto'>
             <p className='text-sm font-semibold text-gray-600'>FOLLOW US</p>
             <div className='mt-4 flex flex-col gap-3'>
               <a
@@ -95,7 +95,7 @@ const Footer = () => {
                 <span>Tiktok</span>
               </a>
               <a
-                href='/' // Ganti dengan URL YouTube Anda jika ada
+                href='/' 
                 target='_blank'
                 rel='noopener noreferrer'
                 className='flex items-center text-sm text-secondary hover:text-primary'
@@ -113,7 +113,6 @@ const Footer = () => {
         {/* === GARIS PEMISAH === */}
         <hr />
 
-        {/* === BLOK COPYRIGHT & DISCLAIMER (Rata Tengah) === */}
         <div className='mt-10 text-center text-sm text-gray-600'>
           <p className=''>
             © 2025 Shoxped. All Rights Reserved.

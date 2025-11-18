@@ -1,7 +1,8 @@
 // Definisikan semua path (alamat URL) yang kita gunakan
 export const path = {
-  home: '/', // Halaman utama (ProductList)
-
+  home: '/', // Halaman utama (Home.tsx)
+  search: '/search', // Halaman hasil produk (ProductList.tsx)
+  
   // Halaman statis
   aboutUs: '/about-us',
   howWeWork: '/how-we-work',
@@ -14,6 +15,4 @@ export const path = {
   faq: '/faq',
   orderIssues: '/order-issues',
   contactUs: '/contact'
-
-  // (Semua path lama seperti 'login', 'register', 'cart' sudah dihapus)
 } as const;

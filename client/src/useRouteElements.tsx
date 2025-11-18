@@ -6,28 +6,29 @@ import ProductList from './pages/ProductList/ProductList';
 import NotFound from './pages/NotFound/NotFound';
 import AboutUs from './pages/AboutUs/AboutUs'; 
 import MainLayout from './layouts/MainLayout/MainLayout';
-
-// (Fungsi 'MainRoute' yang membingungkan sudah dihapus)
+import Home from './pages/Home/Home'; // <-- IMPORT HALAMAN BARU
 
 export default function useRouteElements() {
   const element = useRoutes([
     {
       // Rute Induk (/)
-      // Kita langsung gunakan MainLayout (yang sudah punya <Outlet />)
       path: path.home,
-      element: <MainLayout />, 
-
-      // "Anak-anak" ini akan dirender di dalam <Outlet /> MainLayout
+      element: <MainLayout />, // Gunakan Layout (Header/Footer)
+      
       children: [ 
         {
           index: true, // Halaman default (http://localhost:3000/)
-          element: <ProductList />
+          element: <Home /> // <-- SEKARANG MENAMPILKAN HALAMAN HOME
         },
         {
           path: path.aboutUs, // Path: /about-us
           element: <AboutUs />
         },
-        // (Anda bisa tambahkan path halaman statis lain di sini nanti)
+        {
+          // --- HALAMAN PRODUK DUMMY PINDAH KE SINI ---
+          path: path.search, // Path: /search
+          element: <ProductList />
+        }
       ]
     },
     {
