@@ -121,7 +121,7 @@ const Footer = () => {
             Kontak Email: customer@support.shoxped.id
           </p>
           <p className='mt-4 max-w-3xl mx-auto'>
-            <strong>Disclaimer:</strong> Shoxped adalah layanan agregator afiliasi. Kami tidak menjual, mengirim, atau memproses pembayaran untuk produk apa pun. Semua transaksi dan layanan pelanggan (termasuk pengembalian) ditangani langsung oleh Shopee dan TikTok.
+            <strong>Disclaimer:</strong> Shoxped adalah layanan agregator perbandingan produk. Kami tidak menjual, mengirim, atau memproses pembayaran untuk produk apa pun. Semua transaksi dan layanan pelanggan (termasuk pengembalian) ditangani langsung oleh Shopee dan TikTok.
           </p>
         </div>
       </div>

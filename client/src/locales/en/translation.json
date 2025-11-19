@@ -1,8 +1,17 @@
 {
   "header": {
-    "searchPlaceholder": "Search for products, brands and shops...",
-    "signUp": "Sign Up",
-    "login": "Login"
+    "searchPlaceholder": "Search for products, brands and shops..."
+  },
+  "home": {
+    "heroTitlePrefix": "Find the Best Prices",
+    "heroSubtitle": "Shoxped is a pioneer aggregator in Indonesia. Search once, compare across the two biggest platforms.",
+    "searchButton": "Search",
+    "feature1Title": "1. Search Product",
+    "feature1Desc": "Enter any product name you want into our search box.",
+    "feature2Title": "2. Compare",
+    "feature2Desc": "View product comparisons (dummy) from Shopee and TikTok Shop side by side.",
+    "feature3Title": "3. Get Best Price",
+    "feature3Desc": "Choose the best offer from the comparison results and complete your transaction on Shopee or TikTok Shop at the lowest price."
   },
   "footer": {
     "customerService": "CUSTOMER SERVICE",

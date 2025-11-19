@@ -1,8 +1,17 @@
 {
   "header": {
-    "searchPlaceholder": "Cari produk, merek, dan toko...",
-    "signUp": "Daftar",
-    "login": "Login"
+    "searchPlaceholder": "Cari produk, merek, dan toko..."
+  },
+"home": {
+    "heroTitlePrefix": "Temukan Harga Terbaik",
+    "heroSubtitle": "Shoxped adalah agregator pionir di Indonesia. Cari satu kali, bandingkan di dua platform terbesar.",
+    "searchButton": "Cari",
+    "feature1Title": "1. Cari Produk",
+    "feature1Desc": "Masukkan nama produk apa pun yang Anda inginkan ke dalam kotak pencarian kami.",
+    "feature2Title": "2. Bandingkan",
+    "feature2Desc": "Lihat perbandingan produk (dummy) dari Shopee dan TikTok Shop secara berdampingan.",
+    "feature3Title": "3. Dapatkan Harga Terbaik",
+    "feature3Desc": "Pilih penawaran terbaik dari hasil perbandingan dan selesaikan transaksi Anda di Shopee atau TikTok Shop dengan harga termurah."
   },
   "footer": {
     "customerService": "CUSTOMER SERVICE",
