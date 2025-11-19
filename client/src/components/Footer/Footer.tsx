@@ -10,14 +10,18 @@ const Footer = () => {
     <footer className='bg-neutral-100 py-16'>
       <div className='container'>
         
-        {/* === GRID 3 KOLOM (Presisi Sejajar dengan Bagian Atas) === */}
-        <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-10'>
+        {/* PERBAIKAN RESPONSIF:
+           - Mobile: flex-col, items-center (Rata Tengah secara vertikal)
+           - Desktop (md): flex-row, items-start (Rata Kiri/Atas), justify-center (Grup di tengah)
+        */}
+        <div className='flex flex-col items-center md:flex-row md:items-start justify-center gap-10 md:gap-20 mb-5'>
           
-          {/* === KOLOM 1: CUSTOMER SERVICE === */}
-          {/* 'w-fit mx-auto' membuat blok ini berada PERSIS di tengah kolom 1 */}
-          <div className='w-fit mx-auto'> 
+          {/* === BLOK CUSTOMER SERVICE === */}
+          {/* Mobile: text-center, Desktop: text-left */}
+          <div className='w-full md:w-72 text-center md:text-left'>
             <p className='text-sm font-semibold text-gray-600'>CUSTOMER SERVICE</p>
-            <div className='mt-4 flex flex-col gap-2'>
+            {/* Mobile: items-center (Link ditengah), Desktop: items-start (Link dikiri) */}
+            <div className='mt-4 flex flex-col gap-2 items-center md:items-start'>
               <Link to={path.howToUse} className='text-sm text-secondary hover:text-primary'>
                 Cara Menggunakan Shoxped
               </Link>
@@ -33,11 +37,10 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* === KOLOM 2: ABOUT SHOXPED === */}
-          {/* 'w-fit mx-auto' membuat blok ini berada PERSIS di tengah kolom 2 */}
-          <div className='w-fit mx-auto'>
+          {/* === BLOK ABOUT SHOXPED === */}
+          <div className='w-full md:w-72 text-center md:text-left'>
             <p className='text-sm font-semibold text-gray-600'>ABOUT SHOXPED</p>
-            <div className='mt-4 flex flex-col gap-2'>
+            <div className='mt-4 flex flex-col gap-2 items-center md:items-start'>
               <Link to={path.aboutUs} className='text-sm text-secondary hover:text-primary'>
                 Tentang Kami
               </Link>
@@ -56,11 +59,10 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* === KOLOM 3: FOLLOW US === */}
-          {/* 'w-fit mx-auto' membuat blok ini berada PERSIS di tengah kolom 3 */}
-          <div className='w-fit mx-auto'>
+          {/* === BLOK FOLLOW US === */}
+          <div className='w-full md:w-72 text-center md:text-left'>
             <p className='text-sm font-semibold text-gray-600'>FOLLOW US</p>
-            <div className='mt-4 flex flex-col gap-3'>
+            <div className='mt-4 flex flex-col gap-3 items-center md:items-start'>
               <a
                 href='https://www.facebook.com/share/17YdJNxgJ5/'
                 target='_blank'
@@ -110,7 +112,6 @@ const Footer = () => {
           
         </div>
         
-        {/* === GARIS PEMISAH === */}
         <hr />
 
         <div className='mt-10 text-center text-sm text-gray-600'>
@@ -120,8 +121,8 @@ const Footer = () => {
           <p className='mt-4'>
             Kontak Email: customer@support.shoxped.id
           </p>
-          <p className='mt-4 max-w-3xl mx-auto'>
-            <strong>Disclaimer:</strong> Shoxped adalah layanan agregator perbandingan produk. Kami tidak menjual, mengirim, atau memproses pembayaran untuk produk apa pun. Semua transaksi dan layanan pelanggan (termasuk pengembalian) ditangani langsung oleh Shopee dan TikTok.
+          <p className='mt-4 max-w-3xl mx-auto px-4'> {/* Tambah padding-x agar tidak mentok di HP */}
+            <strong>Disclaimer:</strong> Shoxped adalah layanan agregator afiliasi. Kami tidak menjual, mengirim, atau memproses pembayaran untuk produk apa pun. Semua transaksi dan layanan pelanggan (termasuk pengembalian) ditangani langsung oleh Shopee dan TikTok.
           </p>
         </div>
       </div>
