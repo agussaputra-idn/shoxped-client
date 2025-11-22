@@ -3,7 +3,7 @@
     "searchPlaceholder": "Search for products, brands and shops..."
   },
   "home": {
-    "heroTitlePrefix": "Find the Best Prices",
+    "heroTitleMain": "Find the Best Prices",
     "heroSubtitle": "Shoxped is a pioneer aggregator in Indonesia. Search once, compare across the two biggest platforms.",
     "searchButton": "Search",
     "feature1Title": "1. Search Product",
@@ -32,6 +32,6 @@
     "followUs": "FOLLOW US",
     "copyright": "© 2025 Shoxped. All Rights Reserved.",
     "email": "Contact Email: customer@support.shoxped.id",
-    "disclaimer": "Shoxped is an affiliate aggregator service. We do not sell, ship, or process payments for any products. All transactions and customer service (including returns) are handled directly by Shopee and TikTok."
+    "disclaimer": "Shoxped is a product comparison aggregator service. We do not sell, ship, or process payments for any products. All transactions and customer service (including returns) are handled directly by Shopee and TikTok."
   }
 }

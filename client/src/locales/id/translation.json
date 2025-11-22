@@ -2,8 +2,8 @@
   "header": {
     "searchPlaceholder": "Cari produk, merek, dan toko..."
   },
-"home": {
-    "heroTitlePrefix": "Temukan Harga Terbaik",
+  "home": {
+    "heroTitleMain": "Temukan Harga Terbaik",
     "heroSubtitle": "Shoxped adalah agregator pionir di Indonesia. Cari satu kali, bandingkan di dua platform terbesar.",
     "searchButton": "Cari",
     "feature1Title": "1. Cari Produk",
@@ -32,6 +32,6 @@
     "followUs": "FOLLOW US",
     "copyright": "© 2025 Shoxped. All Rights Reserved.",
     "email": "Kontak Email: customer@support.shoxped.id",
-    "disclaimer": "Shoxped adalah layanan agregator afiliasi. Kami tidak menjual, mengirim, atau memproses pembayaran untuk produk apa pun. Semua transaksi dan layanan pelanggan (termasuk pengembalian) ditangani langsung oleh Shopee dan TikTok."
+    "disclaimer": "Shoxped adalah layanan agregator perbandingan produk. Kami tidak menjual, mengirim, atau memproses pembayaran untuk produk apa pun. Semua transaksi dan layanan pelanggan (termasuk pengembalian) ditangani langsung oleh Shopee dan TikTok."
   }
 }
