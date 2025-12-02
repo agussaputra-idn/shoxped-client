@@ -1,38 +1,46 @@
 import { useRoutes } from 'react-router-dom';
 import { path } from 'src/constants/path';
 
-// IMPORT HALAMAN YANG TERSISA
-import ProductList from './pages/ProductList/ProductList';
-import NotFound from './pages/NotFound/NotFound';
-import AboutUs from './pages/AboutUs/AboutUs'; 
+// === IMPORT HALAMAN (Pastikan semua ada) ===
 import MainLayout from './layouts/MainLayout/MainLayout';
-import Home from './pages/Home/Home'; // <-- IMPORT HALAMAN BARU
+import Home from './pages/Home/Home';
+import ProductList from './pages/ProductList/ProductList';
+import AboutUs from './pages/AboutUs/AboutUs';
+import PrivacyPolicy from './pages/PrivacyPolicy/PrivacyPolicy'; // <--- Import baru
+import Terms from './pages/Terms/Terms'; // <--- Import baru
+import NotFound from './pages/NotFound/NotFound';
 
 export default function useRouteElements() {
   const element = useRoutes([
     {
-      // Rute Induk (/)
       path: path.home,
-      element: <MainLayout />, // Gunakan Layout (Header/Footer)
-      
-      children: [ 
+      element: <MainLayout />, // Gunakan bingkai utama (Header + Footer)
+      children: [
         {
-          index: true, // Halaman default (http://localhost:3000/)
-          element: <Home /> // <-- SEKARANG MENAMPILKAN HALAMAN HOME
+          index: true,
+          element: <Home />
         },
         {
-          path: path.aboutUs, // Path: /about-us
+          path: path.search,
+          element: <ProductList />
+        },
+        {
+          path: path.aboutUs,
           element: <AboutUs />
         },
+        // === PENDAFTARAN RUTE BARU ===
         {
-          // --- HALAMAN PRODUK DUMMY PINDAH KE SINI ---
-          path: path.search, // Path: /search
-          element: <ProductList />
-        }
+          path: path.privacyPolicy,
+          element: <PrivacyPolicy />
+        },
+        {
+          path: path.terms,
+          element: <Terms />
+        },
+        // =============================
       ]
     },
     {
-      // Path 404 (Halaman Tidak Ditemukan)
       path: '*',
       element: (
         <MainLayout>

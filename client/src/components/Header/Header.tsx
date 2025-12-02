@@ -23,61 +23,49 @@ export default function Header() {
   const currentLanguage = i18n.language || 'id';
 
   return (
-    <div className='bg-primary text-white'> {/* Kurangi padding vertikal */}
-      <div className='container py-2 flex items-center justify-between'> {/* Padding vertikal sedikit, align center */}
+    <div className='bg-primary text-white shadow-md'>
+      <div className='container mx-auto px-4 h-16 flex items-center justify-between'>
         
-        {/* Logo Shoxped */}
-        <Link to={path.home} className='flex items-center h-full'>
-          {/* Presisi dengan padding dan font size */}
-          <div className='text-3xl font-bold tracking-tight'>Shoxped</div> 
+        {/* KIRI: Logo Shoxped */}
+        <Link to={path.home} className='flex items-center'>
+          <div className='text-3xl font-black tracking-tighter'>Shoxped</div>
         </Link>
 
-        {/* Search Bar (Hanya muncul jika BUKAN halaman Home) */}
+        {/* TENGAH: Search Bar (Hanya muncul jika BUKAN halaman Home) */}
         {!isHomePage && (
-          <form className='flex-grow mx-4' onSubmit={handleSearch}> {/* flex-grow agar mengisi ruang */}
-            <div className='flex rounded-sm bg-white p-1'>
+          <form className='hidden md:flex flex-grow max-w-xl mx-8' onSubmit={handleSearch}>
+            <div className='flex w-full rounded-md bg-white p-1'>
               <input
                 type='text'
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className='flex-grow border-none bg-transparent px-3 py-2 text-black outline-none'
+                className='flex-grow border-none bg-transparent px-3 py-1 text-black outline-none text-sm'
                 placeholder={t('header.searchPlaceholder')}
               />
               <button
                 type='submit'
-                className='flex-shrink-0 rounded-sm bg-primary py-2 px-6 hover:opacity-90'
+                className='flex-shrink-0 rounded-sm bg-primary py-1 px-4 hover:opacity-90 flex items-center justify-center'
               >
-                <svg
-                  xmlns='http://www.w3.org/2000/svg'
-                  fill='none'
-                  viewBox='0 0 24 24'
-                  strokeWidth={1.5}
-                  stroke='currentColor'
-                  className='h-6 w-6 text-white'
-                >
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    d='M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z'
-                  />
+                <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth={2} stroke='currentColor' className='h-4 w-4 text-white'>
+                  <path strokeLinecap='round' strokeLinejoin='round' d='M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z' />
                 </svg>
               </button>
             </div>
           </form>
         )}
-        
-        {/* Pilihan Bahasa */}
-        <div className='flex items-center text-sm ml-auto'> {/* ml-auto dorong ke kanan */}
+
+        {/* KANAN: Navigasi Bahasa */}
+        <div className='flex items-center text-sm font-medium'>
           <button 
             onClick={() => changeLanguage('id')} 
-            className={`mx-1 hover:text-gray-200 ${currentLanguage === 'id' ? 'font-bold' : ''}`}
+            className={`hover:text-gray-200 transition-colors ${currentLanguage === 'id' ? 'opacity-100 border-b-2 border-white' : 'opacity-70'}`}
           >
             Indonesia
           </button>
-          |
+          <span className="mx-2 opacity-50">|</span>
           <button 
             onClick={() => changeLanguage('en')} 
-            className={`mx-1 hover:text-gray-200 ${currentLanguage === 'en' ? 'font-bold' : ''}`}
+            className={`hover:text-gray-200 transition-colors ${currentLanguage === 'en' ? 'opacity-100 border-b-2 border-white' : 'opacity-70'}`}
           >
             English
           </button>
