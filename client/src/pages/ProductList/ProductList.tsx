@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
-// --- DATABASE PRODUK LENGKAP (12 Item) ---
+// --- DATABASE PRODUK & LINK AFFILIATE SPESIFIK ---
 const PRODUCTS_DATA = [
-  // --- FLASH SALE ITEMS (Pastikan isFlashSale: true) ---
+  // =========================================
+  // FLASH SALE (4 ITEM)
+  // =========================================
   {
     id: 1,
     title: 'ASUS ROG Strix G15 Gaming Laptop Ryzen 7',
@@ -14,7 +16,10 @@ const PRODUCTS_DATA = [
     rating: 4.8,
     sold: 140,
     tags: ['Laptop', 'Gaming'],
-    isFlashSale: true
+    isFlashSale: true,
+    // Link Asus ROG (Sesuai request)
+    shopeeLink: 'https://invl.io/cln5avr?url=https%3A%2F%2Fshopee.co.id%2Fsearch%2F%3Fkeyword%3Dasus%252520rog%252520strix%252520g15%26order%3Dasc%26page%3D0%26sortBy%3Dprice',
+    tiktokLink: 'https://www.tiktok.com/search?q=asus%20rog'
   },
   {
     id: 3,
@@ -26,7 +31,10 @@ const PRODUCTS_DATA = [
     rating: 4.9,
     sold: 2300,
     tags: ['Sepatu', 'Fashion'],
-    isFlashSale: true
+    isFlashSale: true,
+    // Link Nike Air Force 1
+    shopeeLink: 'https://invl.io/cln5avr?url=https%3A%2F%2Fshopee.co.id%2Fsearch%3Fkeyword%3Dnike%2520air%2520force%25201%26sortBy%3Dsales',
+    tiktokLink: 'https://www.tiktok.com/search?q=nike%20air%20force%201'
   },
   {
     id: 5,
@@ -38,7 +46,10 @@ const PRODUCTS_DATA = [
     rating: 5.0,
     sold: 15000,
     tags: ['Skincare', 'Murah'],
-    isFlashSale: true
+    isFlashSale: true,
+    // Link Skintific
+    shopeeLink: 'https://invl.io/cln5avr?url=https%3A%2F%2Fshopee.co.id%2Fsearch%3Fkeyword%3Dskintific%25205x%2520ceramide%26sortBy%3Dsales',
+    tiktokLink: 'https://www.tiktok.com/search?q=skintific'
   },
   {
     id: 7,
@@ -50,10 +61,15 @@ const PRODUCTS_DATA = [
     rating: 4.8,
     sold: 450,
     tags: ['HP', 'Samsung'],
-    isFlashSale: true
+    isFlashSale: true,
+    // Link Samsung S24
+    shopeeLink: 'https://invl.io/cln5avr?url=https%3A%2F%2Fshopee.co.id%2Fsearch%3Fkeyword%3Dsamsung%2520s24%2520ultra%26sortBy%3Dprice',
+    tiktokLink: 'https://www.tiktok.com/search?q=samsung%20s24%20ultra'
   },
 
-  // --- REGULAR ITEMS ---
+  // =========================================
+  // PRODUK REGULER (8 ITEM)
+  // =========================================
   {
     id: 2,
     title: 'MacBook Air M2 2023 Midnight 256GB',
@@ -64,7 +80,10 @@ const PRODUCTS_DATA = [
     rating: 4.9,
     sold: 500,
     tags: ['Laptop', 'Apple'],
-    isFlashSale: false
+    isFlashSale: false,
+    // Link Macbook
+    shopeeLink: 'https://invl.io/cln5avr?url=https%3A%2F%2Fshopee.co.id%2Fsearch%3Fkeyword%3Dmacbook%2520air%2520m2%26sortBy%3Dprice',
+    tiktokLink: 'https://www.tiktok.com/search?q=macbook%20air%20m2'
   },
   {
     id: 4,
@@ -76,7 +95,10 @@ const PRODUCTS_DATA = [
     rating: 4.7,
     sold: 120,
     tags: ['Sepatu', 'Olahraga'],
-    isFlashSale: false
+    isFlashSale: false,
+    // Link Adidas
+    shopeeLink: 'https://invl.io/cln5avr?url=https%3A%2F%2Fshopee.co.id%2Fsearch%3Fkeyword%3Dadidas%2520ultraboost%26sortBy%3Dsales',
+    tiktokLink: 'https://www.tiktok.com/search?q=adidas%20ultraboost'
   },
   {
     id: 6,
@@ -88,7 +110,10 @@ const PRODUCTS_DATA = [
     rating: 4.9,
     sold: 1000,
     tags: ['HP', 'iPhone'],
-    isFlashSale: false
+    isFlashSale: false,
+    // Link iPhone 15
+    shopeeLink: 'https://invl.io/cln5avr?url=https%3A%2F%2Fshopee.co.id%2Fsearch%3Fkeyword%3Diphone%252015%2520pro%2520max%26sortBy%3Dprice',
+    tiktokLink: 'https://www.tiktok.com/search?q=iphone%2015%20pro%20max'
   },
   {
     id: 8,
@@ -100,7 +125,10 @@ const PRODUCTS_DATA = [
     rating: 4.6,
     sold: 1200,
     tags: ['Baju', 'Fashion'],
-    isFlashSale: false
+    isFlashSale: false,
+    // Link Uniqlo
+    shopeeLink: 'https://invl.io/cln5avr?url=https%3A%2F%2Fshopee.co.id%2Fsearch%3Fkeyword%3Dkemeja%2520flannel%2520uniqlo%26sortBy%3Dsales',
+    tiktokLink: 'https://www.tiktok.com/search?q=uniqlo%20flannel'
   },
   {
     id: 9,
@@ -112,7 +140,10 @@ const PRODUCTS_DATA = [
     rating: 4.7,
     sold: 80,
     tags: ['Elektronik', 'Dapur'],
-    isFlashSale: false
+    isFlashSale: false,
+    // Link Air Fryer
+    shopeeLink: 'https://invl.io/cln5avr?url=https%3A%2F%2Fshopee.co.id%2Fsearch%3Fkeyword%3Dphilips%2520air%2520fryer%26sortBy%3Dsales',
+    tiktokLink: 'https://www.tiktok.com/search?q=philips%20air%20fryer'
   },
   {
     id: 10,
@@ -124,7 +155,10 @@ const PRODUCTS_DATA = [
     rating: 4.9,
     sold: 600,
     tags: ['Jam', 'Aksesoris'],
-    isFlashSale: false
+    isFlashSale: false,
+    // Link G-Shock
+    shopeeLink: 'https://invl.io/cln5avr?url=https%3A%2F%2Fshopee.co.id%2Fsearch%3Fkeyword%3Dcasio%2520g%2520shock%2520ga%25202100%26sortBy%3Dprice',
+    tiktokLink: 'https://www.tiktok.com/search?q=gshock%20ga2100'
   },
   {
     id: 11,
@@ -136,7 +170,10 @@ const PRODUCTS_DATA = [
     rating: 4.8,
     sold: 8500,
     tags: ['Skincare', 'Sunscreen'],
-    isFlashSale: false
+    isFlashSale: false,
+    // Link Azarine
+    shopeeLink: 'https://invl.io/cln5avr?url=https%3A%2F%2Fshopee.co.id%2Fsearch%3Fkeyword%3Dsunscreen%2520azarine%26sortBy%3Dsales',
+    tiktokLink: 'https://www.tiktok.com/search?q=azarine%20sunscreen'
   },
   {
     id: 12,
@@ -148,7 +185,10 @@ const PRODUCTS_DATA = [
     rating: 4.8,
     sold: 3000,
     tags: ['Tas', 'Outdoor'],
-    isFlashSale: false
+    isFlashSale: false,
+    // Link Tas Eiger
+    shopeeLink: 'https://invl.io/cln5avr?url=https%3A%2F%2Fshopee.co.id%2Fsearch%3Fkeyword%3Dtas%2520ransel%2520eiger%26sortBy%3Dsales',
+    tiktokLink: 'https://www.tiktok.com/search?q=tas%20eiger'
   }
 ];
 
@@ -158,7 +198,6 @@ const ProductList = () => {
   const query = searchParams.get('name') || '';
   const [products, setProducts] = useState(PRODUCTS_DATA);
 
-  // LOGIKA PENCARIAN
   useEffect(() => {
     if (query) {
       const lower = query.toLowerCase();
@@ -172,23 +211,18 @@ const ProductList = () => {
     }
   }, [query]);
 
-  // Format Rupiah
   const formatRupiah = (num: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
   };
 
-  // Reset
   const handleReset = () => {
     navigate('/search');
   };
 
-  // Image Error
   const handleImageError = (e: any) => {
     e.target.src = 'https://via.placeholder.com/400x300?text=Produk+Shopee+TikTok';
   };
 
-  // MEMISAHKAN DATA (Flash Sale vs Regular)
-  // Jika sedang mencari (query ada), kita gabung saja. Jika tidak, kita pisah.
   const flashSaleItems = query ? [] : products.filter(p => p.isFlashSale);
   const regularItems = query ? products : products.filter(p => !p.isFlashSale);
 
@@ -196,7 +230,7 @@ const ProductList = () => {
     <div className='min-h-screen bg-gray-50 py-10 font-sans'>
       <div className='container mx-auto px-4 max-w-6xl'>
         
-        {/* === HEADER SEARCH INFO === */}
+        {/* HEADER */}
         <div className='mb-8 bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center'>
           <div>
             <h1 className='text-2xl font-bold text-gray-800 uppercase tracking-wide'>
@@ -220,9 +254,7 @@ const ProductList = () => {
           )}
         </div>
 
-        {/* ================================================= */}
-        {/* BAGIAN 1: FLASH SALE (Hanya muncul jika tidak mencari) */}
-        {/* ================================================= */}
+        {/* FLASH SALE */}
         {!query && flashSaleItems.length > 0 && (
           <div className='mb-12'>
             <div className='flex items-center gap-2 mb-6'>
@@ -238,9 +270,7 @@ const ProductList = () => {
           </div>
         )}
 
-        {/* ================================================= */}
-        {/* BAGIAN 2: PRODUK LAINNYA / HASIL PENCARIAN        */}
-        {/* ================================================= */}
+        {/* REGULER */}
         <div>
             {!query && regularItems.length > 0 && (
                  <h2 className='text-xl font-bold text-gray-800 uppercase mb-6 border-l-4 border-orange-500 pl-3'>
@@ -255,7 +285,6 @@ const ProductList = () => {
                     ))}
                 </div>
             ) : (
-                // JIKA KOSONG (Saat mencari)
                 <div className='text-center py-20'>
                     <div className='text-6xl mb-4'>🔍</div>
                     <h3 className='text-xl font-bold text-gray-800'>Tidak Ditemukan</h3>
@@ -266,17 +295,24 @@ const ProductList = () => {
                 </div>
             )}
         </div>
-
       </div>
     </div>
   );
 };
 
-// --- SUB-COMPONENT UNTUK KARTU PRODUK (Supaya kode rapi) ---
+// KOMPONEN KARTU
 const ProductCardItem = ({ item, formatRupiah, handleImageError }: any) => {
+    
+    const handleBuy = (url: string) => {
+        if (url && url !== '#' && url !== '') {
+            window.open(url, '_blank'); 
+        } else {
+            alert('Link pencarian belum tersedia.');
+        }
+    };
+
     return (
         <div className='bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col h-full'>
-            {/* Gambar */}
             <div className='relative h-64 w-full bg-gray-200 overflow-hidden group'>
                 <img 
                     src={item.image} 
@@ -291,15 +327,14 @@ const ProductCardItem = ({ item, formatRupiah, handleImageError }: any) => {
                 )}
                 <div className='absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-3'>
                     <span className='text-white text-xs font-medium flex items-center'>
-                    📍 {item.location}
+                    📍 {item.location || 'Jakarta'}
                     </span>
                 </div>
             </div>
 
-            {/* Konten */}
             <div className='p-4 flex flex-col flex-grow'>
                 <div className='flex flex-wrap gap-2 mb-2'>
-                    {item.tags.map((t: string) => (
+                    {item.tags?.map((t: string) => (
                     <span key={t} className='text-[10px] uppercase font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded-md tracking-wide'>
                         {t}
                     </span>
@@ -311,7 +346,7 @@ const ProductCardItem = ({ item, formatRupiah, handleImageError }: any) => {
                 </h3>
                 
                 <div className='flex items-center text-xs text-gray-500 mb-4 font-medium'>
-                    <span className='text-yellow-400 text-sm mr-1'>★</span> {item.rating} | Terjual {item.sold}+
+                    <span className='text-yellow-400 text-sm mr-1'>★</span> {item.rating || 4.5} | Terjual {item.sold || 10}+
                 </div>
 
                 <div className='mt-auto bg-gray-50 rounded-xl p-3 border border-gray-200'>
@@ -326,11 +361,17 @@ const ProductCardItem = ({ item, formatRupiah, handleImageError }: any) => {
                 </div>
 
                 <div className='grid grid-cols-2 gap-2 mt-3'>
-                    <button className='bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg text-xs font-bold transition-colors shadow-orange-200 shadow-lg'>
-                    Ke Shopee
+                    <button 
+                        onClick={() => handleBuy(item.shopeeLink)}
+                        className='bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg text-xs font-bold transition-colors shadow-orange-200 shadow-lg cursor-pointer'
+                    >
+                    Beli Shopee
                     </button>
-                    <button className='bg-gray-900 hover:bg-black text-white py-2 rounded-lg text-xs font-bold transition-colors shadow-lg'>
-                    Ke TikTok
+                    <button 
+                        onClick={() => handleBuy(item.tiktokLink)}
+                        className='bg-gray-900 hover:bg-black text-white py-2 rounded-lg text-xs font-bold transition-colors shadow-lg cursor-pointer'
+                    >
+                    Beli TikTok
                     </button>
                 </div>
             </div>

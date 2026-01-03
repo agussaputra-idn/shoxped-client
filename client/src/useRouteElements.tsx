@@ -1,20 +1,21 @@
 import { useRoutes } from 'react-router-dom';
 import { path } from 'src/constants/path';
 
-// === IMPORT HALAMAN (Pastikan semua ada) ===
+// === IMPORT HALAMAN ===
 import MainLayout from './layouts/MainLayout/MainLayout';
 import Home from './pages/Home/Home';
 import ProductList from './pages/ProductList/ProductList';
+import Compare from './pages/Compare/Compare';
 import AboutUs from './pages/AboutUs/AboutUs';
-import PrivacyPolicy from './pages/PrivacyPolicy/PrivacyPolicy'; // <--- Import baru
-import Terms from './pages/Terms/Terms'; // <--- Import baru
+import PrivacyPolicy from './pages/PrivacyPolicy/PrivacyPolicy';
+import Terms from './pages/Terms/Terms';
 import NotFound from './pages/NotFound/NotFound';
 
 export default function useRouteElements() {
   const element = useRoutes([
     {
       path: path.home,
-      element: <MainLayout />, // Gunakan bingkai utama (Header + Footer)
+      element: <MainLayout />,
       children: [
         {
           index: true,
@@ -25,10 +26,14 @@ export default function useRouteElements() {
           element: <ProductList />
         },
         {
+          // 🔥 ROUTE COMPARE (PAKAI CONSTANT)
+          path: path.compare,
+          element: <Compare />
+        },
+        {
           path: path.aboutUs,
           element: <AboutUs />
         },
-        // === PENDAFTARAN RUTE BARU ===
         {
           path: path.privacyPolicy,
           element: <PrivacyPolicy />
@@ -36,8 +41,7 @@ export default function useRouteElements() {
         {
           path: path.terms,
           element: <Terms />
-        },
-        // =============================
+        }
       ]
     },
     {
@@ -49,5 +53,6 @@ export default function useRouteElements() {
       )
     }
   ]);
+
   return element;
 }
