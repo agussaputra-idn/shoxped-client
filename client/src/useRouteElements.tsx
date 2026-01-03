@@ -5,7 +5,7 @@ import { path } from 'src/constants/path';
 import MainLayout from './layouts/MainLayout/MainLayout';
 import Home from './pages/Home/Home';
 import ProductList from './pages/ProductList/ProductList';
-import Compare from './pages/Compare/Compare';
+// import Compare from './pages/Compare/Compare'; // ❌ SAYA MATIKAN SEMENTARA BIAR TIDAK ERROR
 import AboutUs from './pages/AboutUs/AboutUs';
 import PrivacyPolicy from './pages/PrivacyPolicy/PrivacyPolicy';
 import Terms from './pages/Terms/Terms';
@@ -25,11 +25,11 @@ export default function useRouteElements() {
           path: path.search,
           element: <ProductList />
         },
-        {
-          // 🔥 ROUTE COMPARE (PAKAI CONSTANT)
-          path: path.compare,
-          element: <Compare />
-        },
+        // 👇 BLOK ERROR SAYA SEMBUNYIKAN DULU
+        // {
+        //   path: path.compare,
+        //   element: <Compare />
+        // },
         {
           path: path.aboutUs,
           element: <AboutUs />
