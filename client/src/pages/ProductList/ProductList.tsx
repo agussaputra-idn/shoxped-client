@@ -350,7 +350,7 @@ const ProductCardItem = ({ item, formatRupiah, handleImageError }: any) => {
                         rel="noopener noreferrer"
                         className='bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg text-xs font-bold transition-colors shadow-orange-200 shadow-lg text-center flex items-center justify-center no-underline'
                     >
-                    Beli Shopee
+                    Beli Shopee >
                     </a>
                     
                     <a 
@@ -359,7 +359,7 @@ const ProductCardItem = ({ item, formatRupiah, handleImageError }: any) => {
                         rel="noopener noreferrer"
                         className='bg-gray-900 hover:bg-black text-white py-2 rounded-lg text-xs font-bold transition-colors shadow-lg text-center flex items-center justify-center no-underline'
                     >
-                    Beli TikTok
+                    Beli TikTok >
                     </a>
                 </div>
             </div>
