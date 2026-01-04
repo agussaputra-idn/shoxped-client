@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
-// --- DATABASE PRODUK (20 ITEM VIRAL DENGAN GAMBAR ASLI) ---
+// --- DATABASE PRODUK (DATA TETAP SAMA) ---
 const PRODUCTS_DATA = [
   {
     id: 100,
@@ -245,33 +245,56 @@ const PRODUCTS_DATA = [
   }
 ];
 
-// --- ICONS (SVG Murni) ---
+// --- ICONS (MARKETPLACE GRADE) ---
 const Icons = {
-    Logo: () => (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6 text-white">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+    // Logo "Solid Bag" ala Shopee/Tokopedia
+    LogoMarketplace: () => (
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-orange-600">
+             <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+             <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" d="M12 12v3" className="text-white" />
         </svg>
     ),
     Star: () => (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-yellow-400">
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-yellow-400">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
     ),
-    Trending: () => (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-orange-600">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+    Search: () => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-gray-500">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+    ),
+    Fire: () => (
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-white animate-pulse">
+            <path d="M12 2c-3 3-3 5-1 8-2-1-3-3-3-5 0 4 3 7 3 11 0 2-1 4-3 5 5 0 8-3 8-7 0-3-2-6-4-12z" />
+        </svg>
+    ),
+    Bolt: () => (
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-white">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+        </svg>
+    ),
+    Shield: () => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-white">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+    ),
+    Cart: () => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6 text-gray-700">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
     )
 };
 
-// --- LOGIKA & UI TOKO ---
+// --- KOMPONEN UTAMA ---
 const ProductList = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const query = searchParams.get('name') || '';
   const [products, setProducts] = useState(PRODUCTS_DATA);
 
-  // LOGIKA PENCARIAN & SMART PRICE
+  // LOGIKA SMART PRICE
   useEffect(() => {
     let dataToDisplay = PRODUCTS_DATA;
     if (query) {
@@ -281,20 +304,14 @@ const ProductList = () => {
         p.tags.some(t => t.toLowerCase().includes(lower))
       );
     }
-    
-    // SMART SIMULATION: Generate harga TikTok jika belum ada
     const enhancedData = dataToDisplay.map(p => {
-        // Jika ada harga asli dari database (manual), pakai itu. Jika tidak, simulasi cerdas.
         const tiktokPrice = (p as any).tiktokPrice || Math.floor(p.shopeePrice * (Math.random() * (1.05 - 0.95) + 0.95) / 100) * 100;
-        
         return {
             ...p,
             tiktokPrice: tiktokPrice,
-            // Generate Link Search otomatis
             tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(p.title)}` 
         };
     });
-
     setProducts(enhancedData);
   }, [query]);
 
@@ -308,58 +325,109 @@ const ProductList = () => {
   const regularItems = query ? products : products.filter(p => !p.isFlashSale);
 
   return (
-    <div className='min-h-screen bg-gray-50 font-sans text-gray-800 pb-20'>
+    <div className='min-h-screen bg-gray-50 font-sans text-gray-800 pb-20 pt-[104px]'>
       
-      {/* 1. NAVBAR PRO */}
-      <nav className="bg-white sticky top-0 z-50 shadow-sm border-b border-gray-100">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-            <div onClick={handleReset} className="flex items-center gap-2 cursor-pointer group">
-                <div className="bg-gradient-to-br from-orange-500 to-red-600 p-1.5 rounded-lg shadow-lg group-hover:scale-105 transition-transform">
-                    <Icons.Logo />
-                </div>
-                <div className="flex flex-col leading-none">
-                    <span className="text-xl font-black tracking-tighter text-gray-900">
+      {/* --- BAGIAN 1: TOP BAR (ANNOUNCEMENT) --- */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-gray-900 via-black to-gray-900 text-white h-9 flex items-center justify-center shadow-md">
+         <div className="container mx-auto px-4 flex justify-between items-center text-[10px] md:text-xs font-bold tracking-wide">
+            
+            {/* Kiri: Hot Deals */}
+            <div className="flex items-center gap-4 animate-pulse">
+                <span className="flex items-center gap-1.5 text-orange-400">
+                    <Icons.Fire /> HOT DEALS HARI INI
+                </span>
+                <span className="hidden sm:flex items-center gap-1.5 text-yellow-300">
+                    <Icons.Bolt /> FLASH SALE EXTRA
+                </span>
+            </div>
+
+            {/* Kanan: Jaminan */}
+            <div className="flex items-center gap-4 text-gray-300">
+                <span className="flex items-center gap-1.5">
+                    <Icons.Shield /> 100% ORI
+                </span>
+                <span className="hidden sm:inline">GRATIS ONGKIR</span>
+            </div>
+
+         </div>
+      </div>
+
+      {/* --- BAGIAN 2: NAVBAR UTAMA (LOGO & SEARCH) --- */}
+      <nav className="fixed top-9 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 h-20 shadow-sm">
+        <div className="container mx-auto px-4 h-full flex items-center justify-between gap-6">
+            
+            {/* LOGO MARKETPLACE GRADE */}
+            <div onClick={handleReset} className="flex items-center gap-2 cursor-pointer group shrink-0">
+                <Icons.LogoMarketplace />
+                <div className="flex flex-col leading-none justify-center">
+                    <span className="text-2xl font-black tracking-tighter text-gray-900 group-hover:text-orange-600 transition-colors">
                         SHOX<span className="text-orange-600">PED</span>
                     </span>
-                    <span className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Price Tracker</span>
                 </div>
             </div>
-            {query && (
-                <button onClick={handleReset} className="text-xs font-bold bg-gray-100 px-4 py-2 rounded-full hover:bg-gray-200 transition">
-                    &larr; Kembali
-                </button>
-            )}
+
+            {/* SEARCH BAR MODERN */}
+            <div className="flex-1 max-w-2xl mx-auto relative group hidden sm:block">
+                <div className="flex">
+                    <input 
+                        type="text" 
+                        placeholder="Cari produk termurah di Shopee & TikTok..."
+                        className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-l-lg py-3 px-5 focus:bg-white focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-inner"
+                        readOnly
+                    />
+                    <button className="bg-orange-600 text-white px-6 rounded-r-lg hover:bg-orange-700 transition font-bold">
+                        <Icons.Search />
+                    </button>
+                </div>
+            </div>
+
+            {/* CART & MENU */}
+            <div className="flex items-center gap-4">
+                <div className="relative cursor-pointer hover:bg-gray-100 p-2 rounded-full transition">
+                    <Icons.Cart />
+                    <span className="absolute top-0 right-0 bg-red-600 text-white text-[9px] font-bold px-1.5 rounded-full border border-white">2</span>
+                </div>
+            </div>
         </div>
       </nav>
 
-      <div className='container mx-auto px-4 max-w-6xl'>
+      <div className='container mx-auto px-4 max-w-6xl mt-8'>
         
-        {/* 2. HERO BANNER */}
+        {/* HERO BANNER */}
         {!query && (
-            <div className="py-12 text-center space-y-4">
-                <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-orange-50 text-orange-700 text-xs font-bold border border-orange-100">
-                    <Icons.Trending /> Update Harian: {new Date().toLocaleDateString('id-ID', { weekday: 'long' })}
-                </div>
-                <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
-                    Jangan Beli Sebelum <br className="hidden md:block"/>
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600">
-                        Cek Harga Disini.
+            <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white py-12 md:py-16 px-6 mb-10 text-center shadow-2xl mx-2 md:mx-0 border-t-4 border-orange-600">
+                
+                <div className="relative z-10 space-y-5">
+                    <span className="inline-block px-4 py-1.5 bg-orange-600 text-white text-[10px] font-black tracking-widest uppercase rounded-full shadow-lg animate-bounce">
+                        NEW ARRIVAL
                     </span>
-                </h1>
-                <p className="text-gray-500 text-lg max-w-xl mx-auto">
-                    Platform #1 perbandingan harga otomatis Shopee vs TikTok. Temukan harga termurah dalam 1 detik.
-                </p>
+                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-tight">
+                        SEMUA ADA. <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-yellow-400">SEMUA MURAH.</span>
+                    </h1>
+                    <p className="text-gray-400 text-base md:text-lg max-w-xl mx-auto leading-relaxed">
+                        Bandingkan harga Shopee & TikTok dalam satu aplikasi. Temukan selisih harga hingga 50% sekarang juga.
+                    </p>
+                </div>
             </div>
         )}
 
-        {/* 3. FLASH SALE */}
+        {/* --- KONTEN PRODUK (FLASH SALE) --- */}
         {!query && flashSaleItems.length > 0 && (
           <div className='mb-12'>
-            <div className='flex items-center gap-3 mb-6'>
-                <div className="h-8 w-1 bg-red-600 rounded-full"></div>
-                <h2 className='text-2xl font-black text-gray-900 uppercase'>⚡ Flash Sale</h2>
+            <div className='flex items-center justify-between mb-6 px-2'>
+                <div className="flex items-center gap-3">
+                    <div className="bg-red-600 text-white p-1.5 rounded-md">
+                        <Icons.Bolt />
+                    </div>
+                    <div>
+                        <h2 className='text-xl font-black text-gray-900 uppercase tracking-tight'>Flash Sale</h2>
+                        <p className="text-[10px] font-bold text-red-500 animate-pulse">Sisa Waktu: 02:45:12</p>
+                    </div>
+                </div>
+                <span className="text-xs font-bold text-orange-600 hover:text-orange-800 cursor-pointer">Lihat Semua &rarr;</span>
             </div>
-            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'>
+            
+            <div className='grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6'>
               {flashSaleItems.map((item) => (
                 <ProductCardItem key={item.id} item={item} formatRupiah={formatRupiah} />
               ))}
@@ -367,27 +435,25 @@ const ProductList = () => {
           </div>
         )}
 
-        {/* 4. PRODUK LAINNYA */}
-        <div>
+        {/* --- KONTEN PRODUK (REKOMENDASI) --- */}
+        <div className="px-2">
             {!query && regularItems.length > 0 && (
-                <div className='flex items-center gap-3 mb-6'>
-                    <div className="h-8 w-1 bg-orange-600 rounded-full"></div>
-                    <h2 className='text-xl font-bold text-gray-900'>Rekomendasi Termurah</h2>
+                <div className='flex items-center gap-2 mb-6 border-b border-gray-200 pb-3'>
+                    <h2 className='text-lg font-bold text-gray-900'>Rekomendasi Untukmu</h2>
                 </div>
             )}
 
             {regularItems.length > 0 ? (
-                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
+                <div className='grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6'>
                     {regularItems.map((item) => (
                         <ProductCardItem key={item.id} item={item} formatRupiah={formatRupiah} />
                     ))}
                 </div>
             ) : (
-                <div className='text-center py-24'>
-                    <div className='text-6xl mb-4 opacity-20'>🔍</div>
-                    <h3 className='text-xl font-bold text-gray-800'>Tidak Ditemukan</h3>
-                    <button onClick={handleReset} className='mt-4 px-6 py-2 bg-gray-900 text-white rounded-full font-bold hover:bg-black transition'>
-                        Reset Pencarian
+                <div className='text-center py-20'>
+                    <h3 className='text-lg font-bold text-gray-800'>Tidak Ditemukan</h3>
+                    <button onClick={handleReset} className='mt-4 px-6 py-2 bg-black text-white rounded-full text-xs font-bold'>
+                        Reset
                     </button>
                 </div>
             )}
@@ -397,63 +463,50 @@ const ProductList = () => {
   );
 };
 
-// --- KARTU PRODUK ELEGAN ---
+// --- KOMPONEN KARTU PRODUK (Updated Layout) ---
 const ProductCardItem = ({ item, formatRupiah }: any) => {
-    // Logika pewarnaan harga
     const isShopeeCheaper = item.shopeePrice <= item.tiktokPrice;
 
     return (
-        <div className='group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full overflow-hidden relative'>
+        <div className='group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full overflow-hidden relative'>
             
-            {/* Image Section */}
-            <div className='relative h-60 bg-gray-100 overflow-hidden'>
+            {/* Image Area */}
+            <div className='relative aspect-square bg-gray-100 overflow-hidden'>
                 <img 
                     src={item.image} 
                     alt={item.title} 
-                    className='w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700'
+                    className='w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500'
                     onError={(e:any) => e.target.src = 'https://via.placeholder.com/400'}
                 />
-                <div className='absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent'>
-                    <div className="flex items-center gap-1 text-yellow-300 text-xs font-bold">
+                
+                {/* Badge Sold */}
+                <div className='absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent'>
+                    <div className="flex items-center gap-1 text-white text-[9px] font-bold">
                         <Icons.Star /> {item.rating} • {item.sold/1000}RB+ Terjual
                     </div>
                 </div>
             </div>
 
-            {/* Info Section */}
-            <div className='p-4 flex flex-col flex-grow'>
-                <div className="flex gap-2 mb-2">
-                    {item.tags?.slice(0,2).map((t: string) => (
-                        <span key={t} className='text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded uppercase tracking-wider'>
-                            {t}
-                        </span>
-                    ))}
-                </div>
-                
-                <h3 className='font-bold text-gray-800 text-sm mb-4 leading-relaxed line-clamp-2 min-h-[2.5rem]'>
+            {/* Content Area */}
+            <div className='p-3 flex flex-col flex-grow'>
+                <h3 className='font-bold text-gray-800 text-xs md:text-sm mb-3 leading-snug line-clamp-2 min-h-[2.4em] group-hover:text-orange-600 transition-colors'>
                     {item.title}
                 </h3>
 
-                {/* Price Comparison Block */}
-                <div className="mt-auto space-y-2 mb-4">
+                {/* Price Blocks */}
+                <div className="mt-auto space-y-1.5 mb-3">
                     {/* Shopee Row */}
-                    <div className={`flex justify-between items-center p-2 rounded-lg ${isShopeeCheaper ? 'bg-orange-50 border border-orange-100' : ''}`}>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Shopee</span>
-                            {isShopeeCheaper && <span className="text-[9px] bg-orange-600 text-white px-1.5 py-0.5 rounded font-bold">WIN</span>}
-                        </div>
-                        <span className={`text-sm font-bold ${isShopeeCheaper ? 'text-orange-600' : 'text-gray-400'}`}>
+                    <div className={`flex justify-between items-center px-2 py-1.5 rounded border ${isShopeeCheaper ? 'bg-orange-50 border-orange-200' : 'bg-white border-transparent'}`}>
+                        <span className="text-[10px] font-extrabold text-gray-500 uppercase">Shopee</span>
+                        <span className={`text-xs font-bold ${isShopeeCheaper ? 'text-orange-600' : 'text-gray-400'}`}>
                             {formatRupiah(item.shopeePrice)}
                         </span>
                     </div>
 
                     {/* TikTok Row */}
-                    <div className={`flex justify-between items-center p-2 rounded-lg ${!isShopeeCheaper ? 'bg-gray-100 border border-gray-200' : ''}`}>
-                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black text-black uppercase tracking-widest">TikTok</span>
-                            {!isShopeeCheaper && <span className="text-[9px] bg-black text-white px-1.5 py-0.5 rounded font-bold">WIN</span>}
-                        </div>
-                        <span className={`text-sm font-bold ${!isShopeeCheaper ? 'text-black' : 'text-gray-400'}`}>
+                    <div className={`flex justify-between items-center px-2 py-1.5 rounded border ${!isShopeeCheaper ? 'bg-gray-50 border-gray-200' : 'bg-white border-transparent'}`}>
+                         <span className="text-[10px] font-extrabold text-gray-500 uppercase">TikTok</span>
+                        <span className={`text-xs font-bold ${!isShopeeCheaper ? 'text-black' : 'text-gray-400'}`}>
                             {formatRupiah(item.tiktokPrice)}
                         </span>
                     </div>
@@ -461,11 +514,11 @@ const ProductCardItem = ({ item, formatRupiah }: any) => {
 
                 {/* Buttons */}
                 <div className='grid grid-cols-2 gap-2'>
-                    <a href={item.shopeeLink} target="_blank" rel="noopener noreferrer" className='bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg text-xs font-bold text-center transition shadow-lg hover:shadow-orange-200'>
-                        Beli Shopee &gt;
+                    <a href={item.shopeeLink} target="_blank" rel="noopener noreferrer" className='bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg text-[10px] md:text-xs font-bold text-center transition shadow-md'>
+                        Beli Shopee
                     </a>
-                    <a href={item.tiktokLink} target="_blank" rel="noopener noreferrer" className='bg-gray-900 hover:bg-black text-white py-2 rounded-lg text-xs font-bold text-center transition shadow-lg'>
-                        Beli TikTok &gt;
+                    <a href={item.tiktokLink} target="_blank" rel="noopener noreferrer" className='bg-gray-900 hover:bg-black text-white py-2 rounded-lg text-[10px] md:text-xs font-bold text-center transition shadow-md'>
+                        Beli TikTok
                     </a>
                 </div>
             </div>
