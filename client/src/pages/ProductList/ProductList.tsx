@@ -1,524 +1,349 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
-// --- DATABASE PRODUK (DATA TETAP SAMA) ---
-const PRODUCTS_DATA = [
-  {
-    id: 100,
-    title: "INSPIRED Scarlett Whitening PARFUM Unisex Memories Dreamy 30ml",
-    shopeePrice: 9000,
-    image: "https://down-tx-id.img.susercontent.com/sg-11134201-8259u-mfvde9xs5vrgcc.webp",
-    location: "Jakarta",
-    rating: 4.9,
-    sold: 10000,
-    tags: ["Viral", "Parfum"],
-    isFlashSale: true,
-    shopeeLink: "https://s.shopee.co.id/9fEMHXug6s",
-  },
-  {
-    id: 114,
-    title: "Rak Troli Plastik Serbaguna 3 Susun dengan Roda",
-    shopeePrice: 25400,
-    image: "https://down-tx-id.img.susercontent.com/sg-11134201-7rd6f-m711lm4pzape48.webp",
-    location: "Jakarta",
-    rating: 4.8,
-    sold: 10000,
-    tags: ["Rumah", "Murah"],
-    isFlashSale: true,
-    shopeeLink: "https://s.shopee.co.id/6faki266CW",
-  },
-  {
-    id: 195,
-    title: "Stik Pewarna Rambut Penutup Uban (Tahan Air)",
-    shopeePrice: 55400,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-7rasg-m45pcf6jy3km84.webp",
-    location: "Jakarta",
-    rating: 4.7,
-    sold: 10000,
-    tags: ["Kecantikan", "Viral"],
-    isFlashSale: true,
-    shopeeLink: "https://s.shopee.co.id/40ZzX8GFdJ",
-  },
-  {
-    id: 188,
-    title: "QME Timbangan Buah Digital 40kg Double Display",
-    shopeePrice: 185800,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-8224x-miv1a4eh9ath2f.webp",
-    location: "Jakarta",
-    rating: 4.9,
-    sold: 10000,
-    tags: ["Elektronik", "Pasar"],
-    isFlashSale: true,
-    shopeeLink: "https://s.shopee.co.id/5q1diV9GuY",
-  },
-  {
-    id: 187,
-    title: "Kipas Angin Mini Portable Turbo (Tahan 24 Jam)",
-    shopeePrice: 33000,
-    image: "https://down-tx-id.img.susercontent.com/sg-11134201-824h6-mfkzvdte02ru8e.webp",
-    location: "Jakarta",
-    rating: 4.8,
-    sold: 10000,
-    tags: ["Elektronik", "Viral"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/5L5N7aBAvR",
-  },
-  {
-    id: 167,
-    title: "Tsurayya Khimar Jema Nonped Bahan Mazen Anti UV",
-    shopeePrice: 204000,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-7r98o-ly9j0goazlrc70.webp",
-    location: "Jakarta",
-    rating: 5.0,
-    sold: 10000,
-    tags: ["Fashion", "Muslim"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/9zrCg9tPS1",
-  },
-  {
-    id: 153,
-    title: "Dephero Eau De Parfum Pria Tahan Lama",
-    shopeePrice: 149000,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-8224p-mfw2xns6dhjga2.webp",
-    location: "Jakarta",
-    rating: 4.8,
-    sold: 10000,
-    tags: ["Parfum", "Pria"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/2VlBkNLxfL",
-  },
-  {
-    id: 145,
-    title: "Bali Surfers Perfume - Blue Point For Her 100ML",
-    shopeePrice: 110000,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-81ztg-mekwhgbtwyki42.webp",
-    location: "Bali",
-    rating: 4.9,
-    sold: 10000,
-    tags: ["Parfum", "Wanita"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/3qGZKpGsxT",
-  },
-  {
-    id: 144,
-    title: "Blouse Kaftan Tunik Viscose Aruna (Kondangan)",
-    shopeePrice: 85700,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-7r992-lpsqagak3jjm70.webp",
-    location: "Pekalongan",
-    rating: 4.7,
-    sold: 10000,
-    tags: ["Fashion", "Wanita"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/3fx98WHWIQ",
-  },
-  {
-    id: 122,
-    title: "KOMIN Sepatu Sandal Selop Baim Pria EVA Casual",
-    shopeePrice: 49900,
-    image: "https://down-tx-id.img.susercontent.com/id-11134201-23030-4pv5ffwsfvov35.webp",
-    location: "Bogor",
-    rating: 4.8,
-    sold: 10000,
-    tags: ["Sepatu", "Pria"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/5L5N7aBAuO",
-  },
-  {
-    id: 120,
-    title: "Hania Oneset Rayon Celana Kulot + Atasan Rempel",
-    shopeePrice: 96500,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-7rbk8-m9od14clkj0314.webp",
-    location: "Solo",
-    rating: 4.8,
-    sold: 10000,
-    tags: ["Fashion", "Muslim"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/7fTHts2IAo",
-  },
-  {
-    id: 199,
-    title: "PAKET HEMAT 5 Pack Detergen Sayang Bubuk",
-    shopeePrice: 19800,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-7rbk4-m8dzuxuoxvyj72.webp",
-    location: "Surabaya",
-    rating: 5.0,
-    sold: 10000,
-    tags: ["Rumah Tangga", "Murah"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/4fpgKMDiHV",
-  },
-  {
-    id: 110,
-    title: "Ecentio Kotak Makan Anti Tumpah 1100ml Free Sendok",
-    shopeePrice: 35900,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-82250-mips57lepczrf8.webp",
-    location: "Jakarta",
-    rating: 4.9,
-    sold: 10000,
-    tags: ["Dapur", "Bekal"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/8fLp5hyU8q",
-  },
-  {
-    id: 108,
-    title: "Tumbler Stainless Steel 473ml Tahan Panas Dingin",
-    shopeePrice: 71300,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-81ztd-mepdnomeywow25.webp",
-    location: "Jakarta",
-    rating: 4.8,
-    sold: 10000,
-    tags: ["Dapur", "Tumbler"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/8Kiyh5zkok",
-  },
-  {
-    id: 109,
-    title: "Amicaa Sweatpants Loose Highwaist Celana Panjang",
-    shopeePrice: 52000,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-7rbkb-m84zpdsclpfvfc.webp",
-    location: "Bandung",
-    rating: 4.8,
-    sold: 10000,
-    tags: ["Fashion", "Celana"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/8V2OtOz7Tn",
-  },
-  {
-    id: 148,
-    title: "WANNAFIT Pulley Cable System Set Alat Gym Rumahan",
-    shopeePrice: 190000,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-7ra0i-mdlnijslzf041e.webp",
-    location: "Jakarta",
-    rating: 4.9,
-    sold: 8000,
-    tags: ["Olahraga", "Gym"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/1gC4kqP8M6",
-  },
-  {
-    id: 118,
-    title: "SOMBONG 5-in-1 Sunscreen Spray SPF 30",
-    shopeePrice: 78000,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-8224z-mgyjbjxt9fkb4b.webp",
-    location: "Jakarta",
-    rating: 4.7,
-    sold: 8000,
-    tags: ["Skincare", "Viral"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/7KqRVG3Yqi",
-  },
-  {
-    id: 139,
-    title: "Biji Kopi Pure Arabica 500 Gram Commercial Grade",
-    shopeePrice: 99300,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-81zti-mejtghsqc6x3f9.webp",
-    location: "Aceh",
-    rating: 4.9,
-    sold: 7000,
-    tags: ["Makanan", "Kopi"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/2qO28zKgzB",
-  },
-  {
-    id: 143,
-    title: "Aeiso Sepatu Sport Casual Fashionable (Kerja & Jalan)",
-    shopeePrice: 369800,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-8224t-mh1npiatcm4p9c.webp",
-    location: "Tangerang",
-    rating: 4.8,
-    sold: 6000,
-    tags: ["Sepatu", "Sport"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/3VdiwDI9dN",
-  },
-  {
-    id: 141,
-    title: "Velixir Demeter Eau de Parfum for Unisex",
-    shopeePrice: 195000,
-    image: "https://down-tx-id.img.susercontent.com/id-11134207-81ztl-mf57uh8oy0pb2b.webp",
-    location: "Jakarta",
-    rating: 4.9,
-    sold: 5000,
-    tags: ["Parfum", "Unisex"],
-    isFlashSale: false,
-    shopeeLink: "https://s.shopee.co.id/3B0sXbJQJH",
-  }
-];
+// --- KONFIGURASI LINK CSV ---
+const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQAsYy9QTAN06pTw9fUSu3eIqf9dBUSIS7OQ62aOvxgHLe_9oNzF1CL7BB9T35dd8v8UifG5Nz3rRnX/pub?output=csv";
 
-// --- ICONS (MARKETPLACE GRADE) ---
+// --- ICONS (SVG) ---
 const Icons = {
-    // Logo "Solid Bag" ala Shopee/Tokopedia
-    LogoMarketplace: () => (
+    Logo: () => (
         <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-orange-600">
-             <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-             <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" d="M12 12v3" className="text-white" />
+            <path d="M19 7h-3V6a4 4 0 00-8 0v1H5a2 2 0 00-2 2v11a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2zm-9-1a2 2 0 012-2 2 2 0 012 2v1h-4V6zm0 4a1.5 1.5 0 01-3 0 1.5 1.5 0 013 0zm6 0a1.5 1.5 0 01-3 0 1.5 1.5 0 013 0z"/>
+            <path stroke="black" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" d="M9 13l2 2 4-4" fill="none"/>
         </svg>
     ),
-    Star: () => (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-yellow-400">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-        </svg>
-    ),
-    Search: () => (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-gray-500">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-    ),
-    Fire: () => (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-white animate-pulse">
-            <path d="M12 2c-3 3-3 5-1 8-2-1-3-3-3-5 0 4 3 7 3 11 0 2-1 4-3 5 5 0 8-3 8-7 0-3-2-6-4-12z" />
-        </svg>
-    ),
-    Bolt: () => (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-white">
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-        </svg>
-    ),
-    Shield: () => (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-white">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-    ),
-    Cart: () => (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6 text-gray-700">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-    )
+    Search: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-gray-500"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>,
+    Fire: () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-white animate-pulse"><path d="M12 2c-3 3-3 5-1 8-2-1-3-3-3-5 0 4 3 7 3 11 0 2-1 4-3 5 5 0 8-3 8-7 0-3-2-6-4-12z" /></svg>,
+    Shield: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-white"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
+    Cart: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6 text-gray-700"><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>,
+    Filter: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>,
 };
 
-// --- KOMPONEN UTAMA ---
+// --- KATEGORI ---
+const CATEGORIES = [
+    { name: "Semua", icon: "🛍️", tag: "All" },
+    { name: "Fashion", icon: "👕", tag: "Fashion" },
+    { name: "Sepatu", icon: "👟", tag: "Sepatu" },
+    { name: "Tas", icon: "👜", tag: "Tas" },
+    { name: "Kecantikan", icon: "💄", tag: "Kecantikan" },
+    { name: "Elektronik", icon: "📱", tag: "Elektronik" },
+    { name: "Rumah", icon: "🏠", tag: "Rumah Tangga" },
+    { name: "Makanan", icon: "🍔", tag: "Makanan" },
+];
+
+// --- PARSER CSV ---
+const parseCSV = (text: string) => {
+    const rows = text.split('\n').filter(row => row.trim() !== '');
+    
+    return rows.slice(1).map((row, index) => {
+        // Logika parsing untuk menangani koma dalam judul
+        const parts = row.split(',');
+        let titleParts = [];
+        let i = 0;
+        
+        // Gabungkan bagian judul sampai ketemu format harga (angka)
+        while (i < parts.length) {
+            const part = parts[i].trim().replace(/^"|"$/g, '');
+            if (i > 0 && part.match(/^(Rp)?\s*\d+(\.\d+)*$/)) break; 
+            titleParts.push(part);
+            i++;
+        }
+        
+        const title = titleParts.join(', ').replace(/^"|"$/g, '');
+        const priceRaw = parts[i] || "0";
+        const image = parts[i+1] || ""; 
+        
+        // Cari link Shopee yang valid
+        let shopeeLink = "#";
+        for (let j = i; j < parts.length; j++) {
+            if (parts[j] && parts[j].includes("shopee.co.id")) {
+                shopeeLink = parts[j];
+                break;
+            }
+        }
+
+        const price = parseInt(priceRaw.replace(/[^0-9]/g, '')) || 0;
+
+        // --- HARGA FEAR ---
+        const isShopeeCheaper = Math.random() < 0.5;
+        const variance = Math.random() * 0.3; 
+        let tiktokPrice = price;
+        if (isShopeeCheaper) {
+            tiktokPrice = Math.floor(price * (1 + variance));
+        } else {
+            tiktokPrice = Math.floor(price * (1 - variance));
+        }
+
+        // --- TAGGING ---
+        const tLower = title.toLowerCase();
+        let tag = "Umum";
+        if (tLower.includes('sepatu') || tLower.includes('sandal')) tag = "Sepatu";
+        else if (tLower.includes('tas') || tLower.includes('ransel')) tag = "Tas";
+        else if (tLower.includes('baju') || tLower.includes('kaos') || tLower.includes('gamis') || tLower.includes('dress')) tag = "Fashion";
+        else if (tLower.includes('parfum') || tLower.includes('serum') || tLower.includes('cream')) tag = "Kecantikan";
+        else if (tLower.includes('kopi') || tLower.includes('snack') || tLower.includes('makanan')) tag = "Makanan";
+        else if (tLower.includes('rak') || tLower.includes('alat') || tLower.includes('rumah')) tag = "Rumah Tangga";
+        else if (tLower.includes('hp') || tLower.includes('case') || tLower.includes('kabel')) tag = "Elektronik";
+
+        // --- PERBAIKAN LINK TIKTOK (HAMPIR FULL TITLE) ---
+        // 1. Bersihkan karakter aneh yang bisa merusak URL (seperti |, /, #, @)
+        // 2. Ambil 12 kata pertama agar pencarian sangat spesifik tapi tidak terlalu panjang sampai error
+        const cleanTitle = title.replace(/[^a-zA-Z0-9 ]/g, " ");
+        const keywords = cleanTitle.split(" ").filter(w => w.trim() !== "").slice(0, 12).join(" ");
+
+        return {
+            id: index + 1000,
+            title: title,
+            shopeePrice: price,
+            image: image,
+            location: ["Jakarta", "Bandung", "Surabaya", "Tangerang"][Math.floor(Math.random() * 4)],
+            rating: (Math.random() * (5.0 - 4.5) + 4.5).toFixed(1),
+            sold: Math.floor(Math.random() * 5000) + 50,
+            tags: ["Viral", tag],
+            isFlashSale: Math.random() < 0.2, 
+            shopeeLink: shopeeLink,
+            tiktokPrice: tiktokPrice,
+            tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(keywords)}` // Link lebih akurat
+        };
+    });
+};
+
+// --- COMPONENT CAROUSEL ---
+const HeroCarousel = ({ items, formatRupiah }: any) => {
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentIndex((prev) => (prev + 1) % items.length);
+        }, 4000); 
+        return () => clearInterval(interval);
+    }, [items.length]);
+
+    if (!items || items.length === 0) return null;
+    const currentItem = items[currentIndex];
+
+    return (
+        <div className="relative w-full h-[200px] md:h-[300px] bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl overflow-hidden shadow-lg mb-8 flex items-center">
+            <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+            <div className="container mx-auto px-6 flex items-center justify-between relative z-10">
+                <div className="text-white max-w-lg">
+                    <div className="flex items-center gap-2 mb-2 animate-bounce">
+                        <span className="bg-yellow-400 text-red-700 text-xs font-black px-2 py-1 rounded uppercase">⚡ Flash Sale</span>
+                        <span className="text-xs font-bold">Berakhir segera!</span>
+                    </div>
+                    <h2 className="text-xl md:text-4xl font-black leading-tight line-clamp-2 mb-2">
+                        {currentItem.title}
+                    </h2>
+                    <div className="text-sm md:text-lg font-medium opacity-90 mb-4">
+                        Diskon Spesial Hari Ini
+                    </div>
+                    <div className="flex gap-3">
+                        <div className="bg-white text-orange-600 px-4 py-2 rounded-lg font-bold shadow-md">
+                            {formatRupiah(currentItem.shopeePrice)}
+                        </div>
+                        <a href={currentItem.shopeeLink} target="_blank" rel="noreferrer" className="bg-black text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-800 transition">
+                            Beli Sekarang
+                        </a>
+                    </div>
+                </div>
+                <div className="hidden md:block w-48 h-48 bg-white p-2 rounded-lg shadow-xl rotate-3 transform hover:rotate-0 transition duration-500">
+                    <img src={currentItem.image} alt="Flash Sale" className="w-full h-full object-cover rounded" />
+                </div>
+            </div>
+            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                {items.slice(0, 5).map((_: any, idx: number) => (
+                    <div key={idx} className={`h-2 rounded-full transition-all ${idx === (currentIndex % 5) ? 'w-6 bg-white' : 'w-2 bg-white/50'}`}></div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// --- MAIN COMPONENT ---
 const ProductList = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const query = searchParams.get('name') || '';
-  const [products, setProducts] = useState(PRODUCTS_DATA);
+  
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState(""); 
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
-  // LOGIKA SMART PRICE
   useEffect(() => {
-    let dataToDisplay = PRODUCTS_DATA;
-    if (query) {
-      const lower = query.toLowerCase();
-      dataToDisplay = PRODUCTS_DATA.filter(p => 
-        p.title.toLowerCase().includes(lower) || 
-        p.tags.some(t => t.toLowerCase().includes(lower))
-      );
-    }
-    const enhancedData = dataToDisplay.map(p => {
-        const tiktokPrice = (p as any).tiktokPrice || Math.floor(p.shopeePrice * (Math.random() * (1.05 - 0.95) + 0.95) / 100) * 100;
-        return {
-            ...p,
-            tiktokPrice: tiktokPrice,
-            tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(p.title)}` 
-        };
-    });
-    setProducts(enhancedData);
-  }, [query]);
+    const fetchData = async () => {
+        try {
+            const response = await fetch(GOOGLE_SHEET_CSV_URL);
+            const text = await response.text();
+            const parsedData = parseCSV(text);
+            const uniqueProducts = Array.from(new Map(parsedData.map(item => [item['shopeeLink'], item])).values());
+            setProducts(uniqueProducts);
+            setLoading(false);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            setLoading(false);
+        }
+    };
+    fetchData();
+  }, []);
+
+  const filteredProducts = products.filter(p => {
+      const matchSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchCategory = selectedCategory === "All" || p.tags.includes(selectedCategory);
+      return matchSearch && matchCategory;
+  });
+
+  const flashSaleItems = products.filter(p => p.isFlashSale).slice(0, 5);
 
   const formatRupiah = (num: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
   };
 
-  const handleReset = () => navigate('/');
-
-  const flashSaleItems = query ? [] : products.filter(p => p.isFlashSale);
-  const regularItems = query ? products : products.filter(p => !p.isFlashSale);
+  const handleReset = () => {
+      setSearchTerm("");
+      setSelectedCategory("All");
+      navigate('/');
+  };
 
   return (
-    <div className='min-h-screen bg-gray-50 font-sans text-gray-800 pb-20 pt-[104px]'>
+    <div className='min-h-screen bg-gray-50 font-sans text-gray-800 pb-20 pt-[150px] md:pt-[120px]'>
       
-      {/* --- BAGIAN 1: TOP BAR (ANNOUNCEMENT) --- */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-gray-900 via-black to-gray-900 text-white h-9 flex items-center justify-center shadow-md">
+      {/* HEADER */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-black text-white h-9 flex items-center justify-center shadow-md">
          <div className="container mx-auto px-4 flex justify-between items-center text-[10px] md:text-xs font-bold tracking-wide">
-            
-            {/* Kiri: Hot Deals */}
             <div className="flex items-center gap-4 animate-pulse">
-                <span className="flex items-center gap-1.5 text-orange-400">
-                    <Icons.Fire /> HOT DEALS HARI INI
-                </span>
-                <span className="hidden sm:flex items-center gap-1.5 text-yellow-300">
-                    <Icons.Bolt /> FLASH SALE EXTRA
-                </span>
+                <span className="flex items-center gap-1.5 text-orange-400"><Icons.Fire /> HOT DEALS</span>
             </div>
-
-            {/* Kanan: Jaminan */}
             <div className="flex items-center gap-4 text-gray-300">
-                <span className="flex items-center gap-1.5">
-                    <Icons.Shield /> 100% ORI
-                </span>
-                <span className="hidden sm:inline">GRATIS ONGKIR</span>
+                <span className="flex items-center gap-1.5"><Icons.Shield /> 100% ORI</span>
             </div>
-
          </div>
       </div>
 
-      {/* --- BAGIAN 2: NAVBAR UTAMA (LOGO & SEARCH) --- */}
-      <nav className="fixed top-9 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 h-20 shadow-sm">
-        <div className="container mx-auto px-4 h-full flex items-center justify-between gap-6">
-            
-            {/* LOGO MARKETPLACE GRADE */}
-            <div onClick={handleReset} className="flex items-center gap-2 cursor-pointer group shrink-0">
-                <Icons.LogoMarketplace />
-                <div className="flex flex-col leading-none justify-center">
-                    <span className="text-2xl font-black tracking-tighter text-gray-900 group-hover:text-orange-600 transition-colors">
-                        SHOX<span className="text-orange-600">PED</span>
-                    </span>
+      {/* NAVBAR */}
+      <nav className="fixed top-9 left-0 right-0 z-40 bg-white border-b border-gray-200 py-3 md:py-0 md:h-20 shadow-sm transition-all">
+        <div className="container mx-auto px-4 h-full flex flex-wrap md:flex-nowrap items-center justify-between gap-y-3 gap-x-4">
+            <div onClick={handleReset} className="flex items-center gap-2 cursor-pointer shrink-0 order-1 group">
+                <div className="group-hover:scale-105 transition-transform">
+                    <Icons.Logo />
                 </div>
+                <span className="text-2xl font-black tracking-tighter text-gray-900">
+                    Shox<span className="text-orange-600">ped</span>
+                </span>
             </div>
-
-            {/* SEARCH BAR MODERN */}
-            <div className="flex-1 max-w-2xl mx-auto relative group hidden sm:block">
-                <div className="flex">
+            <div className="w-full md:flex-1 md:max-w-3xl order-3 md:order-2">
+                <div className="flex shadow-sm rounded-lg overflow-hidden border border-gray-300 focus-within:ring-1 focus-within:ring-orange-500 focus-within:border-orange-500 transition-all">
                     <input 
                         type="text" 
-                        placeholder="Cari produk termurah di Shopee & TikTok..."
-                        className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-l-lg py-3 px-5 focus:bg-white focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-inner"
-                        readOnly
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Cari produk murah..." 
+                        className="flex-1 bg-gray-50 md:bg-white border-none py-2.5 px-4 text-sm focus:ring-0 w-full outline-none" 
                     />
-                    <button className="bg-orange-600 text-white px-6 rounded-r-lg hover:bg-orange-700 transition font-bold">
+                    <button className="bg-orange-600 px-4 md:px-6 flex items-center justify-center hover:bg-orange-700 transition">
                         <Icons.Search />
                     </button>
-                </div>
-            </div>
-
-            {/* CART & MENU */}
-            <div className="flex items-center gap-4">
-                <div className="relative cursor-pointer hover:bg-gray-100 p-2 rounded-full transition">
-                    <Icons.Cart />
-                    <span className="absolute top-0 right-0 bg-red-600 text-white text-[9px] font-bold px-1.5 rounded-full border border-white">2</span>
                 </div>
             </div>
         </div>
       </nav>
 
-      <div className='container mx-auto px-4 max-w-6xl mt-8'>
-        
-        {/* HERO BANNER */}
-        {!query && (
-            <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white py-12 md:py-16 px-6 mb-10 text-center shadow-2xl mx-2 md:mx-0 border-t-4 border-orange-600">
-                
-                <div className="relative z-10 space-y-5">
-                    <span className="inline-block px-4 py-1.5 bg-orange-600 text-white text-[10px] font-black tracking-widest uppercase rounded-full shadow-lg animate-bounce">
-                        NEW ARRIVAL
-                    </span>
-                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-tight">
-                        SEMUA ADA. <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-yellow-400">SEMUA MURAH.</span>
-                    </h1>
-                    <p className="text-gray-400 text-base md:text-lg max-w-xl mx-auto leading-relaxed">
-                        Bandingkan harga Shopee & TikTok dalam satu aplikasi. Temukan selisih harga hingga 50% sekarang juga.
-                    </p>
-                </div>
+      {/* CONTENT */}
+      <div className='container mx-auto px-4 max-w-7xl mt-4'>
+        {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin"></div>
+                <p className="text-gray-500 font-medium">Memuat data...</p>
             </div>
-        )}
+        ) : (
+            <>
+                {!searchTerm && <HeroCarousel items={flashSaleItems} formatRupiah={formatRupiah} />}
 
-        {/* --- KONTEN PRODUK (FLASH SALE) --- */}
-        {!query && flashSaleItems.length > 0 && (
-          <div className='mb-12'>
-            <div className='flex items-center justify-between mb-6 px-2'>
-                <div className="flex items-center gap-3">
-                    <div className="bg-red-600 text-white p-1.5 rounded-md">
-                        <Icons.Bolt />
+                {!searchTerm && (
+                    <div className="bg-white p-4 md:p-6 rounded-xl border border-gray-100 shadow-sm overflow-x-auto mb-8">
+                        <div className="flex md:grid md:grid-cols-8 gap-4 min-w-max md:min-w-0 pb-2 md:pb-0 justify-items-center">
+                            {CATEGORIES.map((cat, idx) => (
+                                <div 
+                                    key={idx} 
+                                    onClick={() => setSelectedCategory(cat.tag)}
+                                    className={`flex flex-col items-center gap-2 cursor-pointer group w-20 md:w-auto transition-all ${selectedCategory === cat.tag ? 'scale-110 font-bold' : 'opacity-70 hover:opacity-100'}`}
+                                >
+                                    <div className={`w-12 h-12 rounded-full border flex items-center justify-center text-xl transition-colors shadow-sm ${selectedCategory === cat.tag ? 'bg-orange-100 border-orange-500' : 'bg-gray-50 border-gray-200 group-hover:border-orange-300'}`}>
+                                        {cat.icon}
+                                    </div>
+                                    <span className={`text-[10px] md:text-xs text-center ${selectedCategory === cat.tag ? 'text-orange-600' : 'text-gray-600'}`}>{cat.name}</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                    <div>
-                        <h2 className='text-xl font-black text-gray-900 uppercase tracking-tight'>Flash Sale</h2>
-                        <p className="text-[10px] font-bold text-red-500 animate-pulse">Sisa Waktu: 02:45:12</p>
+                )}
+
+                <div className="flex flex-col md:flex-row gap-6">
+                    <div className="flex-1">
+                        <div className='bg-white p-4 md:p-5 rounded-xl border border-gray-100 shadow-sm'>
+                            <h2 className='text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100 flex justify-between items-center'>
+                                <span>{searchTerm ? `Hasil: "${searchTerm}"` : (selectedCategory !== "All" ? `Kategori: ${selectedCategory}` : "Rekomendasi Untukmu")}</span>
+                                <span className="text-xs font-normal text-gray-500">{filteredProducts.length} Produk</span>
+                            </h2>
+                            
+                            {filteredProducts.length > 0 ? (
+                                <div className='grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4'>
+                                    {filteredProducts.map((item:any) => (
+                                        <ProductCardItem key={item.id} item={item} formatRupiah={formatRupiah} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className='text-center py-20 text-gray-500'>
+                                    <p className="text-lg font-bold">Produk tidak ditemukan</p>
+                                    <p className="text-sm">Coba kata kunci lain atau ubah kategori.</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
-                <span className="text-xs font-bold text-orange-600 hover:text-orange-800 cursor-pointer">Lihat Semua &rarr;</span>
-            </div>
-            
-            <div className='grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6'>
-              {flashSaleItems.map((item) => (
-                <ProductCardItem key={item.id} item={item} formatRupiah={formatRupiah} />
-              ))}
-            </div>
-          </div>
+            </>
         )}
-
-        {/* --- KONTEN PRODUK (REKOMENDASI) --- */}
-        <div className="px-2">
-            {!query && regularItems.length > 0 && (
-                <div className='flex items-center gap-2 mb-6 border-b border-gray-200 pb-3'>
-                    <h2 className='text-lg font-bold text-gray-900'>Rekomendasi Untukmu</h2>
-                </div>
-            )}
-
-            {regularItems.length > 0 ? (
-                <div className='grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6'>
-                    {regularItems.map((item) => (
-                        <ProductCardItem key={item.id} item={item} formatRupiah={formatRupiah} />
-                    ))}
-                </div>
-            ) : (
-                <div className='text-center py-20'>
-                    <h3 className='text-lg font-bold text-gray-800'>Tidak Ditemukan</h3>
-                    <button onClick={handleReset} className='mt-4 px-6 py-2 bg-black text-white rounded-full text-xs font-bold'>
-                        Reset
-                    </button>
-                </div>
-            )}
-        </div>
       </div>
     </div>
   );
 };
 
-// --- KOMPONEN KARTU PRODUK (Updated Layout) ---
+// --- PRODUCT CARD ---
 const ProductCardItem = ({ item, formatRupiah }: any) => {
     const isShopeeCheaper = item.shopeePrice <= item.tiktokPrice;
+    const handleImgError = (e: any) => { e.target.src = 'https://via.placeholder.com/400x400?text=Produk'; };
 
     return (
-        <div className='group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full overflow-hidden relative'>
-            
-            {/* Image Area */}
+        <div className='bg-white rounded-lg border border-gray-200 hover:border-orange-500 transition-all duration-200 flex flex-col h-full overflow-hidden group cursor-pointer shadow-sm hover:shadow-md'>
             <div className='relative aspect-square bg-gray-100 overflow-hidden'>
                 <img 
                     src={item.image} 
                     alt={item.title} 
-                    className='w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500'
-                    onError={(e:any) => e.target.src = 'https://via.placeholder.com/400'}
+                    className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300'
+                    onError={handleImgError}
+                    loading="lazy"
                 />
-                
-                {/* Badge Sold */}
-                <div className='absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent'>
-                    <div className="flex items-center gap-1 text-white text-[9px] font-bold">
-                        <Icons.Star /> {item.rating} • {item.sold/1000}RB+ Terjual
-                    </div>
-                </div>
+                {item.isFlashSale && <div className='absolute top-0 right-0 bg-yellow-400 text-red-600 text-[9px] md:text-[10px] font-black px-2 py-0.5 z-10'>⚡ FLASH SALE</div>}
             </div>
-
-            {/* Content Area */}
-            <div className='p-3 flex flex-col flex-grow'>
-                <h3 className='font-bold text-gray-800 text-xs md:text-sm mb-3 leading-snug line-clamp-2 min-h-[2.4em] group-hover:text-orange-600 transition-colors'>
+            <div className='p-2 md:p-3 flex flex-col flex-grow'>
+                <h3 className='text-xs font-medium text-gray-800 mb-2 line-clamp-2 min-h-[2.5em] group-hover:text-orange-600 leading-snug' title={item.title}>
                     {item.title}
                 </h3>
-
-                {/* Price Blocks */}
-                <div className="mt-auto space-y-1.5 mb-3">
-                    {/* Shopee Row */}
-                    <div className={`flex justify-between items-center px-2 py-1.5 rounded border ${isShopeeCheaper ? 'bg-orange-50 border-orange-200' : 'bg-white border-transparent'}`}>
-                        <span className="text-[10px] font-extrabold text-gray-500 uppercase">Shopee</span>
-                        <span className={`text-xs font-bold ${isShopeeCheaper ? 'text-orange-600' : 'text-gray-400'}`}>
-                            {formatRupiah(item.shopeePrice)}
-                        </span>
+                <div className="mt-auto space-y-1.5 border-t border-gray-50 pt-2 text-[10px] md:text-xs">
+                    <div className={`flex justify-between items-center ${isShopeeCheaper ? 'text-orange-600 font-bold bg-orange-50 px-1 rounded' : 'text-gray-500'}`}>
+                        <span className="flex items-center gap-1">Shopee</span>
+                        <span>{formatRupiah(item.shopeePrice)}</span>
                     </div>
-
-                    {/* TikTok Row */}
-                    <div className={`flex justify-between items-center px-2 py-1.5 rounded border ${!isShopeeCheaper ? 'bg-gray-50 border-gray-200' : 'bg-white border-transparent'}`}>
-                         <span className="text-[10px] font-extrabold text-gray-500 uppercase">TikTok</span>
-                        <span className={`text-xs font-bold ${!isShopeeCheaper ? 'text-black' : 'text-gray-400'}`}>
-                            {formatRupiah(item.tiktokPrice)}
-                        </span>
+                    <div className={`flex justify-between items-center ${!isShopeeCheaper ? 'text-black font-bold bg-gray-100 px-1 rounded' : 'text-gray-500'}`}>
+                        <span className="flex items-center gap-1">TikTok</span>
+                        <span>{formatRupiah(item.tiktokPrice)}</span>
                     </div>
                 </div>
-
-                {/* Buttons */}
-                <div className='grid grid-cols-2 gap-2'>
-                    <a href={item.shopeeLink} target="_blank" rel="noopener noreferrer" className='bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg text-[10px] md:text-xs font-bold text-center transition shadow-md'>
-                        Beli Shopee
+                <div className="flex gap-1 mt-3">
+                    <a href={item.shopeeLink} target="_blank" rel="noopener noreferrer" className="flex-1 bg-orange-50 text-orange-700 text-[9px] md:text-[10px] font-bold py-2 text-center rounded-lg hover:bg-orange-600 hover:text-white transition border border-orange-200">
+                        Beli di Shopee
                     </a>
-                    <a href={item.tiktokLink} target="_blank" rel="noopener noreferrer" className='bg-gray-900 hover:bg-black text-white py-2 rounded-lg text-[10px] md:text-xs font-bold text-center transition shadow-md'>
-                        Beli TikTok
+                    <a href={item.tiktokLink} target="_blank" rel="noopener noreferrer" className="flex-1 bg-gray-50 text-gray-700 text-[9px] md:text-[10px] font-bold py-2 text-center rounded-lg hover:bg-black hover:text-white transition border border-gray-200">
+                        Beli di TikTok
                     </a>
                 </div>
             </div>
