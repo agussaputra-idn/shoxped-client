@@ -4,8 +4,14 @@ import { path } from 'src/constants/path';
 // === IMPORT HALAMAN ===
 import MainLayout from './layouts/MainLayout/MainLayout';
 import Home from './pages/Home/Home';
-import ProductList from './pages/ProductList/ProductList';
-// import Compare from './pages/Compare/Compare'; // ❌ SAYA MATIKAN SEMENTARA BIAR TIDAK ERROR
+
+// 1. IMPORT FILE SEARCH YANG BARU
+// Pastikan filenya sudah dibuat di src/pages/Search.tsx
+import Search from './pages/Search'; 
+
+// Hapus atau abaikan ProductList yang lama karena itu sumber masalahnya
+// import ProductList from './pages/ProductList/ProductList'; 
+
 import AboutUs from './pages/AboutUs/AboutUs';
 import PrivacyPolicy from './pages/PrivacyPolicy/PrivacyPolicy';
 import Terms from './pages/Terms/Terms';
@@ -23,13 +29,9 @@ export default function useRouteElements() {
         },
         {
           path: path.search,
-          element: <ProductList />
+          // 2. GUNAKAN SEARCH DISINI (Bukan ProductList)
+          element: <Search />
         },
-        // 👇 BLOK ERROR SAYA SEMBUNYIKAN DULU
-        // {
-        //   path: path.compare,
-        //   element: <Compare />
-        // },
         {
           path: path.aboutUs,
           element: <AboutUs />
