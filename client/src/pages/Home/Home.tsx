@@ -3,7 +3,13 @@ import Carousel from 'src/components/Carousel/Carousel';
 
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQAsYy9QTAN06pTw9fUSu3eIqf9dBUSIS7OQ62aOvxgHLe_9oNzF1CL7BB9T35dd8v8UifG5Nz3rRnX/pub?output=csv";
 
-// --- PARSER PASTI (SESUAI STRUKTUR EXCEL ANDA) ---
+// --- HELPER: CEK KATA UTUH (REGEX) ---
+const isMatch = (text: string, keywords: string[]) => {
+    const pattern = new RegExp(`\\b(${keywords.join('|')})\\b`, 'i');
+    return pattern.test(text);
+};
+
+// --- PARSER ---
 const parseCSV = (text: string) => {
     const rows = text.split('\n').filter(row => row && row.trim().length > 0);
     const dataRows = rows.slice(1);
@@ -14,23 +20,16 @@ const parseCSV = (text: string) => {
 
         if (cleanParts.length < 3) return null;
 
-        // MAPPING KOLOM:
         const title = cleanParts[0] || "Produk Tanpa Nama";
-        // Kolom B [1] adalah Harga
         const priceRaw = cleanParts[1] ? cleanParts[1].replace(/[^0-9]/g, '') : "0";
         const price = parseInt(priceRaw) || 0;
 
-        // Kolom C [2] adalah Gambar
         let image = cleanParts[2];
-        if (!image || !image.includes('http')) {
-            image = "https://via.placeholder.com/300?text=No+Image";
-        }
+        if (!image || !image.includes('http')) image = "https://via.placeholder.com/300?text=No+Image";
 
-        // Kolom G [6] adalah Link Affiliate
         let shopeeLink = "#";
-        if (cleanParts[6] && cleanParts[6].includes('http')) {
-            shopeeLink = cleanParts[6];
-        } else {
+        if (cleanParts[6] && cleanParts[6].includes('http')) shopeeLink = cleanParts[6];
+        else {
             const findLink = cleanParts.find(p => p.includes('shopee.co.id') || p.includes('shp.ee'));
             if (findLink) shopeeLink = findLink;
         }
@@ -42,12 +41,12 @@ const parseCSV = (text: string) => {
         // Auto Tagging
         const tLower = title.toLowerCase();
         let tag = "Lainnya";
-        if (tLower.includes('sepatu') || tLower.includes('sneakers')) tag = "Sepatu";
-        else if (tLower.includes('tas') || tLower.includes('bag')) tag = "Tas";
-        else if (tLower.includes('baju') || tLower.includes('kemeja') || tLower.includes('dress')) tag = "Fashion";
-        else if (tLower.includes('serum') || tLower.includes('wajah')) tag = "Kecantikan";
-        else if (tLower.includes('hp') || tLower.includes('case')) tag = "Elektronik";
-        else if (tLower.includes('rumah')) tag = "Rumah";
+        if (isMatch(tLower, ['sepatu', 'sneakers', 'sandal', 'boots', 'heels', 'wedges'])) tag = "Sepatu";
+        else if (isMatch(tLower, ['tas', 'bag', 'tote', 'ransel', 'backpack', 'dompet', 'clutch', 'slingbag'])) tag = "Tas";
+        else if (isMatch(tLower, ['baju', 'kemeja', 'dress', 'kaos', 'atasan', 'celana', 'rok', 'gamis', 'tunik', 'blouse', 'hoodie', 'jaket'])) tag = "Fashion";
+        else if (isMatch(tLower, ['serum', 'wajah', 'cream', 'lotion', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 'makeup'])) tag = "Kecantikan";
+        else if (isMatch(tLower, ['hp', 'handphone', 'case', 'kabel', 'bluetooth', 'headset', 'speaker', 'charger', 'iphone', 'android'])) tag = "Elektronik";
+        else if (isMatch(tLower, ['rumah', 'rak', 'lemari', 'dapur', 'alat', 'sapu', 'pel', 'wajan', 'panci'])) tag = "Rumah";
 
         const cleanTitle = title.replace(/[^a-zA-Z0-9 ]/g, " ").trim();
         const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
@@ -69,6 +68,10 @@ export default function Home() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("Semua");
+  
+  // --- PAGINATION HOME ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 30; 
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,9 +86,27 @@ export default function Home() {
     fetchData();
   }, []);
 
+  // Reset ke halaman 1 saat ganti kategori
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    setCurrentPage(1);
+  };
+
   const formatRupiah = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
   const filteredProducts = selectedCategory === "Semua" ? products : products.filter(p => p.category === selectedCategory);
+
+  // LOGIKA SLICING HOME
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+    // Scroll ke awal grid produk (bukan paling atas)
+    document.getElementById('product-grid')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const categories = [
     { name: "Semua", icon: "🛍️" },
@@ -112,7 +133,7 @@ export default function Home() {
         <div className='mt-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100'>
            <div className='flex items-start justify-between md:justify-around overflow-x-auto pb-2 scrollbar-hide gap-4'>
               {categories.map((cat, index) => (
-                <div key={index} onClick={() => setSelectedCategory(cat.name)} className={`flex flex-col items-center min-w-[70px] cursor-pointer group transition-all ${selectedCategory === cat.name ? 'scale-110 font-bold' : 'opacity-80 hover:opacity-100'}`}>
+                <div key={index} onClick={() => handleCategoryChange(cat.name)} className={`flex flex-col items-center min-w-[70px] cursor-pointer group transition-all ${selectedCategory === cat.name ? 'scale-110 font-bold' : 'opacity-80 hover:opacity-100'}`}>
                   <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center text-2xl md:text-3xl mb-3 border transition-all shadow-sm ${selectedCategory === cat.name ? 'bg-orange-100 border-orange-500' : 'bg-white border-gray-200 group-hover:border-orange-200'}`}>{cat.icon}</div>
                   <span className={`text-xs md:text-sm font-medium transition-colors ${selectedCategory === cat.name ? 'text-orange-600' : 'text-gray-600'}`}>{cat.name}</span>
                 </div>
@@ -120,7 +141,8 @@ export default function Home() {
            </div>
         </div>
 
-        <div className='mt-8'>
+        {/* Anchor ID untuk scroll */}
+        <div id="product-grid" className='mt-8'>
           <div className='flex items-center justify-between mb-4 px-1'>
             <h2 className='text-xl md:text-2xl font-bold text-gray-800'>
                 {selectedCategory === "Semua" ? "Rekomendasi Untukmu" : `Kategori: ${selectedCategory}`}
@@ -128,11 +150,11 @@ export default function Home() {
             </h2>
           </div>
 
-          <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6'>
+          <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 min-h-[500px]'>
             {loading ? (
               [...Array(10)].map((_, i) => <div key={i} className='bg-white rounded-xl shadow-sm h-80 animate-pulse border border-gray-100' />)
-            ) : filteredProducts.length > 0 ? (
-              filteredProducts.map((item) => (
+            ) : currentItems.length > 0 ? (
+              currentItems.map((item) => (
                 <div key={item.id} className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col'>
                     <div className='w-full aspect-square relative overflow-hidden bg-gray-100'>
                         <img src={item.image} alt={item.title} className='w-full h-full object-cover transition-transform duration-500 hover:scale-105' onError={(e:any) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/300?text=Gambar+Rusak'; }} loading="lazy" />
@@ -169,6 +191,23 @@ export default function Home() {
                 <div className="col-span-full text-center py-10 text-gray-500"><p>Tidak ada produk di kategori ini.</p></div>
             )}
           </div>
+
+          {/* --- NAVIGASI HALAMAN (PAGINATION) --- */}
+          {!loading && totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-12 mb-8">
+                <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-2 border rounded-md hover:bg-gray-100 disabled:opacity-50"> &lt; </button>
+                {[...Array(totalPages)].map((_, i) => {
+                    const page = i + 1;
+                    if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                        return <button key={page} onClick={() => paginate(page)} className={`w-9 h-9 rounded-md font-bold ${currentPage === page ? 'bg-[#ee4d2d] text-white' : 'bg-white border hover:bg-gray-50'}`}>{page}</button>;
+                    } else if (page === currentPage - 2 || page === currentPage + 2) {
+                        return <span key={page}>...</span>;
+                    }
+                    return null;
+                })}
+                <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-2 border rounded-md hover:bg-gray-100 disabled:opacity-50"> &gt; </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
