@@ -1,19 +1,22 @@
-import { Outlet } from 'react-router-dom'; // <-- PASTIKAN INI DI-IMPORT
-import Footer from 'src/components/Footer/Footer';
-import Header from 'src/components/Header/Header';
+import React from 'react';
+// PERBAIKAN DI SINI: Menambahkan /Header
+import Header from '../../components/Header/Header';       
+import Footer from '../../components/Footer/Footer'; 
+import { Outlet } from 'react-router-dom';
 
-// Ini adalah 'pembungkus' (Header + Konten + Footer)
-export default function MainLayout() {
+export default function MainLayout({ children }: { children?: React.ReactNode }) {
   return (
-    <div>
-      <Header />
+    <div className='flex flex-col min-h-screen'>
+      
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-50 w-full bg-white shadow-sm">
+        <Header />
+      </div>
 
-      {/* Outlet adalah 'jendela' 
-        tempat React Router akan meletakkan 
-        ProductList, AboutUs, atau NotFound 
-      */}
-      <Outlet /> 
-
+      <div className='flex-1'>
+        {children || <Outlet />}
+      </div>
+      
       <Footer />
     </div>
   );

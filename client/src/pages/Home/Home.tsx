@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Carousel from 'src/components/Carousel/Carousel';
 
-const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQAsYy9QTAN06pTw9fUSu3eIqf9dBUSIS7OQ62aOvxgHLe_9oNzF1CL7BB9T35dd8v8UifG5Nz3rRnX/pub?output=csv";
+// --- URL SHEET ---
+const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRHWpsx3G4RMRvKFM-8_TbHXoScIJA_JfyU3yoaUhaKWyIvS0fWixGwsgn8fbotRQ/pub?gid=1694034890&single=true&output=csv";
 
 const isMatch = (text: string, keywords: string[]) => {
     const pattern = new RegExp(`\\b(${keywords.join('|')})\\b`, 'i');
@@ -19,31 +20,29 @@ const parseCSV = (text: string) => {
         if (cleanParts.length < 3) return null;
 
         const title = cleanParts[0] || "Produk Tanpa Nama";
-        const priceRaw = cleanParts[1] ? cleanParts[1].replace(/[^0-9]/g, '') : "0";
-        const price = parseInt(priceRaw) || 0;
-
+        const price = parseInt(cleanParts[1]) || 0;
         let image = cleanParts[2];
         if (!image || !image.includes('http')) image = "https://via.placeholder.com/300?text=No+Image";
 
-        let shopeeLink = "#";
-        if (cleanParts[6] && cleanParts[6].includes('http')) shopeeLink = cleanParts[6];
-        else {
-            const findLink = cleanParts.find(p => p.includes('shopee.co.id') || p.includes('shp.ee'));
-            if (findLink) shopeeLink = findLink;
+        // Kategori Otomatis
+        let category = cleanParts[3];
+        if (!category || category === "" || category === "General") {
+            const tLower = title.toLowerCase();
+            if (isMatch(tLower, ['sepatu', 'sneakers', 'sandal', 'boots'])) category = "Sepatu";
+            else if (isMatch(tLower, ['tas', 'bag', 'tote', 'ransel', 'dompet'])) category = "Tas";
+            else if (isMatch(tLower, ['baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket'])) category = "Fashion";
+            else if (isMatch(tLower, ['serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik'])) category = "Kecantikan";
+            else if (isMatch(tLower, ['hp', 'handphone', 'case', 'kabel', 'headset', 'charger'])) category = "Elektronik";
+            else category = "Lainnya";
         }
+
+        const sales = cleanParts[4] || "0 Terjual";
+        const shopName = cleanParts[5] || "Star Seller";
+        const shopeeLink = cleanParts[6] || "#";
 
         const isShopeeCheaper = Math.random() < 0.6;
         const variance = Math.random() * 0.3; 
         let tiktokPrice = isShopeeCheaper ? Math.floor(price * (1 + variance)) : Math.floor(price * (1 - variance));
-        
-        const tLower = title.toLowerCase();
-        let tag = "Lainnya";
-        if (isMatch(tLower, ['sepatu', 'sneakers', 'sandal', 'boots', 'heels', 'wedges'])) tag = "Sepatu";
-        else if (isMatch(tLower, ['tas', 'bag', 'tote', 'ransel', 'backpack', 'dompet', 'clutch', 'slingbag'])) tag = "Tas";
-        else if (isMatch(tLower, ['baju', 'kemeja', 'dress', 'kaos', 'atasan', 'celana', 'rok', 'gamis', 'tunik', 'blouse', 'hoodie', 'jaket'])) tag = "Fashion";
-        else if (isMatch(tLower, ['serum', 'wajah', 'cream', 'lotion', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 'makeup'])) tag = "Kecantikan";
-        else if (isMatch(tLower, ['hp', 'handphone', 'case', 'kabel', 'bluetooth', 'headset', 'speaker', 'charger', 'iphone', 'android'])) tag = "Elektronik";
-        else if (isMatch(tLower, ['rumah', 'rak', 'lemari', 'dapur', 'alat', 'sapu', 'pel', 'wajan', 'panci'])) tag = "Rumah";
 
         const cleanTitle = title.replace(/[^a-zA-Z0-9 ]/g, " ").trim();
         const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
@@ -54,11 +53,12 @@ const parseCSV = (text: string) => {
             shopeePrice: price,
             image,
             shopeeLink,
-            // Tambahan: Link Pencarian Manual
             shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodeURIComponent(keywords)}`,
             tiktokPrice,
             tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(keywords)}`,
-            category: tag,
+            category: category,
+            sales: sales,
+            shopName: shopName
         };
     }).filter(item => item !== null && item.shopeePrice > 0);
 };
@@ -92,7 +92,7 @@ export default function Home() {
     { name: "Tas", icon: "👜" },
     { name: "Elektronik", icon: "📱" },
     { name: "Kecantikan", icon: "💄" },
-    { name: "Rumah", icon: "🏠" },
+    { name: "Lainnya", icon: "🏠" },
   ];
 
   return (
@@ -137,15 +137,23 @@ export default function Home() {
                     </div> 
                     
                     <div className='p-4 flex flex-col flex-grow justify-between'>
-                        <h3 className='text-sm text-gray-800 font-semibold line-clamp-2 leading-snug mb-3' title={item.title}>{item.title}</h3>
+                        <h3 className='text-sm text-gray-800 font-semibold line-clamp-2 leading-snug mb-1' title={item.title}>{item.title}</h3>
+                        
+                        <div className="flex items-center gap-2 mb-3 text-[10px] text-gray-500">
+                             <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium truncate max-w-[100px]">{item.shopName}</span>
+                             <span>•</span>
+                             <span>{item.sales}</span>
+                        </div>
 
                         <div className="space-y-2 mb-4">
                             <div className="flex justify-between items-center text-xs md:text-sm">
                                 <span className="font-bold text-[#ee4d2d]">Shopee</span>
+                                {/* UPDATE: Hapus "Est." */}
                                 <span className="font-bold text-[#ee4d2d]">{formatRupiah(item.shopeePrice)}</span>
                             </div>
                             <div className="flex justify-between items-center text-xs md:text-sm">
                                 <span className="font-medium text-gray-600">TikTok</span>
+                                {/* UPDATE: Hapus "Est." */}
                                 <span className="font-medium text-gray-600">{formatRupiah(item.tiktokPrice)}</span>
                             </div>
                         </div>
@@ -162,11 +170,16 @@ export default function Home() {
                                 </a>
                             </div>
 
-                            {/* --- FITUR ANTI KECEWA: LINK CADANGAN --- */}
-                            <a href={item.shopeeSearchFallback} target="_blank" rel="noreferrer" 
-                               className="text-[10px] text-gray-400 text-center underline hover:text-[#ee4d2d] transition-colors cursor-pointer pt-1">
-                                Link Error? Cari Serupa di Shopee
-                            </a>
+                            <div className="text-center">
+                                {/* UPDATE: Kalimat Link Error lebih simpel */}
+                                <a href={item.shopeeSearchFallback} target="_blank" rel="noreferrer" 
+                                   className="text-[10px] text-gray-400 underline hover:text-[#ee4d2d] transition-colors cursor-pointer block mb-1">
+                                    Cari Serupa di Shopee
+                                </a>
+                                <p className="text-[9px] text-gray-300 italic">
+                                    *Harga dapat berubah sewaktu-waktu
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

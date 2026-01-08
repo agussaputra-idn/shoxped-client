@@ -1,108 +1,63 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { path } from 'src/constants/path';
 
 export default function Header() {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [keyword, setKeyword] = useState("");
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
 
-  const handleSearch = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (searchTerm.trim()) {
-      navigate(`/search?name=${encodeURIComponent(searchTerm)}`);
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (keyword.trim()) {
+      navigate(`/search?name=${encodeURIComponent(keyword)}`);
     }
   };
 
-  const changeLanguage = (lng: 'id' | 'en') => {
-    i18n.changeLanguage(lng);
-  };
-
-  const currentLanguage = i18n.language || 'id';
-
-  // WARNA CONFIG
-  const orangeColor = '#ea580c'; 
-  const blackColor = '#1f2937';
-
   return (
-    <div className='w-full bg-white text-gray-700 shadow-sm border-b border-gray-100 sticky top-0 z-50'>
-      {/* Container: Padding kiri-kanan dikurangi di mobile (px-2) agar lebih luas */}
-      <div className='w-full px-2 md:px-8 h-16 md:h-20 flex items-center justify-between gap-2 md:gap-4 max-w-[1920px] mx-auto'>
+    <header className="w-full bg-white shadow-sm py-4 sticky top-0 z-50">
+      <div className="container mx-auto max-w-[1920px] px-4 md:px-8 flex items-center justify-between gap-4">
         
-        {/* === LOGO SECTION === */}
-        <Link to={path.home} className='flex items-center flex-shrink-0 group'>
-          
-          {/* LOGO SVG (Ukuran disesuaikan untuk mobile) */}
-          <svg 
-            className="h-8 w-8 md:h-11 md:w-11 mr-1 md:mr-2" 
-            viewBox="0 0 24 24" 
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path 
-              d='M19 7h-3V6a4 4 0 00-8 0v1H5a2 2 0 00-2 2v11a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2zm-9-1a2 2 0 012-2 2 2 0 012 2v1h-4V6zm0 4a1.5 1.5 0 01-3 0 1.5 1.5 0 013 0zm6 0a1.5 1.5 0 01-3 0 1.5 1.5 0 013 0z' 
-              fill={orangeColor}
-            />
-            <path 
-              d='M9 13l2 2 4-4' 
-              fill='none' 
-              stroke='#000000' 
-              strokeWidth='2' 
-              strokeLinecap='round' 
-              strokeLinejoin='round'
-            />
-          </svg>
-
-          {/* TULISAN SHOXPED (HANYA MUNCUL DI LAPTOP/MD KE ATAS) */}
-          {/* Di HP (Mobile) tulisan ini akan hilang supaya Search Bar muat */}
-          <div className='hidden md:flex text-3xl md:text-4xl font-black tracking-tighter group-hover:opacity-90 transition'>
-            <span style={{ color: blackColor }}>Shox</span>
-            <span style={{ color: orangeColor }}>ped</span>
-          </div>
+        {/* 1. LOGO AREA (SHOX Hitam + PED Orange) */}
+        <Link to="/" className="flex items-center gap-2 flex-shrink-0 group cursor-pointer">
+           {/* ICON TAS BELANJA (Warna Orange) */}
+           <div className="text-[#ee4d2d]">
+             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 md:w-9 md:h-9">
+               <path fillRule="evenodd" d="M7.5 6v.75H5.513c-.96 0-1.764.724-1.865 1.679l-1.263 12A1.875 1.875 0 004.25 22.5h15.5a1.875 1.875 0 001.865-2.071l-1.263-12a1.875 1.875 0 00-1.865-1.679H16.5V6a4.5 4.5 0 10-9 0zM12 3a3 3 0 00-3 3v.75h6V6a3 3 0 00-3-3zm-3 8.25a3 3 0 106 0v-.75a.75.75 0 011.5 0v.75a4.5 4.5 0 11-9 0v-.75a.75.75 0 011.5 0v.75z" clipRule="evenodd" />
+             </svg>
+           </div>
+           
+           {/* TEKS LOGO: SHOX (Hitam) + PED (Orange) */}
+           <div className="text-2xl md:text-3xl font-bold tracking-tight hidden md:block">
+             <span className="text-gray-900">Shox</span>
+             <span className="text-[#ee4d2d]">ped</span>
+           </div>
         </Link>
 
-        {/* === SEARCH BAR === */}
-        {/* Margin kiri dikurangi di mobile (ml-1) */}
-        <form className='flex-grow max-w-5xl ml-1 md:mx-4' onSubmit={handleSearch}>
-          <div className='flex w-full rounded-md border border-gray-300 bg-gray-50 overflow-hidden focus-within:ring-1 focus-within:ring-orange-500 focus-within:border-orange-500'>
-            <input
-              type='text'
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className='flex-grow border-none bg-transparent px-3 py-2 md:px-4 md:py-2.5 text-black outline-none text-xs md:text-base placeholder-gray-400'
-              placeholder={t('header.searchPlaceholder') || "Cari produk..."}
+        {/* 2. SEARCH BAR */}
+        <form onSubmit={handleSearch} className="flex-1 max-w-3xl relative mx-4">
+            <input 
+              type="text" 
+              placeholder="Cari produk, merek, dan toko..." 
+              className="w-full border border-gray-300 rounded-md py-2.5 px-4 pr-14 text-sm focus:outline-none focus:border-[#ee4d2d] focus:ring-1 focus:ring-[#ee4d2d] transition-all bg-gray-50 focus:bg-white"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
             />
-            <button
-              type='submit'
-              className='flex-shrink-0 px-3 md:px-6 flex items-center justify-center transition-colors text-white'
-              style={{ backgroundColor: orangeColor }}
-            >
-              <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth={2} stroke='currentColor' className='h-4 w-4 md:h-5 md:w-5'>
-                <path strokeLinecap='round' strokeLinejoin='round' d='M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z' />
-              </svg>
+            <button type="submit" className="absolute right-1 top-1 bottom-1 bg-[#ee4d2d] text-white px-5 rounded-md hover:bg-orange-600 transition flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
             </button>
-          </div>
         </form>
 
-        {/* === BAHASA === */}
-        {/* Di HP disederhanakan tampilannya (hanya ID/EN kecil jika perlu, atau hidden) */}
-        <div className='hidden md:flex items-center text-sm font-medium gap-2'>
-          <button 
-            onClick={() => changeLanguage('id')} 
-            className={`px-2 py-1 rounded transition-colors ${currentLanguage === 'id' ? 'font-bold bg-orange-50 text-orange-600' : 'text-gray-500 hover:text-orange-600'}`}
-          >
-            ID
-          </button>
-          <span className="text-gray-300">|</span>
-          <button 
-            onClick={() => changeLanguage('en')} 
-            className={`px-2 py-1 rounded transition-colors ${currentLanguage === 'en' ? 'font-bold bg-orange-50 text-orange-600' : 'text-gray-500 hover:text-orange-600'}`}
-          >
-            EN
-          </button>
+        {/* 3. MENU KANAN */}
+        <div className="flex items-center gap-4 text-gray-600 flex-shrink-0">
+            <div className="flex gap-1 text-sm font-bold">
+                <span className="text-[#ee4d2d] cursor-pointer">ID</span>
+                <span className="text-gray-300">|</span>
+                <span className="hover:text-[#ee4d2d] cursor-pointer">EN</span>
+            </div>
         </div>
 
       </div>
-    </div>
+    </header>
   );
 }

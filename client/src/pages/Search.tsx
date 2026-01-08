@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQAsYy9QTAN06pTw9fUSu3eIqf9dBUSIS7OQ62aOvxgHLe_9oNzF1CL7BB9T35dd8v8UifG5Nz3rRnX/pub?output=csv";
+const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRHWpsx3G4RMRvKFM-8_TbHXoScIJA_JfyU3yoaUhaKWyIvS0fWixGwsgn8fbotRQ/pub?gid=1694034890&single=true&output=csv";
 
-// --- PARSER DATA ---
+// --- PARSER ---
 const parseCSV = (text: string) => {
     const rows = text.split('\n').filter(row => row && row.trim().length > 0);
     const dataRows = rows.slice(1);
@@ -15,18 +15,14 @@ const parseCSV = (text: string) => {
         if (cleanParts.length < 3) return null;
 
         const title = cleanParts[0] || "Produk Tanpa Nama";
-        const priceRaw = cleanParts[1] ? cleanParts[1].replace(/[^0-9]/g, '') : "0";
-        const price = parseInt(priceRaw) || 0;
-
+        const price = parseInt(cleanParts[1]) || 0; 
+        
         let image = cleanParts[2];
         if (!image || !image.includes('http')) image = "https://via.placeholder.com/300?text=No+Image";
 
-        let shopeeLink = "#";
-        if (cleanParts[6] && cleanParts[6].includes('http')) shopeeLink = cleanParts[6];
-        else {
-            const findLink = cleanParts.find(p => p.includes('shopee.co.id') || p.includes('shp.ee'));
-            if (findLink) shopeeLink = findLink;
-        }
+        const sales = cleanParts[4] || "0 Terjual";
+        const shopName = cleanParts[5] || "Star Seller";
+        const shopeeLink = cleanParts[6] || "#";
 
         const isShopeeCheaper = Math.random() < 0.6;
         const variance = Math.random() * 0.3; 
@@ -41,10 +37,11 @@ const parseCSV = (text: string) => {
             shopeePrice: price,
             image,
             shopeeLink, 
-            // Tambahan: Link Pencarian Manual Shopee (Backup jika link utama mati)
             shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodeURIComponent(keywords)}`,
             tiktokPrice,
             tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(keywords)}`, 
+            sales,
+            shopName
         };
     }).filter(item => item !== null && item.shopeePrice > 0); 
 };
@@ -66,8 +63,8 @@ export default function Search() {
   
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortOption, setSortOption] = useState("terkait"); 
 
-  // --- CONFIG PAGINATION ---
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 30; 
 
@@ -89,10 +86,21 @@ export default function Search() {
 
   const formatRupiah = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
+  const getSortedProducts = () => {
+      let sorted = [...products]; 
+      if (sortOption === "termurah") {
+          sorted.sort((a, b) => a.shopeePrice - b.shopeePrice);
+      } else if (sortOption === "termahal") {
+          sorted.sort((a, b) => b.shopeePrice - a.shopeePrice);
+      }
+      return sorted;
+  };
+
+  const sortedProducts = getSortedProducts();
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = products.slice(indexOfFirstItem, indexOfLastItem); 
-  const totalPages = Math.ceil(products.length / itemsPerPage);
+  const currentItems = sortedProducts.slice(indexOfFirstItem, indexOfLastItem); 
+  const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
 
   const paginate = (pageNumber: number) => {
     setCurrentPage(pageNumber);
@@ -103,9 +111,24 @@ export default function Search() {
     <div className='w-full min-h-screen bg-gray-50 pb-12'>
       <div className='w-full max-w-[1920px] mx-auto px-4 md:px-8 pt-8'>
         
-        <div className='flex items-center justify-between mb-6'>
-            <h1 className='text-xl md:text-2xl font-bold text-gray-800'>Hasil: <span className="text-[#ee4d2d]">"{queryName}"</span></h1>
-            <span className="text-gray-500 text-sm">Menampilkan {products.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, products.length)} dari {products.length} Produk</span>
+        <div className='flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4'>
+            <div>
+                <h1 className='text-xl md:text-2xl font-bold text-gray-800'>Hasil: <span className="text-[#ee4d2d]">"{queryName}"</span></h1>
+                <span className="text-gray-500 text-sm">Ditemukan {products.length} Produk</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600 font-medium">Urutkan:</span>
+                <select 
+                    value={sortOption}
+                    onChange={(e) => setSortOption(e.target.value)}
+                    className="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-[#ee4d2d] focus:border-[#ee4d2d] block p-2.5 cursor-pointer hover:border-orange-400 transition-colors shadow-sm"
+                >
+                    <option value="terkait">Terkait</option>
+                    <option value="termurah">Harga Termurah</option>
+                    <option value="termahal">Harga Termahal</option>
+                </select>
+            </div>
         </div>
 
         <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 min-h-[500px]'>
@@ -119,15 +142,23 @@ export default function Search() {
                         </div>
                         
                         <div className='p-4 flex flex-col flex-grow justify-between'>
-                            <h3 className='text-sm text-gray-800 font-semibold line-clamp-2 leading-snug mb-3' title={item.title}>{item.title}</h3>
+                            <h3 className='text-sm text-gray-800 font-semibold line-clamp-2 leading-snug mb-1' title={item.title}>{item.title}</h3>
+
+                            <div className="flex items-center gap-2 mb-3 text-[10px] text-gray-500">
+                                <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium truncate max-w-[100px]">{item.shopName}</span>
+                                <span>•</span>
+                                <span>{item.sales}</span>
+                            </div>
 
                             <div className="space-y-2 mb-4">
                                 <div className="flex justify-between items-center text-xs md:text-sm">
                                     <span className="font-bold text-[#ee4d2d]">Shopee</span>
+                                    {/* UPDATE: Hapus "Est." */}
                                     <span className="font-bold text-[#ee4d2d]">{formatRupiah(item.shopeePrice)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-xs md:text-sm">
                                     <span className="font-medium text-gray-600">TikTok</span>
+                                    {/* UPDATE: Hapus "Est." */}
                                     <span className="font-medium text-gray-600">{formatRupiah(item.tiktokPrice)}</span>
                                 </div>
                             </div>
@@ -143,12 +174,14 @@ export default function Search() {
                                         Beli di TikTok
                                     </a>
                                 </div>
-                                
-                                {/* --- FITUR ANTI KECEWA: LINK CADANGAN --- */}
-                                <a href={item.shopeeSearchFallback} target="_blank" rel="noreferrer" 
-                                   className="text-[10px] text-gray-400 text-center underline hover:text-[#ee4d2d] transition-colors cursor-pointer pt-1">
-                                    Link Error? Cari Serupa di Shopee
-                                </a>
+                                <div className="text-center">
+                                    {/* UPDATE: Kalimat Link Error lebih simpel */}
+                                    <a href={item.shopeeSearchFallback} target="_blank" rel="noreferrer" 
+                                       className="text-[10px] text-gray-400 underline hover:text-[#ee4d2d] transition-colors cursor-pointer block mb-1">
+                                        Cari Serupa di Shopee
+                                    </a>
+                                    <p className="text-[9px] text-gray-300 italic">*Harga dapat berubah sewaktu-waktu</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -158,7 +191,6 @@ export default function Search() {
             )}
         </div>
 
-        {/* --- PAGINATION --- */}
         {!loading && totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 mt-12 mb-8">
                 <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-2 border rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-50 bg-white">&lt;</button>
@@ -174,7 +206,6 @@ export default function Search() {
                 <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-2 border rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-50 bg-white">&gt;</button>
             </div>
         )}
-
       </div>
     </div>
   );
