@@ -3,7 +3,15 @@ import { useSearchParams } from 'react-router-dom';
 
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRHWpsx3G4RMRvKFM-8_TbHXoScIJA_JfyU3yoaUhaKWyIvS0fWixGwsgn8fbotRQ/pub?gid=1694034890&single=true&output=csv";
 
-// --- PARSER ---
+// --- GAMBAR CADANGAN ---
+const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3EGambar Tidak Tersedia%3C/text%3E%3C/svg%3E";
+
+const isMatch = (text: string, keywords: string[]) => {
+    const pattern = new RegExp(`\\b(${keywords.join('|')})`, 'i');
+    return pattern.test(text);
+};
+
+// --- PARSER DATA ---
 const parseCSV = (text: string) => {
     const rows = text.split('\n').filter(row => row && row.trim().length > 0);
     const dataRows = rows.slice(1);
@@ -18,7 +26,27 @@ const parseCSV = (text: string) => {
         const price = parseInt(cleanParts[1]) || 0; 
         
         let image = cleanParts[2];
-        if (!image || !image.includes('http')) image = "https://via.placeholder.com/300?text=No+Image";
+        if (!image || !image.startsWith('http')) image = FALLBACK_IMAGE;
+
+        // LOGIKA KATEGORI DIPERBARUI
+        let category = cleanParts[3];
+        if (!category || category === "" || category === "General") {
+            const tLower = title.toLowerCase();
+
+            // KAMUS LENGKAP
+            const kwSepatu = ['sepatu', 'sneakers', 'sandal', 'boots', 'shoes', 'heels', 'wedges', 'flat', 'pantofel', 'kets', 'slip on', 'loafers', 'trainers', 'running', 'sport', 'futsal', 'bola', 'crocs', 'baim', 'slop'];
+            const kwTas = ['tas', 'bag', 'tote', 'ransel', 'dompet', 'backpack', 'clutch', 'waistbag', 'sling', 'shoulder', 'wallet', 'koper', 'duffel', 'handbag', 'selempang', 'pouch', 'travel bag'];
+            const kwKecantikan = ['serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 'cream', 'lotion', 'masker', 'essence', 'moisturizer', 'foundation', 'powder', 'bedak', 'lip', 'eye', 'hair', 'shampoo', 'sabun', 'body', 'parfum', 'perfume', 'fragrance', 'beauty', 'acne', 'jerawat', 'cleanser', 'micellar'];
+            const kwElektronik = ['hp', 'handphone', 'case', 'kabel', 'headset', 'charger', 'iphone', 'android', 'samsung', 'xiaomi', 'oppo', 'vivo', 'realme', 'infinix', 'laptop', 'mouse', 'keyboard', 'earphone', 'tws', 'speaker', 'bluetooth', 'powerbank', 'usb', 'monitor', 'tv', 'kamera', 'camera', 'tripod', 'watch', 'jam tangan'];
+            const kwFashion = ['baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket', 'hoodie', 'sweater', 't-shirt', 'shirt', 'blouse', 'tunik', 'gamis', 'hijab', 'jilbab', 'batik', 'piyama', 'underwear', 'bra', 'cd', 'sarinah', 'pakaian', 'jeans', 'chino', 'kulot', 'cardigan', 'vest', 'blazer', 'setelan'];
+
+            if (isMatch(tLower, kwSepatu)) category = "Sepatu";
+            else if (isMatch(tLower, kwTas)) category = "Tas";
+            else if (isMatch(tLower, kwKecantikan)) category = "Kecantikan";
+            else if (isMatch(tLower, kwElektronik)) category = "Elektronik";
+            else if (isMatch(tLower, kwFashion)) category = "Fashion";
+            else category = "Lainnya";
+        }
 
         const sales = cleanParts[4] || "0 Terjual";
         const shopName = cleanParts[5] || "Star Seller";
@@ -41,7 +69,8 @@ const parseCSV = (text: string) => {
             tiktokPrice,
             tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(keywords)}`, 
             sales,
-            shopName
+            shopName,
+            category
         };
     }).filter(item => item !== null && item.shopeePrice > 0); 
 };
@@ -138,7 +167,12 @@ export default function Search() {
                 currentItems.map((item) => (
                     <div key={item.id} className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col'>
                         <div className='w-full aspect-square relative overflow-hidden bg-gray-100'>
-                            <img src={item.image} alt={item.title} className='w-full h-full object-cover transition-transform duration-500 hover:scale-105' onError={(e: any) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/300?text=No+Image'; }} />
+                            <img 
+                                src={item.image} 
+                                alt={item.title} 
+                                className='w-full h-full object-cover transition-transform duration-500 hover:scale-105' 
+                                onError={(e: any) => { e.target.onerror = null; e.target.src = FALLBACK_IMAGE; }} 
+                            />
                         </div>
                         
                         <div className='p-4 flex flex-col flex-grow justify-between'>
@@ -153,12 +187,10 @@ export default function Search() {
                             <div className="space-y-2 mb-4">
                                 <div className="flex justify-between items-center text-xs md:text-sm">
                                     <span className="font-bold text-[#ee4d2d]">Shopee</span>
-                                    {/* UPDATE: Hapus "Est." */}
                                     <span className="font-bold text-[#ee4d2d]">{formatRupiah(item.shopeePrice)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-xs md:text-sm">
                                     <span className="font-medium text-gray-600">TikTok</span>
-                                    {/* UPDATE: Hapus "Est." */}
                                     <span className="font-medium text-gray-600">{formatRupiah(item.tiktokPrice)}</span>
                                 </div>
                             </div>
@@ -175,7 +207,6 @@ export default function Search() {
                                     </a>
                                 </div>
                                 <div className="text-center">
-                                    {/* UPDATE: Kalimat Link Error lebih simpel */}
                                     <a href={item.shopeeSearchFallback} target="_blank" rel="noreferrer" 
                                        className="text-[10px] text-gray-400 underline hover:text-[#ee4d2d] transition-colors cursor-pointer block mb-1">
                                         Cari Serupa di Shopee
@@ -191,8 +222,9 @@ export default function Search() {
             )}
         </div>
 
+        {/* PAGINATION SEARCH */}
         {!loading && totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-12 mb-8">
+            <div className="flex justify-center items-center gap-2 mt-12 mb-8 flex-wrap">
                 <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-2 border rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-50 bg-white">&lt;</button>
                 {[...Array(totalPages)].map((_, i) => {
                     const pageNum = i + 1;

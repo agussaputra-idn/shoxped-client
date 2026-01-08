@@ -4,8 +4,13 @@ import Carousel from 'src/components/Carousel/Carousel';
 // --- URL SHEET ---
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRHWpsx3G4RMRvKFM-8_TbHXoScIJA_JfyU3yoaUhaKWyIvS0fWixGwsgn8fbotRQ/pub?gid=1694034890&single=true&output=csv";
 
+// --- GAMBAR CADANGAN ---
+const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3EGambar Tidak Tersedia%3C/text%3E%3C/svg%3E";
+
+// Fungsi Pencocokan Kata yang Lebih Luwes
 const isMatch = (text: string, keywords: string[]) => {
-    const pattern = new RegExp(`\\b(${keywords.join('|')})\\b`, 'i');
+    // Menggunakan Regex boundary (\b) agar "tass" tidak terdeteksi sebagai "tas"
+    const pattern = new RegExp(`\\b(${keywords.join('|')})`, 'i'); 
     return pattern.test(text);
 };
 
@@ -21,18 +26,65 @@ const parseCSV = (text: string) => {
 
         const title = cleanParts[0] || "Produk Tanpa Nama";
         const price = parseInt(cleanParts[1]) || 0;
+        
         let image = cleanParts[2];
-        if (!image || !image.includes('http')) image = "https://via.placeholder.com/300?text=No+Image";
+        if (!image || !image.startsWith('http')) image = FALLBACK_IMAGE;
 
-        // Kategori Otomatis
+        // --- LOGIKA KATEGORI BARU (LEBIH LENGKAP) ---
         let category = cleanParts[3];
+        
+        // Jika kolom kategori di Excel kosong/General, kita tebak dari Judul:
         if (!category || category === "" || category === "General") {
             const tLower = title.toLowerCase();
-            if (isMatch(tLower, ['sepatu', 'sneakers', 'sandal', 'boots'])) category = "Sepatu";
-            else if (isMatch(tLower, ['tas', 'bag', 'tote', 'ransel', 'dompet'])) category = "Tas";
-            else if (isMatch(tLower, ['baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket'])) category = "Fashion";
-            else if (isMatch(tLower, ['serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik'])) category = "Kecantikan";
-            else if (isMatch(tLower, ['hp', 'handphone', 'case', 'kabel', 'headset', 'charger'])) category = "Elektronik";
+
+            // 1. KAMUS SEPATU (Inggris & Indo & Jenis)
+            const kwSepatu = [
+                'sepatu', 'sneakers', 'sandal', 'boots', 'shoes', 'heels', 'wedges', 
+                'flat', 'pantofel', 'kets', 'slip on', 'loafers', 'trainers', 'running', 
+                'sport', 'futsal', 'bola', 'high heels', 'crocs', 'baim', 'slop'
+            ];
+
+            // 2. KAMUS TAS & DOMPET
+            const kwTas = [
+                'tas', 'bag', 'tote', 'ransel', 'dompet', 'backpack', 'clutch', 
+                'waistbag', 'sling', 'shoulder', 'wallet', 'koper', 'duffel', 
+                'handbag', 'selempang', 'pouch', 'travel bag'
+            ];
+
+            // 3. KAMUS KECANTIKAN
+            const kwKecantikan = [
+                'serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 
+                'cream', 'lotion', 'masker', 'essence', 'moisturizer', 'foundation', 
+                'powder', 'bedak', 'lip', 'eye', 'hair', 'shampoo', 'sabun', 
+                'body', 'parfum', 'perfume', 'fragrance', 'beauty', 'acne', 'jerawat',
+                'cleanser', 'micellar', 'wardah', 'somethinc', 'skintific'
+            ];
+
+            // 4. KAMUS ELEKTRONIK & GADGET
+            const kwElektronik = [
+                'hp', 'handphone', 'case', 'kabel', 'headset', 'charger', 
+                'iphone', 'android', 'samsung', 'xiaomi', 'oppo', 'vivo', 'realme', 
+                'infinix', 'laptop', 'mouse', 'keyboard', 'earphone', 'tws', 
+                'speaker', 'bluetooth', 'powerbank', 'usb', 'monitor', 'tv', 
+                'kamera', 'camera', 'tripod', 'watch', 'jam tangan'
+            ];
+
+            // 5. KAMUS FASHION (BAJU/CELANA)
+            // Ditaruh agak bawah agar "Tas" dan "Sepatu" tidak masuk sini
+            const kwFashion = [
+                'baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket', 
+                'hoodie', 'sweater', 't-shirt', 'shirt', 'blouse', 'tunik', 
+                'gamis', 'hijab', 'jilbab', 'batik', 'piyama', 'underwear', 
+                'bra', 'cd', 'sarinah', 'pakaian', 'jeans', 'chino', 'kulot', 
+                'cardigan', 'vest', 'blazer', 'setelan', 'polo'
+            ];
+
+            // PENGECEKAN BERJENJANG
+            if (isMatch(tLower, kwSepatu)) category = "Sepatu";
+            else if (isMatch(tLower, kwTas)) category = "Tas";
+            else if (isMatch(tLower, kwKecantikan)) category = "Kecantikan";
+            else if (isMatch(tLower, kwElektronik)) category = "Elektronik";
+            else if (isMatch(tLower, kwFashion)) category = "Fashion";
             else category = "Lainnya";
         }
 
@@ -68,6 +120,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("Semua");
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 24; 
+
   useEffect(() => {
     const fetchData = async () => {
         try {
@@ -81,9 +136,28 @@ export default function Home() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory]);
+
   const formatRupiah = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
   const filteredProducts = selectedCategory === "Semua" ? products : products.filter(p => p.category === selectedCategory);
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+    const categorySection = document.getElementById('category-section');
+    if (categorySection) {
+        categorySection.scrollIntoView({ behavior: 'smooth' });
+    } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const categories = [
     { name: "Semua", icon: "🛍️" },
@@ -105,9 +179,11 @@ export default function Home() {
       </div>
 
       <div className='w-full max-w-[1920px] mx-auto px-4 md:px-8 pb-12'>
-        <div className='w-full mt-6 rounded-xl overflow-hidden shadow-sm'><Carousel /></div>
+        <div className='w-full mt-6 rounded-xl overflow-hidden shadow-sm'>
+            <Carousel />
+        </div>
 
-        <div className='mt-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100'>
+        <div id="category-section" className='mt-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100'>
            <div className='flex items-start justify-between md:justify-around overflow-x-auto pb-2 scrollbar-hide gap-4'>
               {categories.map((cat, index) => (
                 <div key={index} onClick={() => setSelectedCategory(cat.name)} className={`flex flex-col items-center min-w-[70px] cursor-pointer group transition-all ${selectedCategory === cat.name ? 'scale-110 font-bold' : 'opacity-80 hover:opacity-100'}`}>
@@ -122,18 +198,25 @@ export default function Home() {
           <div className='flex items-center justify-between mb-4 px-1'>
             <h2 className='text-xl md:text-2xl font-bold text-gray-800'>
                 {selectedCategory === "Semua" ? "Rekomendasi Untukmu" : `Kategori: ${selectedCategory}`}
-                <span className="ml-2 text-sm font-normal text-gray-500">({filteredProducts.length} Produk)</span>
+                <span className="ml-2 text-sm font-normal text-gray-500">
+                    (Menampilkan {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredProducts.length)} dari {filteredProducts.length} Produk)
+                </span>
             </h2>
           </div>
 
-          <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6'>
+          <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 min-h-[600px]'>
             {loading ? (
               [...Array(10)].map((_, i) => <div key={i} className='bg-white rounded-xl shadow-sm h-80 animate-pulse border border-gray-100' />)
-            ) : filteredProducts.length > 0 ? (
-              filteredProducts.map((item) => (
+            ) : currentItems.length > 0 ? (
+              currentItems.map((item) => (
                 <div key={item.id} className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col'>
                     <div className='w-full aspect-square relative overflow-hidden bg-gray-100'>
-                        <img src={item.image} alt={item.title} className='w-full h-full object-cover transition-transform duration-500 hover:scale-105' onError={(e:any) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/300?text=Gambar+Rusak'; }} loading="lazy" />
+                        <img 
+                            src={item.image} 
+                            alt={item.title} 
+                            className='w-full h-full object-cover transition-transform duration-500 hover:scale-105' 
+                            onError={(e:any) => { e.target.onerror = null; e.target.src = FALLBACK_IMAGE; }} 
+                        />
                     </div> 
                     
                     <div className='p-4 flex flex-col flex-grow justify-between'>
@@ -148,12 +231,10 @@ export default function Home() {
                         <div className="space-y-2 mb-4">
                             <div className="flex justify-between items-center text-xs md:text-sm">
                                 <span className="font-bold text-[#ee4d2d]">Shopee</span>
-                                {/* UPDATE: Hapus "Est." */}
                                 <span className="font-bold text-[#ee4d2d]">{formatRupiah(item.shopeePrice)}</span>
                             </div>
                             <div className="flex justify-between items-center text-xs md:text-sm">
                                 <span className="font-medium text-gray-600">TikTok</span>
-                                {/* UPDATE: Hapus "Est." */}
                                 <span className="font-medium text-gray-600">{formatRupiah(item.tiktokPrice)}</span>
                             </div>
                         </div>
@@ -171,7 +252,6 @@ export default function Home() {
                             </div>
 
                             <div className="text-center">
-                                {/* UPDATE: Kalimat Link Error lebih simpel */}
                                 <a href={item.shopeeSearchFallback} target="_blank" rel="noreferrer" 
                                    className="text-[10px] text-gray-400 underline hover:text-[#ee4d2d] transition-colors cursor-pointer block mb-1">
                                     Cari Serupa di Shopee
@@ -188,6 +268,23 @@ export default function Home() {
                 <div className="col-span-full text-center py-10 text-gray-500"><p>Tidak ada produk di kategori ini.</p></div>
             )}
           </div>
+
+          {!loading && totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-12 mb-8 flex-wrap">
+                <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-2 border rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-50 bg-white">&lt; Prev</button>
+                {[...Array(totalPages)].map((_, i) => {
+                    const pageNum = i + 1;
+                    if (pageNum === 1 || pageNum === totalPages || (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)) {
+                         return (
+                            <button key={pageNum} onClick={() => paginate(pageNum)} className={`w-10 h-10 rounded-md font-bold transition-colors ${currentPage === pageNum ? 'bg-[#ee4d2d] text-white border border-[#ee4d2d]' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'}`}>{pageNum}</button>
+                        );
+                    } else if (pageNum === currentPage - 2 || pageNum === currentPage + 2) { return <span key={pageNum} className="text-gray-400">...</span>; }
+                    return null;
+                })}
+                <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-2 border rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-50 bg-white">Next &gt;</button>
+            </div>
+          )}
+
         </div>
       </div>
     </div>
