@@ -1,18 +1,17 @@
 import { useEffect } from 'react';
 import { ref, runTransaction } from 'firebase/database';
-// 👇 Perhatikan: kita import 'realtimeDb', bukan 'db' lagi
-import { realtimeDb } from './firebase'; 
+import { realtimeDb } from './firebase';
+import useRouteElements from './useRouteElements'; // 👈 Kembalikan fungsi Router ini
 
 function App() {
+  // 1. Panggil elemen router Anda
+  const routeElements = useRouteElements();
 
+  // 2. Logic Live Tracking Visitor (JANGAN DIHAPUS)
   useEffect(() => {
-    // Fungsi pencatat pengunjung
     const countVisitor = () => {
-      // 👇 Pakai realtimeDb di sini
       const visitorsRef = ref(realtimeDb, 'stats/totalVisitors');
-      
       runTransaction(visitorsRef, (currentCount) => {
-        // Kalau null (data baru), jadi 1. Kalau ada, tambah 1.
         return (currentCount || 0) + 1;
       });
     };
@@ -20,9 +19,11 @@ function App() {
     countVisitor();
   }, []);
 
+  // 3. Render Tampilan Website (INI YANG TADI HILANG)
   return (
-    // ... Biarkan kode HTML/Router di bawah ini apa adanya ...
-    // Pastikan tidak menghapus isi return yang sudah ada
+    <div>
+      {routeElements}
+    </div>
   );
 }
 
