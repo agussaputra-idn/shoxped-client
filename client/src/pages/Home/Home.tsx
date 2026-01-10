@@ -1,83 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import Carousel from 'src/components/Carousel/Carousel';
 
-// --- IMPORT FIREBASE (CCTV) ---
+// --- IMPORT FIREBASE ---
 import { db } from 'src/firebase'; 
-import { doc, updateDoc, increment, setDoc, getDoc } from 'firebase/firestore';
-
-// --- URL SHEET ---
-const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRHWpsx3G4RMRvKFM-8_TbHXoScIJA_JfyU3yoaUhaKWyIvS0fWixGwsgn8fbotRQ/pub?gid=1694034890&single=true&output=csv";
+import { 
+  doc, updateDoc, increment, setDoc, getDoc, // Untuk Analytics
+  collection, getDocs // Untuk Ambil Produk
+} from 'firebase/firestore';
 
 // --- GAMBAR CADANGAN ---
 const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3EGambar Tidak Tersedia%3C/text%3E%3C/svg%3E";
 
-// Fungsi Pencocokan Kata yang Lebih Luwes
+// Fungsi Pencocokan Kata (Untuk Auto-Kategori)
 const isMatch = (text: string, keywords: string[]) => {
     const pattern = new RegExp(`\\b(${keywords.join('|')})`, 'i'); 
     return pattern.test(text);
-};
-
-const parseCSV = (text: string) => {
-    const rows = text.split('\n').filter(row => row && row.trim().length > 0);
-    const dataRows = rows.slice(1);
-
-    return dataRows.map((row, index) => {
-        const parts = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-        const cleanParts = parts.map(p => p.trim().replace(/^"|"$/g, '').trim());
-
-        if (cleanParts.length < 3) return null;
-
-        const title = cleanParts[0] || "Produk Tanpa Nama";
-        const price = parseInt(cleanParts[1]) || 0;
-        
-        let image = cleanParts[2];
-        if (!image || !image.startsWith('http')) image = FALLBACK_IMAGE;
-
-        // --- LOGIKA KATEGORI BARU ---
-        let category = cleanParts[3];
-        
-        if (!category || category === "" || category === "General") {
-            const tLower = title.toLowerCase();
-
-            const kwSepatu = ['sepatu', 'sneakers', 'sandal', 'boots', 'shoes', 'heels', 'wedges', 'flat', 'pantofel', 'kets', 'slip on', 'loafers', 'trainers', 'running', 'sport', 'futsal', 'bola', 'high heels', 'crocs', 'baim', 'slop'];
-            const kwTas = ['tas', 'bag', 'tote', 'ransel', 'dompet', 'backpack', 'clutch', 'waistbag', 'sling', 'shoulder', 'wallet', 'koper', 'duffel', 'handbag', 'selempang', 'pouch', 'travel bag'];
-            const kwKecantikan = ['serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 'cream', 'lotion', 'masker', 'essence', 'moisturizer', 'foundation', 'powder', 'bedak', 'lip', 'eye', 'hair', 'shampoo', 'sabun', 'body', 'parfum', 'perfume', 'fragrance', 'beauty', 'acne', 'jerawat', 'cleanser', 'micellar', 'wardah', 'somethinc', 'skintific'];
-            const kwElektronik = ['hp', 'handphone', 'case', 'kabel', 'headset', 'charger', 'iphone', 'android', 'samsung', 'xiaomi', 'oppo', 'vivo', 'realme', 'infinix', 'laptop', 'mouse', 'keyboard', 'earphone', 'tws', 'speaker', 'bluetooth', 'powerbank', 'usb', 'monitor', 'tv', 'kamera', 'camera', 'tripod', 'watch', 'jam tangan'];
-            const kwFashion = ['baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket', 'hoodie', 'sweater', 't-shirt', 'shirt', 'blouse', 'tunik', 'gamis', 'hijab', 'jilbab', 'batik', 'piyama', 'underwear', 'bra', 'cd', 'sarinah', 'pakaian', 'jeans', 'chino', 'kulot', 'cardigan', 'vest', 'blazer', 'setelan', 'polo'];
-
-            if (isMatch(tLower, kwSepatu)) category = "Sepatu";
-            else if (isMatch(tLower, kwTas)) category = "Tas";
-            else if (isMatch(tLower, kwKecantikan)) category = "Kecantikan";
-            else if (isMatch(tLower, kwElektronik)) category = "Elektronik";
-            else if (isMatch(tLower, kwFashion)) category = "Fashion";
-            else category = "Lainnya";
-        }
-
-        const sales = cleanParts[4] || "0 Terjual";
-        const shopName = cleanParts[5] || "Star Seller";
-        const shopeeLink = cleanParts[6] || "#";
-
-        const isShopeeCheaper = Math.random() < 0.6;
-        const variance = Math.random() * 0.3; 
-        let tiktokPrice = isShopeeCheaper ? Math.floor(price * (1 + variance)) : Math.floor(price * (1 - variance));
-
-        const cleanTitle = title.replace(/[^a-zA-Z0-9 ]/g, " ").trim();
-        const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
-
-        return {
-            id: index + 1000,
-            title,
-            shopeePrice: price,
-            image,
-            shopeeLink,
-            shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodeURIComponent(keywords)}`,
-            tiktokPrice,
-            tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(keywords)}`,
-            category: category,
-            sales: sales,
-            shopName: shopName
-        };
-    }).filter(item => item !== null && item.shopeePrice > 0);
 };
 
 export default function Home() {
@@ -88,46 +25,100 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 24; 
 
-  // --- CCTV ANALYTICS (PENCATAT PENGUNJUNG) ---
+  // --- 1. CCTV ANALYTICS (TETAP ADA) ---
   useEffect(() => {
     const logVisit = async () => {
         try {
-            // Referensi ke dokumen 'page_views' di koleksi 'analytics'
             const docRef = doc(db, "analytics", "page_views");
             const docSnap = await getDoc(docRef);
 
             if (!docSnap.exists()) {
-                // Jika data belum ada, buat baru mulai dari 1
                 await setDoc(docRef, { views: 1, lastVisit: new Date().toLocaleString() });
             } else {
-                // Jika sudah ada, tambahkan +1
                 await updateDoc(docRef, { 
                     views: increment(1),
                     lastVisit: new Date().toLocaleString()
                 });
             }
         } catch (e) {
-            // Error diam-diam agar user tidak terganggu
             console.log("Analytics Error (Silent):", e); 
         }
     };
     logVisit();
   }, []);
 
-  // --- FETCH DATA PRODUK ---
+  // --- 2. FETCH DATA DARI DATABASE (NEW!) ---
   useEffect(() => {
     const fetchData = async () => {
         try {
-            const response = await fetch(GOOGLE_SHEET_CSV_URL);
-            const text = await response.text();
-            const parsedData = parseCSV(text);
-            setProducts(parsedData);
+            // Mengambil data dari koleksi "products" di Firestore
+            const querySnapshot = await getDocs(collection(db, "products"));
+            
+            const fetchedProducts = querySnapshot.docs.map((doc) => {
+                const data = doc.data();
+                
+                // --- LOGIKA PERBAIKAN DATA (Sama seperti CSV Parser dulu) ---
+                // Kita terapkan logic ini agar data yang tampil tetap cantik
+                
+                const title = data.name || "Produk Tanpa Nama";
+                const price = parseInt(data.price) || 0;
+                let image = data.image;
+                if (!image || !image.startsWith('http')) image = FALLBACK_IMAGE;
+
+                // Logic Auto-Kategori (Jika di database 'General', kita coba tebak lagi)
+                let category = data.category;
+                if (!category || category === "" || category === "General") {
+                    const tLower = title.toLowerCase();
+                    const kwSepatu = ['sepatu', 'sneakers', 'sandal', 'boots', 'shoes', 'heels', 'wedges', 'flat', 'pantofel', 'kets', 'slip on', 'loafers', 'trainers', 'running', 'sport', 'futsal', 'bola', 'high heels', 'crocs', 'baim', 'slop'];
+                    const kwTas = ['tas', 'bag', 'tote', 'ransel', 'dompet', 'backpack', 'clutch', 'waistbag', 'sling', 'shoulder', 'wallet', 'koper', 'duffel', 'handbag', 'selempang', 'pouch', 'travel bag'];
+                    const kwKecantikan = ['serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 'cream', 'lotion', 'masker', 'essence', 'moisturizer', 'foundation', 'powder', 'bedak', 'lip', 'eye', 'hair', 'shampoo', 'sabun', 'body', 'parfum', 'perfume', 'fragrance', 'beauty', 'acne', 'jerawat', 'cleanser', 'micellar', 'wardah', 'somethinc', 'skintific'];
+                    const kwElektronik = ['hp', 'handphone', 'case', 'kabel', 'headset', 'charger', 'iphone', 'android', 'samsung', 'xiaomi', 'oppo', 'vivo', 'realme', 'infinix', 'laptop', 'mouse', 'keyboard', 'earphone', 'tws', 'speaker', 'bluetooth', 'powerbank', 'usb', 'monitor', 'tv', 'kamera', 'camera', 'tripod', 'watch', 'jam tangan'];
+                    const kwFashion = ['baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket', 'hoodie', 'sweater', 't-shirt', 'shirt', 'blouse', 'tunik', 'gamis', 'hijab', 'jilbab', 'batik', 'piyama', 'underwear', 'bra', 'cd', 'sarinah', 'pakaian', 'jeans', 'chino', 'kulot', 'cardigan', 'vest', 'blazer', 'setelan', 'polo'];
+
+                    if (isMatch(tLower, kwSepatu)) category = "Sepatu";
+                    else if (isMatch(tLower, kwTas)) category = "Tas";
+                    else if (isMatch(tLower, kwKecantikan)) category = "Kecantikan";
+                    else if (isMatch(tLower, kwElektronik)) category = "Elektronik";
+                    else if (isMatch(tLower, kwFashion)) category = "Fashion";
+                    else category = "Lainnya";
+                }
+
+                // Logic Harga Pembanding (Tetap pakai simulasi agar user melihat perbandingan)
+                const isShopeeCheaper = Math.random() < 0.6;
+                const variance = Math.random() * 0.3; 
+                let tiktokPrice = isShopeeCheaper ? Math.floor(price * (1 + variance)) : Math.floor(price * (1 - variance));
+
+                // Keyword untuk link search
+                const cleanTitle = title.replace(/[^a-zA-Z0-9 ]/g, " ").trim();
+                const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
+
+                return {
+                    id: doc.id, // ID unik dari Firebase
+                    title: title,
+                    shopeePrice: price,
+                    image: image,
+                    shopeeLink: data.shopeeLink || "#",
+                    shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodeURIComponent(keywords)}`,
+                    tiktokPrice: tiktokPrice, // Simulasi harga
+                    tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(keywords)}`, // Auto search link
+                    category: category,
+                    sales: data.sold || "0 Terjual",
+                    shopName: "Star Seller" // Default karena data toko tidak ada di DB simple
+                };
+            });
+
+            setProducts(fetchedProducts);
             setLoading(false);
-        } catch (error) { console.error("Gagal mengambil data:", error); setLoading(false); }
+        } catch (error) { 
+            console.error("Gagal mengambil data dari Database:", error); 
+            setLoading(false); 
+        }
     };
+
     fetchData();
   }, []);
 
+  // --- LOGIC PAGINATION & RENDER (TIDAK BERUBAH) ---
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedCategory]);
