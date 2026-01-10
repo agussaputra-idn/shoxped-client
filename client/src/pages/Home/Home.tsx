@@ -1,79 +1,68 @@
 import React, { useState, useEffect } from 'react';
 import Carousel from 'src/components/Carousel/Carousel';
-
-// --- IMPORT FIREBASE ---
 import { db } from 'src/firebase'; 
-import { 
-  doc, updateDoc, increment, setDoc, getDoc, // Untuk Analytics
-  collection, getDocs // Untuk Ambil Produk
-} from 'firebase/firestore';
+import { doc, updateDoc, increment, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 
-// --- GAMBAR CADANGAN ---
 const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3EGambar Tidak Tersedia%3C/text%3E%3C/svg%3E";
 
-// Fungsi Pencocokan Kata (Untuk Auto-Kategori)
 const isMatch = (text: string, keywords: string[]) => {
     const pattern = new RegExp(`\\b(${keywords.join('|')})`, 'i'); 
     return pattern.test(text);
+};
+
+// --- JURUS PENGACAK (SHUFFLE ALGORITHM) ---
+// Ini algoritma Fisher-Yates, pengacak paling adil sedunia
+const shuffleArray = (array: any[]) => {
+  let currentIndex = array.length, randomIndex;
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+  }
+  return array;
 };
 
 export default function Home() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("Semua");
-
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 24; 
 
-  // --- 1. CCTV ANALYTICS (TETAP ADA) ---
+  // --- ANALYTICS ---
   useEffect(() => {
     const logVisit = async () => {
         try {
             const docRef = doc(db, "analytics", "page_views");
             const docSnap = await getDoc(docRef);
-
-            if (!docSnap.exists()) {
-                await setDoc(docRef, { views: 1, lastVisit: new Date().toLocaleString() });
-            } else {
-                await updateDoc(docRef, { 
-                    views: increment(1),
-                    lastVisit: new Date().toLocaleString()
-                });
-            }
-        } catch (e) {
-            console.log("Analytics Error (Silent):", e); 
-        }
+            if (!docSnap.exists()) await setDoc(docRef, { views: 1 });
+            else await updateDoc(docRef, { views: increment(1) });
+        } catch (e) { console.log("Silent Error:", e); }
     };
     logVisit();
   }, []);
 
-  // --- 2. FETCH DATA DARI DATABASE (NEW!) ---
+  // --- FETCH & SHUFFLE DATA ---
   useEffect(() => {
     const fetchData = async () => {
         try {
-            // Mengambil data dari koleksi "products" di Firestore
             const querySnapshot = await getDocs(collection(db, "products"));
             
             const fetchedProducts = querySnapshot.docs.map((doc) => {
                 const data = doc.data();
-                
-                // --- LOGIKA PERBAIKAN DATA (Sama seperti CSV Parser dulu) ---
-                // Kita terapkan logic ini agar data yang tampil tetap cantik
-                
                 const title = data.name || "Produk Tanpa Nama";
                 const price = parseInt(data.price) || 0;
                 let image = data.image;
                 if (!image || !image.startsWith('http')) image = FALLBACK_IMAGE;
 
-                // Logic Auto-Kategori (Jika di database 'General', kita coba tebak lagi)
                 let category = data.category;
                 if (!category || category === "" || category === "General") {
                     const tLower = title.toLowerCase();
-                    const kwSepatu = ['sepatu', 'sneakers', 'sandal', 'boots', 'shoes', 'heels', 'wedges', 'flat', 'pantofel', 'kets', 'slip on', 'loafers', 'trainers', 'running', 'sport', 'futsal', 'bola', 'high heels', 'crocs', 'baim', 'slop'];
-                    const kwTas = ['tas', 'bag', 'tote', 'ransel', 'dompet', 'backpack', 'clutch', 'waistbag', 'sling', 'shoulder', 'wallet', 'koper', 'duffel', 'handbag', 'selempang', 'pouch', 'travel bag'];
-                    const kwKecantikan = ['serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 'cream', 'lotion', 'masker', 'essence', 'moisturizer', 'foundation', 'powder', 'bedak', 'lip', 'eye', 'hair', 'shampoo', 'sabun', 'body', 'parfum', 'perfume', 'fragrance', 'beauty', 'acne', 'jerawat', 'cleanser', 'micellar', 'wardah', 'somethinc', 'skintific'];
-                    const kwElektronik = ['hp', 'handphone', 'case', 'kabel', 'headset', 'charger', 'iphone', 'android', 'samsung', 'xiaomi', 'oppo', 'vivo', 'realme', 'infinix', 'laptop', 'mouse', 'keyboard', 'earphone', 'tws', 'speaker', 'bluetooth', 'powerbank', 'usb', 'monitor', 'tv', 'kamera', 'camera', 'tripod', 'watch', 'jam tangan'];
-                    const kwFashion = ['baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket', 'hoodie', 'sweater', 't-shirt', 'shirt', 'blouse', 'tunik', 'gamis', 'hijab', 'jilbab', 'batik', 'piyama', 'underwear', 'bra', 'cd', 'sarinah', 'pakaian', 'jeans', 'chino', 'kulot', 'cardigan', 'vest', 'blazer', 'setelan', 'polo'];
+                    const kwSepatu = ['sepatu', 'sneakers', 'sandal', 'boots', 'shoes'];
+                    const kwTas = ['tas', 'bag', 'tote', 'ransel', 'dompet', 'backpack'];
+                    const kwKecantikan = ['serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 'cream', 'lotion', 'parfum', 'beauty'];
+                    const kwElektronik = ['hp', 'handphone', 'case', 'iphone', 'android', 'samsung', 'xiaomi', 'laptop', 'headset'];
+                    const kwFashion = ['baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket', 'hoodie', 'gamis', 'hijab'];
 
                     if (isMatch(tLower, kwSepatu)) category = "Sepatu";
                     else if (isMatch(tLower, kwTas)) category = "Tas";
@@ -83,50 +72,46 @@ export default function Home() {
                     else category = "Lainnya";
                 }
 
-                // Logic Harga Pembanding (Tetap pakai simulasi agar user melihat perbandingan)
                 const isShopeeCheaper = Math.random() < 0.6;
                 const variance = Math.random() * 0.3; 
                 let tiktokPrice = isShopeeCheaper ? Math.floor(price * (1 + variance)) : Math.floor(price * (1 - variance));
-
-                // Keyword untuk link search
                 const cleanTitle = title.replace(/[^a-zA-Z0-9 ]/g, " ").trim();
                 const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
 
                 return {
-                    id: doc.id, // ID unik dari Firebase
+                    id: doc.id,
                     title: title,
                     shopeePrice: price,
                     image: image,
                     shopeeLink: data.shopeeLink || "#",
                     shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodeURIComponent(keywords)}`,
-                    tiktokPrice: tiktokPrice, // Simulasi harga
-                    tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(keywords)}`, // Auto search link
+                    tiktokPrice: tiktokPrice,
+                    tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(keywords)}`,
                     category: category,
                     sales: data.sold || "0 Terjual",
-                    shopName: "Star Seller" // Default karena data toko tidak ada di DB simple
+                    shopName: "Star Seller"
                 };
             });
 
-            setProducts(fetchedProducts);
+            // 🔥 DISINI KUNCINYA: KITA ACAK DATA SEBELUM DITAMPILKAN
+            const randomProducts = shuffleArray(fetchedProducts);
+            
+            setProducts(randomProducts);
             setLoading(false);
         } catch (error) { 
-            console.error("Gagal mengambil data dari Database:", error); 
+            console.error("Error:", error); 
             setLoading(false); 
         }
     };
-
     fetchData();
   }, []);
 
-  // --- LOGIC PAGINATION & RENDER (TIDAK BERUBAH) ---
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedCategory]);
+  // Reset page kalau ganti kategori, TAPI JANGAN ACAK ULANG (Biar user ga bingung)
+  useEffect(() => { setCurrentPage(1); }, [selectedCategory]);
 
   const formatRupiah = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
-
   const filteredProducts = selectedCategory === "Semua" ? products : products.filter(p => p.category === selectedCategory);
-
+  
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
@@ -134,12 +119,7 @@ export default function Home() {
 
   const paginate = (pageNumber: number) => {
     setCurrentPage(pageNumber);
-    const categorySection = document.getElementById('category-section');
-    if (categorySection) {
-        categorySection.scrollIntoView({ behavior: 'smooth' });
-    } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    document.getElementById('category-section')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const categories = [
@@ -201,16 +181,13 @@ export default function Home() {
                             onError={(e:any) => { e.target.onerror = null; e.target.src = FALLBACK_IMAGE; }} 
                         />
                     </div> 
-                    
                     <div className='p-4 flex flex-col flex-grow justify-between'>
                         <h3 className='text-sm text-gray-800 font-semibold line-clamp-2 leading-snug mb-1' title={item.title}>{item.title}</h3>
-                        
                         <div className="flex items-center gap-2 mb-3 text-[10px] text-gray-500">
                              <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium truncate max-w-[100px]">{item.shopName}</span>
                              <span>•</span>
                              <span>{item.sales}</span>
                         </div>
-
                         <div className="space-y-2 mb-4">
                             <div className="flex justify-between items-center text-xs md:text-sm">
                                 <span className="font-bold text-[#ee4d2d]">Shopee</span>
@@ -221,27 +198,14 @@ export default function Home() {
                                 <span className="font-medium text-gray-600">{formatRupiah(item.tiktokPrice)}</span>
                             </div>
                         </div>
-
                         <div className="flex flex-col gap-2 mt-auto">
                             <div className="flex flex-col md:flex-row gap-2">
-                                <a href={item.shopeeLink} target="_blank" rel="noreferrer" 
-                                className="flex-1 bg-white text-[#ee4d2d] border border-[#ee4d2d] text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-[#ee4d2d] hover:text-white hover:shadow-md">
-                                    Beli di Shopee
-                                </a>
-                                <a href={item.tiktokLink} target="_blank" rel="noreferrer" 
-                                className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-black hover:text-white hover:border-black hover:shadow-md">
-                                    Beli di TikTok
-                                </a>
+                                <a href={item.shopeeLink} target="_blank" rel="noreferrer" className="flex-1 bg-white text-[#ee4d2d] border border-[#ee4d2d] text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-[#ee4d2d] hover:text-white hover:shadow-md">Beli di Shopee</a>
+                                <a href={item.tiktokLink} target="_blank" rel="noreferrer" className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-black hover:text-white hover:border-black hover:shadow-md">Beli di TikTok</a>
                             </div>
-
                             <div className="text-center">
-                                <a href={item.shopeeSearchFallback} target="_blank" rel="noreferrer" 
-                                   className="text-[10px] text-gray-400 underline hover:text-[#ee4d2d] transition-colors cursor-pointer block mb-1">
-                                    Cari Serupa di Shopee
-                                </a>
-                                <p className="text-[9px] text-gray-300 italic">
-                                    *Harga dapat berubah sewaktu-waktu
-                                </p>
+                                <a href={item.shopeeSearchFallback} target="_blank" rel="noreferrer" className="text-[10px] text-gray-400 underline hover:text-[#ee4d2d] transition-colors cursor-pointer block mb-1">Cari Serupa di Shopee</a>
+                                <p className="text-[9px] text-gray-300 italic">*Harga dapat berubah sewaktu-waktu</p>
                             </div>
                         </div>
                     </div>
@@ -258,16 +222,13 @@ export default function Home() {
                 {[...Array(totalPages)].map((_, i) => {
                     const pageNum = i + 1;
                     if (pageNum === 1 || pageNum === totalPages || (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)) {
-                         return (
-                            <button key={pageNum} onClick={() => paginate(pageNum)} className={`w-10 h-10 rounded-md font-bold transition-colors ${currentPage === pageNum ? 'bg-[#ee4d2d] text-white border border-[#ee4d2d]' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'}`}>{pageNum}</button>
-                        );
+                         return <button key={pageNum} onClick={() => paginate(pageNum)} className={`w-10 h-10 rounded-md font-bold transition-colors ${currentPage === pageNum ? 'bg-[#ee4d2d] text-white border border-[#ee4d2d]' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'}`}>{pageNum}</button>;
                     } else if (pageNum === currentPage - 2 || pageNum === currentPage + 2) { return <span key={pageNum} className="text-gray-400">...</span>; }
                     return null;
                 })}
                 <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-2 border rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-50 bg-white">Next &gt;</button>
             </div>
           )}
-
         </div>
       </div>
     </div>
