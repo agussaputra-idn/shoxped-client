@@ -1,36 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '../firebase';
+// 👇 UBAH 1: Import realtimeDb (bukan db)
+import { auth, realtimeDb } from '../firebase'; 
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+// 👇 UBAH 2: Import fungsi Realtime Database (bukan Firestore)
+import { ref, onValue } from 'firebase/database'; 
 
 export default function SecretAdmin() {
   const [user, setUser] = useState<any>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [stats, setStats] = useState({ views: 0, lastVisit: '-' });
+  
+  // 👇 UBAH 3: State khusus untuk counter angka
+  const [visitorCount, setVisitorCount] = useState(0);
 
-  // Cek apakah Admin sedang login
+  // Cek Login & Pasang Live Tracking
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) fetchStats();
+      
+      // Jika user sudah login, langsung aktifkan "Mata-Mata"
+      if (currentUser) {
+        // 👇 LOGIKA BARU: Dengar perubahan dari Realtime Database
+        const visitorsRef = ref(realtimeDb, 'stats/totalVisitors');
+        onValue(visitorsRef, (snapshot) => {
+          const data = snapshot.val();
+          setVisitorCount(data || 0);
+        });
+      }
     });
     return () => unsubscribe();
   }, []);
 
-  // Ambil Data Statistik dari Database
-  const fetchStats = async () => {
-    try {
-      const docRef = doc(db, "analytics", "page_views");
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setStats(docSnap.data() as any);
-      }
-    } catch (err) { console.error("Gagal ambil data", err); }
-  };
-
-  // Fungsi Login
+  // Fungsi Login (Tetap Sama)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -41,12 +43,12 @@ export default function SecretAdmin() {
     }
   };
 
-  // Fungsi Logout
+  // Fungsi Logout (Tetap Sama)
   const handleLogout = async () => {
     await signOut(auth);
   };
 
-  // TAMPILAN JIKA BELUM LOGIN (Gerbang Besi)
+  // TAMPILAN JIKA BELUM LOGIN (Gerbang Besi) - Tetap Sama
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
@@ -89,13 +91,14 @@ export default function SecretAdmin() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <h3 className="text-gray-500 text-sm font-medium uppercase">Total Visitors</h3>
-            <p className="text-4xl font-bold text-gray-900 mt-2">{stats.views || 0}</p>
-            <span className="text-green-500 text-sm">Live Tracking Active</span>
+            {/* 👇 Tampilkan Angka Realtime di sini */}
+            <p className="text-4xl font-bold text-gray-900 mt-2">{visitorCount}</p>
+            <span className="text-green-500 text-sm">● Live Tracking Active</span>
           </div>
 
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <h3 className="text-gray-500 text-sm font-medium uppercase">Last Activity</h3>
-            <p className="text-lg font-semibold text-gray-800 mt-2">{stats.lastVisit || "Belum ada data"}</p>
+            <h3 className="text-gray-500 text-sm font-medium uppercase">System Status</h3>
+            <p className="text-lg font-semibold text-gray-800 mt-2">Online</p>
           </div>
         </div>
       </div>
