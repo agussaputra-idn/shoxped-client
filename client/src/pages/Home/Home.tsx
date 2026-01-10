@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; 
 import Carousel from 'src/components/Carousel/Carousel';
 import { db } from 'src/firebase'; 
 import { doc, updateDoc, increment, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
