@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Carousel from 'src/components/Carousel/Carousel';
 
+// --- IMPORT FIREBASE (CCTV) ---
+import { db } from 'src/firebase'; 
+import { doc, updateDoc, increment, setDoc, getDoc } from 'firebase/firestore';
+
 // --- URL SHEET ---
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRHWpsx3G4RMRvKFM-8_TbHXoScIJA_JfyU3yoaUhaKWyIvS0fWixGwsgn8fbotRQ/pub?gid=1694034890&single=true&output=csv";
 
@@ -9,7 +13,6 @@ const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/
 
 // Fungsi Pencocokan Kata yang Lebih Luwes
 const isMatch = (text: string, keywords: string[]) => {
-    // Menggunakan Regex boundary (\b) agar "tass" tidak terdeteksi sebagai "tas"
     const pattern = new RegExp(`\\b(${keywords.join('|')})`, 'i'); 
     return pattern.test(text);
 };
@@ -30,56 +33,18 @@ const parseCSV = (text: string) => {
         let image = cleanParts[2];
         if (!image || !image.startsWith('http')) image = FALLBACK_IMAGE;
 
-        // --- LOGIKA KATEGORI BARU (LEBIH LENGKAP) ---
+        // --- LOGIKA KATEGORI BARU ---
         let category = cleanParts[3];
         
-        // Jika kolom kategori di Excel kosong/General, kita tebak dari Judul:
         if (!category || category === "" || category === "General") {
             const tLower = title.toLowerCase();
 
-            // 1. KAMUS SEPATU (Inggris & Indo & Jenis)
-            const kwSepatu = [
-                'sepatu', 'sneakers', 'sandal', 'boots', 'shoes', 'heels', 'wedges', 
-                'flat', 'pantofel', 'kets', 'slip on', 'loafers', 'trainers', 'running', 
-                'sport', 'futsal', 'bola', 'high heels', 'crocs', 'baim', 'slop'
-            ];
+            const kwSepatu = ['sepatu', 'sneakers', 'sandal', 'boots', 'shoes', 'heels', 'wedges', 'flat', 'pantofel', 'kets', 'slip on', 'loafers', 'trainers', 'running', 'sport', 'futsal', 'bola', 'high heels', 'crocs', 'baim', 'slop'];
+            const kwTas = ['tas', 'bag', 'tote', 'ransel', 'dompet', 'backpack', 'clutch', 'waistbag', 'sling', 'shoulder', 'wallet', 'koper', 'duffel', 'handbag', 'selempang', 'pouch', 'travel bag'];
+            const kwKecantikan = ['serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 'cream', 'lotion', 'masker', 'essence', 'moisturizer', 'foundation', 'powder', 'bedak', 'lip', 'eye', 'hair', 'shampoo', 'sabun', 'body', 'parfum', 'perfume', 'fragrance', 'beauty', 'acne', 'jerawat', 'cleanser', 'micellar', 'wardah', 'somethinc', 'skintific'];
+            const kwElektronik = ['hp', 'handphone', 'case', 'kabel', 'headset', 'charger', 'iphone', 'android', 'samsung', 'xiaomi', 'oppo', 'vivo', 'realme', 'infinix', 'laptop', 'mouse', 'keyboard', 'earphone', 'tws', 'speaker', 'bluetooth', 'powerbank', 'usb', 'monitor', 'tv', 'kamera', 'camera', 'tripod', 'watch', 'jam tangan'];
+            const kwFashion = ['baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket', 'hoodie', 'sweater', 't-shirt', 'shirt', 'blouse', 'tunik', 'gamis', 'hijab', 'jilbab', 'batik', 'piyama', 'underwear', 'bra', 'cd', 'sarinah', 'pakaian', 'jeans', 'chino', 'kulot', 'cardigan', 'vest', 'blazer', 'setelan', 'polo'];
 
-            // 2. KAMUS TAS & DOMPET
-            const kwTas = [
-                'tas', 'bag', 'tote', 'ransel', 'dompet', 'backpack', 'clutch', 
-                'waistbag', 'sling', 'shoulder', 'wallet', 'koper', 'duffel', 
-                'handbag', 'selempang', 'pouch', 'travel bag'
-            ];
-
-            // 3. KAMUS KECANTIKAN
-            const kwKecantikan = [
-                'serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 
-                'cream', 'lotion', 'masker', 'essence', 'moisturizer', 'foundation', 
-                'powder', 'bedak', 'lip', 'eye', 'hair', 'shampoo', 'sabun', 
-                'body', 'parfum', 'perfume', 'fragrance', 'beauty', 'acne', 'jerawat',
-                'cleanser', 'micellar', 'wardah', 'somethinc', 'skintific'
-            ];
-
-            // 4. KAMUS ELEKTRONIK & GADGET
-            const kwElektronik = [
-                'hp', 'handphone', 'case', 'kabel', 'headset', 'charger', 
-                'iphone', 'android', 'samsung', 'xiaomi', 'oppo', 'vivo', 'realme', 
-                'infinix', 'laptop', 'mouse', 'keyboard', 'earphone', 'tws', 
-                'speaker', 'bluetooth', 'powerbank', 'usb', 'monitor', 'tv', 
-                'kamera', 'camera', 'tripod', 'watch', 'jam tangan'
-            ];
-
-            // 5. KAMUS FASHION (BAJU/CELANA)
-            // Ditaruh agak bawah agar "Tas" dan "Sepatu" tidak masuk sini
-            const kwFashion = [
-                'baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket', 
-                'hoodie', 'sweater', 't-shirt', 'shirt', 'blouse', 'tunik', 
-                'gamis', 'hijab', 'jilbab', 'batik', 'piyama', 'underwear', 
-                'bra', 'cd', 'sarinah', 'pakaian', 'jeans', 'chino', 'kulot', 
-                'cardigan', 'vest', 'blazer', 'setelan', 'polo'
-            ];
-
-            // PENGECEKAN BERJENJANG
             if (isMatch(tLower, kwSepatu)) category = "Sepatu";
             else if (isMatch(tLower, kwTas)) category = "Tas";
             else if (isMatch(tLower, kwKecantikan)) category = "Kecantikan";
@@ -123,6 +88,33 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 24; 
 
+  // --- CCTV ANALYTICS (PENCATAT PENGUNJUNG) ---
+  useEffect(() => {
+    const logVisit = async () => {
+        try {
+            // Referensi ke dokumen 'page_views' di koleksi 'analytics'
+            const docRef = doc(db, "analytics", "page_views");
+            const docSnap = await getDoc(docRef);
+
+            if (!docSnap.exists()) {
+                // Jika data belum ada, buat baru mulai dari 1
+                await setDoc(docRef, { views: 1, lastVisit: new Date().toLocaleString() });
+            } else {
+                // Jika sudah ada, tambahkan +1
+                await updateDoc(docRef, { 
+                    views: increment(1),
+                    lastVisit: new Date().toLocaleString()
+                });
+            }
+        } catch (e) {
+            // Error diam-diam agar user tidak terganggu
+            console.log("Analytics Error (Silent):", e); 
+        }
+    };
+    logVisit();
+  }, []);
+
+  // --- FETCH DATA PRODUK ---
   useEffect(() => {
     const fetchData = async () => {
         try {

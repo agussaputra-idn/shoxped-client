@@ -4,13 +4,10 @@ import { path } from 'src/constants/path';
 // === IMPORT HALAMAN ===
 import MainLayout from './layouts/MainLayout/MainLayout';
 import Home from './pages/Home/Home';
-
-// 1. IMPORT FILE SEARCH YANG BARU
-// Pastikan filenya sudah dibuat di src/pages/Search.tsx
 import Search from './pages/Search'; 
 
-// Hapus atau abaikan ProductList yang lama karena itu sumber masalahnya
-// import ProductList from './pages/ProductList/ProductList'; 
+// IMPORT HALAMAN RAHASIA (Pastikan file src/pages/SecretAdmin.tsx sudah dibuat)
+import SecretAdmin from './pages/SecretAdmin';
 
 import AboutUs from './pages/AboutUs/AboutUs';
 import PrivacyPolicy from './pages/PrivacyPolicy/PrivacyPolicy';
@@ -19,6 +16,13 @@ import NotFound from './pages/NotFound/NotFound';
 
 export default function useRouteElements() {
   const element = useRoutes([
+    // 1. JALUR RAHASIA (Ditaruh diluar MainLayout agar tanpa Header/Footer)
+    {
+      path: '/ruang-rahasia', // <-- Ganti ini jika ingin URL yang lebih sulit ditebak
+      element: <SecretAdmin />
+    },
+
+    // 2. JALUR UTAMA WEBSITE
     {
       path: path.home,
       element: <MainLayout />,
@@ -29,7 +33,6 @@ export default function useRouteElements() {
         },
         {
           path: path.search,
-          // 2. GUNAKAN SEARCH DISINI (Bukan ProductList)
           element: <Search />
         },
         {
@@ -46,6 +49,8 @@ export default function useRouteElements() {
         }
       ]
     },
+
+    // 3. HALAMAN NOT FOUND (404)
     {
       path: '*',
       element: (
