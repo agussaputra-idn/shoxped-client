@@ -59,17 +59,27 @@ export default function SecretAdmin() {
           const batchSize = 400; 
           const chunks = [];
           
-          // Bersihkan Data & Mapping Kolom CSV Anda
-          const cleanData = rawData.map((item: any) => ({
-            id: item['Title']?.replace(/\s+/g, '-').toLowerCase().substring(0, 50) || 'no-id', // Bikin ID unik dari judul
-            name: item['Title'] || 'Tanpa Nama',
-            price: parseInt(item['Price']) || 0,
-            image: item['ItemCard__image src'] || '',
-            shopeeLink: item['Affiliate Link'] || '',
-            tiktokLink: '', // Kosongkan dulu karena di CSV cuma ada 1 link
-            category: item['Category'] || 'General',
-            sold: item['Sales'] || '0'
-          })).filter((item: any) => item.name !== 'Tanpa Nama' && item.price > 0);
+          // Bersihkan Data & Mapping Kolom (VERSI ANTI-ERROR)
+          const cleanData = rawData.map((item: any) => {
+             // 1. FIX PENTING: Bersihkan ID dari simbol aneh (/, &, %, dll)
+             const rawTitle = item['Title'] || '';
+             const cleanId = rawTitle
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-') // Ganti semua simbol aneh jadi strip (-)
+                .replace(/^-+|-+$/g, '')     // Hapus strip di awal/akhir
+                .substring(0, 50) || 'no-id';
+
+             return {
+                id: cleanId,
+                name: rawTitle || 'Tanpa Nama',
+                price: parseInt(item['Price']) || 0,
+                image: item['ItemCard__image src'] || '',
+                shopeeLink: item['Affiliate Link'] || '',
+                tiktokLink: '', 
+                category: item['Category'] || 'General',
+                sold: item['Sales'] || '0'
+             };
+          }).filter((item: any) => item.name !== 'Tanpa Nama' && item.price > 0);
 
           // Bagi data menjadi paket-paket kecil
           for (let i = 0; i < cleanData.length; i += batchSize) {
