@@ -1,29 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { auth, realtimeDb, db } from '../firebase'; // Pastikan db (Firestore) diimport
+import { auth, realtimeDb, db } from '../firebase'; 
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { ref, onValue } from 'firebase/database';
-import { collection, writeBatch, doc, getDocs } from 'firebase/firestore'; // Fitur Database Produk
-import Papa from 'papaparse'; // Alat baca CSV
+import { 
+  collection, writeBatch, doc, getDocs, deleteDoc, 
+  query, limit, orderBy, startAfter, where, getCountFromServer 
+} from 'firebase/firestore'; 
+import Papa from 'papaparse'; 
 
 export default function SecretAdmin() {
   const [user, setUser] = useState<any>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [visitorCount, setVisitorCount] = useState(0);
   
-  // State untuk Upload
+  // --- STATISTIK ---
+  const [visitorCount, setVisitorCount] = useState(0);
+  const [totalProducts, setTotalProducts] = useState(0);
+
+  // --- MANAJEMEN PRODUK ---
+  const [products, setProducts] = useState<any[]>([]);
+  const [lastDoc, setLastDoc] = useState<any>(null); // Untuk Pagination
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loadingData, setLoadingData] = useState(false);
+  
+  // --- UPLOAD ---
   const [isUploading, setIsUploading] = useState(false);
   const [uploadLog, setUploadLog] = useState('');
 
-  // 1. Cek Login & Visitor (Sama seperti sebelumnya)
+  // 1. Cek Login & Visitor
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        // Ambil Data Visitor (Realtime DB)
         const visitorsRef = ref(realtimeDb, 'stats/totalVisitors');
         onValue(visitorsRef, (snapshot) => {
           setVisitorCount(snapshot.val() || 0);
         });
+
+        // Ambil Data Produk Awal
+        fetchStats();
+        fetchProducts(); 
       }
     });
     return () => unsubscribe();
@@ -39,7 +56,61 @@ export default function SecretAdmin() {
     }
   };
 
-  // 3. JURUS RAHASIA: Import CSV ke Firestore
+  // 3. FETCH DATA (Lihat isi Gudang)
+  const fetchStats = async () => {
+    try {
+        const coll = collection(db, "products");
+        const snapshot = await getCountFromServer(coll);
+        setTotalProducts(snapshot.data().count);
+    } catch (e) { console.log("Gagal hitung total:", e); }
+  };
+
+  const fetchProducts = async (isNext = false) => {
+    setLoadingData(true);
+    try {
+        let q;
+        const productsRef = collection(db, "products");
+
+        if (searchTerm) {
+             // Search simpel (Case sensitive, harus sesuai awalan kalimat)
+             // Firestore basic search limitation
+             q = query(productsRef, where("name", ">=", searchTerm), where("name", "<=", searchTerm + '\uf8ff'), limit(10));
+        } else {
+             // Load biasa (ambil 20 teratas)
+             if (isNext && lastDoc) {
+                q = query(productsRef, limit(20), startAfter(lastDoc));
+             } else {
+                q = query(productsRef, limit(20));
+             }
+        }
+
+        const querySnapshot = await getDocs(q);
+        const data: any[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        setProducts(isNext ? [...products, ...data] : data);
+        setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
+        setLoadingData(false);
+    } catch (error) {
+        console.error("Gagal ambil data:", error);
+        setLoadingData(false);
+    }
+  };
+
+  // 4. HAPUS DATA (Tong Sampah)
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Yakin ingin menghapus produk ini?")) {
+        try {
+            await deleteDoc(doc(db, "products", id));
+            setProducts(products.filter(p => p.id !== id));
+            setTotalProducts(prev => prev - 1);
+            alert("Produk berhasil dihapus!");
+        } catch (error) {
+            alert("Gagal menghapus.");
+        }
+    }
+  };
+
+  // 5. IMPORT CSV (Logic Anda yg sudah mantap)
   const handleFileUpload = (event: any) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -52,22 +123,16 @@ export default function SecretAdmin() {
       skipEmptyLines: true,
       complete: async (results) => {
         const rawData = results.data;
-        setUploadLog(`✅ File terbaca! Ditemukan ${rawData.length} baris data. Mulai memproses...`);
+        setUploadLog(`✅ Ditemukan ${rawData.length} baris data. Memproses...`);
         
         try {
-          // Batch write (Firestore membatasi 500 data per batch, jadi kita potong-potong)
           const batchSize = 400; 
           const chunks = [];
           
-          // Bersihkan Data & Mapping Kolom (VERSI ANTI-ERROR)
           const cleanData = rawData.map((item: any) => {
-             // 1. FIX PENTING: Bersihkan ID dari simbol aneh (/, &, %, dll)
              const rawTitle = item['Title'] || '';
-             const cleanId = rawTitle
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, '-') // Ganti semua simbol aneh jadi strip (-)
-                .replace(/^-+|-+$/g, '')     // Hapus strip di awal/akhir
-                .substring(0, 50) || 'no-id';
+             // ID Cleaning Logic
+             const cleanId = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 50) || 'no-id';
 
              return {
                 id: cleanId,
@@ -81,31 +146,29 @@ export default function SecretAdmin() {
              };
           }).filter((item: any) => item.name !== 'Tanpa Nama' && item.price > 0);
 
-          // Bagi data menjadi paket-paket kecil
           for (let i = 0; i < cleanData.length; i += batchSize) {
             chunks.push(cleanData.slice(i, i + batchSize));
           }
 
           let totalUploaded = 0;
-
-          // Kirim paket ke Firebase
           for (const chunk of chunks) {
             const batch = writeBatch(db);
             chunk.forEach((product: any) => {
-              const docRef = doc(db, "products", product.id); // "products" adalah nama tabelnya
+              const docRef = doc(db, "products", product.id);
               batch.set(docRef, product);
             });
             await batch.commit();
             totalUploaded += chunk.length;
-            setUploadLog(`🚀 Mengupload... ${totalUploaded} / ${cleanData.length} produk berhasil disimpan.`);
+            setUploadLog(`🚀 Uploading... ${totalUploaded} / ${cleanData.length} selesai.`);
           }
 
-          setUploadLog(`🎉 SUKSES! Total ${totalUploaded} produk sudah masuk database Shoxped.`);
+          setUploadLog(`🎉 SUKSES! Total ${totalUploaded} produk masuk.`);
           setIsUploading(false);
+          fetchStats(); // Update counter
+          fetchProducts(); // Refresh tabel
 
         } catch (error) {
-          console.error(error);
-          setUploadLog(`❌ Gagal Upload: ${(error as Error).message}`);
+          setUploadLog(`❌ Gagal: ${(error as Error).message}`);
           setIsUploading(false);
         }
       }
@@ -120,7 +183,7 @@ export default function SecretAdmin() {
             <form onSubmit={handleLogin} className="space-y-4">
                 <input type="email" placeholder="Email" className="w-full p-3 rounded bg-gray-700 text-white" value={email} onChange={e => setEmail(e.target.value)} />
                 <input type="password" placeholder="Password" className="w-full p-3 rounded bg-gray-700 text-white" value={password} onChange={e => setPassword(e.target.value)} />
-                <button className="w-full bg-orange-600 p-3 rounded text-white font-bold">UNLOCK</button>
+                <button className="w-full bg-orange-600 p-3 rounded text-white font-bold hover:bg-orange-700">UNLOCK</button>
             </form>
         </div>
       </div>
@@ -128,51 +191,122 @@ export default function SecretAdmin() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">🕵️‍♂️ Secret Dashboard</h1>
-          <button onClick={() => signOut(auth)} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Logout</button>
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+          <h1 className="text-3xl font-bold text-gray-800">🕵️‍♂️ Secret Dashboard <span className="text-sm bg-orange-100 text-orange-800 px-2 py-1 rounded ml-2">v2.0</span></h1>
+          <button onClick={() => signOut(auth)} className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 font-bold shadow">Logout</button>
         </div>
 
-        {/* STATISTIK */}
+        {/* STATISTIK DASHBOARD */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl shadow border-l-4 border-blue-500">
-            <h3 className="text-gray-500 text-sm font-bold">TOTAL VISITORS</h3>
+          <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+            <h3 className="text-gray-500 text-sm font-bold uppercase">Total Pengunjung</h3>
             <p className="text-4xl font-bold text-gray-900 mt-2">{visitorCount}</p>
-            <p className="text-green-500 text-xs mt-1">● Live Tracking Active</p>
+            <p className="text-green-500 text-xs mt-1 font-semibold flex items-center">● Live Tracking Active</p>
           </div>
-          <div className="bg-white p-6 rounded-xl shadow border-l-4 border-orange-500">
-            <h3 className="text-gray-500 text-sm font-bold">DATABASE STATUS</h3>
-            <p className="text-lg font-semibold text-gray-800 mt-2">Ready to Import</p>
-            <p className="text-gray-400 text-xs mt-1">Firestore Connected</p>
+          <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500">
+            <h3 className="text-gray-500 text-sm font-bold uppercase">Total Produk di Gudang</h3>
+            <p className="text-4xl font-bold text-gray-900 mt-2">{totalProducts.toLocaleString()}</p>
+            <p className="text-orange-500 text-xs mt-1 font-semibold">Realtime Firestore Data</p>
           </div>
         </div>
 
-        {/* AREA UPLOAD CSV */}
-        <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">📥 Import Massal Produk</h2>
-            <p className="text-gray-600 mb-6">Upload file CSV database produk Anda di sini. Sistem akan otomatis membersihkan duplikat.</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-10 bg-gray-50 hover:bg-gray-100 transition">
-                <input 
-                    type="file" 
-                    accept=".csv" 
-                    onChange={handleFileUpload} 
-                    disabled={isUploading}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
-                />
-                {isUploading && <p className="mt-4 text-blue-600 font-semibold animate-pulse">Sedang memproses... Jangan tutup halaman!</p>}
+            {/* KOLOM KIRI: IMPORT DATA */}
+            <div className="lg:col-span-1 space-y-6">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h2 className="text-lg font-bold text-gray-800 mb-2">📥 Import CSV</h2>
+                    <p className="text-xs text-gray-500 mb-4">Pastikan format CSV sesuai template.</p>
+                    
+                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 hover:bg-orange-50 transition cursor-pointer">
+                        <input 
+                            type="file" 
+                            accept=".csv" 
+                            onChange={handleFileUpload} 
+                            disabled={isUploading}
+                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200 cursor-pointer"
+                        />
+                        {isUploading && <p className="mt-4 text-orange-600 font-bold animate-pulse text-sm">Sedang Memproses...</p>}
+                    </div>
+                    {/* LOG OUTPUT MINI */}
+                    {uploadLog && (
+                        <div className="mt-4 p-3 bg-gray-900 text-green-400 font-mono text-xs rounded h-32 overflow-y-auto shadow-inner">
+                            {uploadLog}
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* LOG OUTPUT */}
-            {uploadLog && (
-                <div className="mt-6 p-4 bg-black text-green-400 font-mono text-sm rounded h-40 overflow-y-auto">
-                    {uploadLog}
-                </div>
-            )}
-        </div>
+            {/* KOLOM KANAN: TABEL MANAJEMEN */}
+            <div className="lg:col-span-2">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <h2 className="text-lg font-bold text-gray-800">📦 Manajemen Produk</h2>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            <input 
+                                type="text" 
+                                placeholder="Cari nama produk..." 
+                                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-500 w-full"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                            <button onClick={() => fetchProducts(false)} className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-600">Cari</button>
+                        </div>
+                    </div>
 
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm text-gray-600">
+                            <thead className="bg-gray-50 text-gray-800 font-semibold uppercase text-xs">
+                                <tr>
+                                    <th className="px-4 py-3">Gambar</th>
+                                    <th className="px-4 py-3">Nama Produk</th>
+                                    <th className="px-4 py-3">Harga</th>
+                                    <th className="px-4 py-3">Kategori</th>
+                                    <th className="px-4 py-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {products.length > 0 ? products.map((product) => (
+                                    <tr key={product.id} className="hover:bg-gray-50 transition">
+                                        <td className="px-4 py-3">
+                                            <img src={product.image} alt="product" className="w-10 h-10 object-cover rounded border border-gray-200" onError={(e:any) => e.target.src='https://via.placeholder.com/40'}/>
+                                        </td>
+                                        <td className="px-4 py-3 font-medium text-gray-900 max-w-xs truncate" title={product.name}>{product.name}</td>
+                                        <td className="px-4 py-3">Rp {product.price.toLocaleString('id-ID')}</td>
+                                        <td className="px-4 py-3"><span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">{product.category}</span></td>
+                                        <td className="px-4 py-3 text-center">
+                                            <button 
+                                                onClick={() => handleDelete(product.id)}
+                                                className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded transition"
+                                                title="Hapus Produk"
+                                            >
+                                                🗑️
+                                            </button>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                                            {loadingData ? "Sedang memuat data..." : "Tidak ada produk ditemukan."}
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {/* Pagination Simple */}
+                    <div className="p-4 border-t border-gray-100 text-center">
+                         <button onClick={() => fetchProducts(true)} disabled={loadingData || !lastDoc} className="text-orange-600 font-bold text-sm hover:underline disabled:opacity-50">
+                             {loadingData ? "Loading..." : "Muat Lebih Banyak 👇"}
+                         </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
       </div>
     </div>
   );
