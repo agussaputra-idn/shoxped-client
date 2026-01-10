@@ -160,7 +160,7 @@ export default function Home() {
         <div className='mt-8'>
           <div className='flex items-center justify-between mb-4 px-1'>
             <h2 className='text-xl md:text-2xl font-bold text-gray-800'>
-                {selectedCategory === "Semua" ? "Rekomendasi Untukmu" : `Kategori: ${selectedCategory}`}
+                {selectedCategory === "Semua" ? "Rekomendasi Pilihan" : `Kategori: ${selectedCategory}`}
                 <span className="ml-2 text-sm font-normal text-gray-500">
                     (Menampilkan {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredProducts.length)} dari {filteredProducts.length} Produk)
                 </span>
