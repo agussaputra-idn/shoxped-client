@@ -77,11 +77,10 @@ export default function SecretAdmin() {
     }
   };
 
-  // --- LOGIC SEARCH PINTAR (ANTI KERTAS) ---
+  // --- LOGIC SEARCH ADAPTIF (V6) ---
   useEffect(() => {
     if (!allProducts.length) return;
 
-    // Kalau kosong, tampilkan semua
     if (!searchTerm) {
         setFilteredProducts(allProducts);
         setPage(1);
@@ -90,6 +89,40 @@ export default function SecretAdmin() {
     }
 
     const lowerTerm = searchTerm.toLowerCase();
+    
+    const results = allProducts.filter((product: any) => {
+        const name = product.name.toLowerCase();
+        const category = product.category.toLowerCase();
+        
+        // 1. Cek Kategori Dulu (Kalau kategorinya cocok, langsung lolos)
+        if (category.includes(lowerTerm)) return true;
+
+        // 2. Cek Nama dengan LOGIKA PANJANG-PENDEK
+        try {
+            let regex;
+            if (lowerTerm.length <= 3) {
+                // KATA PENDEK (<= 3 Huruf): Pakai "Strict Mode" (Kata Utuh)
+                // Cari "ban" -> Hanya "ban" (Bantal TOLAK)
+                // Cari "tas" -> Hanya "tas" (Kertas TOLAK)
+                regex = new RegExp(`\\b${lowerTerm}\\b`, 'i');
+            } else {
+                // KATA PANJANG (> 3 Huruf): Pakai "Prefix Mode" (Awalan)
+                // Cari "sepa" -> Boleh "sepatu"
+                // Cari "sams" -> Boleh "samsung"
+                regex = new RegExp(`\\b${lowerTerm}`, 'i');
+            }
+            return regex.test(name);
+        } catch (e) {
+            return name.includes(lowerTerm); 
+        }
+    });
+
+    setFilteredProducts(results);
+    setPage(1); 
+    updateDisplay(results, 1);
+    
+  }, [searchTerm, allProducts]);
+
     
     // FILTER CANGGIH PAKE REGEX
     const results = allProducts.filter((product: any) => {
