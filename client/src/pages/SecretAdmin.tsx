@@ -4,41 +4,40 @@ import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebas
 import { ref, onValue } from 'firebase/database';
 import { 
   collection, writeBatch, doc, getDocs, deleteDoc, 
-  query, limit, orderBy, startAfter, where, getCountFromServer 
+  query, limit, startAfter, where, getCountFromServer 
 } from 'firebase/firestore'; 
 import Papa from 'papaparse'; 
+
+// --- HELPER: TEBAK KATEGORI ---
+const isMatch = (text: string, keywords: string[]) => {
+    const pattern = new RegExp(`\\b(${keywords.join('|')})`, 'i'); 
+    return pattern.test(text);
+};
 
 export default function SecretAdmin() {
   const [user, setUser] = useState<any>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
-  // --- STATISTIK ---
   const [visitorCount, setVisitorCount] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
 
-  // --- MANAJEMEN PRODUK ---
   const [products, setProducts] = useState<any[]>([]);
-  const [lastDoc, setLastDoc] = useState<any>(null); // Untuk Pagination
+  const [lastDoc, setLastDoc] = useState<any>(null); 
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingData, setLoadingData] = useState(false);
   
-  // --- UPLOAD ---
   const [isUploading, setIsUploading] = useState(false);
   const [uploadLog, setUploadLog] = useState('');
 
-  // 1. Cek Login & Visitor
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        // Ambil Data Visitor (Realtime DB)
         const visitorsRef = ref(realtimeDb, 'stats/totalVisitors');
         onValue(visitorsRef, (snapshot) => {
           setVisitorCount(snapshot.val() || 0);
         });
-
-        // Ambil Data Produk Awal
         fetchStats();
         fetchProducts(); 
       }
@@ -46,17 +45,12 @@ export default function SecretAdmin() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Fungsi Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      alert('Login Gagal! Cek email & password.');
-    }
+    try { await signInWithEmailAndPassword(auth, email, password); } 
+    catch (err) { alert('Login Gagal! Cek email & password.'); }
   };
 
-  // 3. FETCH DATA (Lihat isi Gudang)
   const fetchStats = async () => {
     try {
         const coll = collection(db, "products");
@@ -72,11 +66,9 @@ export default function SecretAdmin() {
         const productsRef = collection(db, "products");
 
         if (searchTerm) {
-             // Search simpel (Case sensitive, harus sesuai awalan kalimat)
-             // Firestore basic search limitation
+             // Trik Search: Menggunakan range character untuk simulasi "Starts With"
              q = query(productsRef, where("name", ">=", searchTerm), where("name", "<=", searchTerm + '\uf8ff'), limit(10));
         } else {
-             // Load biasa (ambil 20 teratas)
              if (isNext && lastDoc) {
                 q = query(productsRef, limit(20), startAfter(lastDoc));
              } else {
@@ -96,7 +88,6 @@ export default function SecretAdmin() {
     }
   };
 
-  // 4. HAPUS DATA (Tong Sampah)
   const handleDelete = async (id: string) => {
     if (window.confirm("Yakin ingin menghapus produk ini?")) {
         try {
@@ -104,13 +95,11 @@ export default function SecretAdmin() {
             setProducts(products.filter(p => p.id !== id));
             setTotalProducts(prev => prev - 1);
             alert("Produk berhasil dihapus!");
-        } catch (error) {
-            alert("Gagal menghapus.");
-        }
+        } catch (error) { alert("Gagal menghapus."); }
     }
   };
 
-  // 5. IMPORT CSV (Logic Anda yg sudah mantap)
+  // --- LOGIC UPLOAD CERDAS ---
   const handleFileUpload = (event: any) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -123,7 +112,7 @@ export default function SecretAdmin() {
       skipEmptyLines: true,
       complete: async (results) => {
         const rawData = results.data;
-        setUploadLog(`✅ Ditemukan ${rawData.length} baris data. Memproses...`);
+        setUploadLog(`✅ Ditemukan ${rawData.length} baris data. Sedang Menganalisa Kategori Otomatis...`);
         
         try {
           const batchSize = 400; 
@@ -131,8 +120,27 @@ export default function SecretAdmin() {
           
           const cleanData = rawData.map((item: any) => {
              const rawTitle = item['Title'] || '';
-             // ID Cleaning Logic
              const cleanId = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 50) || 'no-id';
+
+             // --- LOGIC OTOMATIS KATEGORI (DIPINDAH DARI HOME) ---
+             let category = item['Category'];
+             
+             // Kalau kosong atau General, kita tebak sendiri
+             if (!category || category === "" || category === "General") {
+                const tLower = rawTitle.toLowerCase();
+                const kwSepatu = ['sepatu', 'sneakers', 'sandal', 'boots', 'shoes', 'heels', 'wedges', 'flat', 'pantofel', 'kets', 'slip on', 'loafers', 'trainers', 'running', 'sport', 'futsal', 'bola', 'high heels', 'crocs', 'baim', 'slop'];
+                const kwTas = ['tas', 'bag', 'tote', 'ransel', 'dompet', 'backpack', 'clutch', 'waistbag', 'sling', 'shoulder', 'wallet', 'koper', 'duffel', 'handbag', 'selempang', 'pouch', 'travel bag'];
+                const kwKecantikan = ['serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 'cream', 'lotion', 'masker', 'essence', 'moisturizer', 'foundation', 'powder', 'bedak', 'lip', 'eye', 'hair', 'shampoo', 'sabun', 'body', 'parfum', 'perfume', 'fragrance', 'beauty', 'acne', 'jerawat', 'cleanser', 'micellar', 'wardah', 'somethinc', 'skintific'];
+                const kwElektronik = ['hp', 'handphone', 'case', 'kabel', 'headset', 'charger', 'iphone', 'android', 'samsung', 'xiaomi', 'oppo', 'vivo', 'realme', 'infinix', 'laptop', 'mouse', 'keyboard', 'earphone', 'tws', 'speaker', 'bluetooth', 'powerbank', 'usb', 'monitor', 'tv', 'kamera', 'camera', 'tripod', 'watch', 'jam tangan'];
+                const kwFashion = ['baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket', 'hoodie', 'sweater', 't-shirt', 'shirt', 'blouse', 'tunik', 'gamis', 'hijab', 'jilbab', 'batik', 'piyama', 'underwear', 'bra', 'cd', 'sarinah', 'pakaian', 'jeans', 'chino', 'kulot', 'cardigan', 'vest', 'blazer', 'setelan', 'polo'];
+
+                if (isMatch(tLower, kwSepatu)) category = "Sepatu";
+                else if (isMatch(tLower, kwTas)) category = "Tas";
+                else if (isMatch(tLower, kwKecantikan)) category = "Kecantikan";
+                else if (isMatch(tLower, kwElektronik)) category = "Elektronik";
+                else if (isMatch(tLower, kwFashion)) category = "Fashion";
+                else category = "Lainnya";
+             }
 
              return {
                 id: cleanId,
@@ -141,7 +149,7 @@ export default function SecretAdmin() {
                 image: item['ItemCard__image src'] || '',
                 shopeeLink: item['Affiliate Link'] || '',
                 tiktokLink: '', 
-                category: item['Category'] || 'General',
+                category: category, // Sekarang Kategori sudah pintar!
                 sold: item['Sales'] || '0'
              };
           }).filter((item: any) => item.name !== 'Tanpa Nama' && item.price > 0);
@@ -162,10 +170,10 @@ export default function SecretAdmin() {
             setUploadLog(`🚀 Uploading... ${totalUploaded} / ${cleanData.length} selesai.`);
           }
 
-          setUploadLog(`🎉 SUKSES! Total ${totalUploaded} produk masuk.`);
+          setUploadLog(`🎉 SUKSES! ${totalUploaded} Produk berhasil di-update kategorinya!`);
           setIsUploading(false);
-          fetchStats(); // Update counter
-          fetchProducts(); // Refresh tabel
+          fetchStats(); 
+          fetchProducts(); 
 
         } catch (error) {
           setUploadLog(`❌ Gagal: ${(error as Error).message}`);
@@ -194,7 +202,7 @@ export default function SecretAdmin() {
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-          <h1 className="text-3xl font-bold text-gray-800">🕵️‍♂️ Secret Dashboard <span className="text-sm bg-orange-100 text-orange-800 px-2 py-1 rounded ml-2">v2.0</span></h1>
+          <h1 className="text-3xl font-bold text-gray-800">🕵️‍♂️ Secret Dashboard <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded ml-2">Smart AI v3</span></h1>
           <button onClick={() => signOut(auth)} className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 font-bold shadow">Logout</button>
         </div>
 
@@ -213,45 +221,24 @@ export default function SecretAdmin() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* KOLOM KIRI: IMPORT DATA */}
             <div className="lg:col-span-1 space-y-6">
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h2 className="text-lg font-bold text-gray-800 mb-2">📥 Import CSV</h2>
-                    <p className="text-xs text-gray-500 mb-4">Pastikan format CSV sesuai template.</p>
-                    
+                    <h2 className="text-lg font-bold text-gray-800 mb-2">📥 Import CSV (Auto Category)</h2>
+                    <p className="text-xs text-gray-500 mb-4">Sistem akan otomatis mendeteksi kategori Sepatu, Tas, dll.</p>
                     <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 hover:bg-orange-50 transition cursor-pointer">
-                        <input 
-                            type="file" 
-                            accept=".csv" 
-                            onChange={handleFileUpload} 
-                            disabled={isUploading}
-                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200 cursor-pointer"
-                        />
-                        {isUploading && <p className="mt-4 text-orange-600 font-bold animate-pulse text-sm">Sedang Memproses...</p>}
+                        <input type="file" accept=".csv" onChange={handleFileUpload} disabled={isUploading} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200 cursor-pointer"/>
+                        {isUploading && <p className="mt-4 text-orange-600 font-bold animate-pulse text-sm">Sedang Memproses AI...</p>}
                     </div>
-                    {/* LOG OUTPUT MINI */}
-                    {uploadLog && (
-                        <div className="mt-4 p-3 bg-gray-900 text-green-400 font-mono text-xs rounded h-32 overflow-y-auto shadow-inner">
-                            {uploadLog}
-                        </div>
-                    )}
+                    {uploadLog && <div className="mt-4 p-3 bg-gray-900 text-green-400 font-mono text-xs rounded h-32 overflow-y-auto shadow-inner">{uploadLog}</div>}
                 </div>
             </div>
 
-            {/* KOLOM KANAN: TABEL MANAJEMEN */}
             <div className="lg:col-span-2">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
                         <h2 className="text-lg font-bold text-gray-800">📦 Manajemen Produk</h2>
                         <div className="flex gap-2 w-full sm:w-auto">
-                            <input 
-                                type="text" 
-                                placeholder="Cari nama produk..." 
-                                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-500 w-full"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                            <input type="text" placeholder="Cari nama produk..." className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-500 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/>
                             <button onClick={() => fetchProducts(false)} className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-600">Cari</button>
                         </div>
                     </div>
@@ -270,42 +257,35 @@ export default function SecretAdmin() {
                             <tbody className="divide-y divide-gray-100">
                                 {products.length > 0 ? products.map((product) => (
                                     <tr key={product.id} className="hover:bg-gray-50 transition">
-                                        <td className="px-4 py-3">
-                                            <img src={product.image} alt="product" className="w-10 h-10 object-cover rounded border border-gray-200" onError={(e:any) => e.target.src='https://via.placeholder.com/40'}/>
-                                        </td>
+                                        <td className="px-4 py-3"><img src={product.image} alt="product" className="w-10 h-10 object-cover rounded border border-gray-200" onError={(e:any) => e.target.src='https://via.placeholder.com/40'}/></td>
                                         <td className="px-4 py-3 font-medium text-gray-900 max-w-xs truncate" title={product.name}>{product.name}</td>
                                         <td className="px-4 py-3">Rp {product.price.toLocaleString('id-ID')}</td>
-                                        <td className="px-4 py-3"><span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">{product.category}</span></td>
+                                        <td className="px-4 py-3">
+                                            {/* Pewarnaan Kategori Biar Keren */}
+                                            <span className={`text-xs px-2 py-1 rounded-full ${
+                                                product.category === 'Sepatu' ? 'bg-orange-100 text-orange-800' :
+                                                product.category === 'Tas' ? 'bg-pink-100 text-pink-800' :
+                                                product.category === 'Elektronik' ? 'bg-purple-100 text-purple-800' :
+                                                product.category === 'General' ? 'bg-gray-200 text-gray-600' : 'bg-blue-100 text-blue-800'
+                                            }`}>
+                                                {product.category}
+                                            </span>
+                                        </td>
                                         <td className="px-4 py-3 text-center">
-                                            <button 
-                                                onClick={() => handleDelete(product.id)}
-                                                className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded transition"
-                                                title="Hapus Produk"
-                                            >
-                                                🗑️
-                                            </button>
+                                            <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded transition" title="Hapus Produk">🗑️</button>
                                         </td>
                                     </tr>
                                 )) : (
-                                    <tr>
-                                        <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                                            {loadingData ? "Sedang memuat data..." : "Tidak ada produk ditemukan."}
-                                        </td>
-                                    </tr>
+                                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">{loadingData ? "Sedang memuat data..." : "Tidak ada produk ditemukan."}</td></tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
-                    
-                    {/* Pagination Simple */}
                     <div className="p-4 border-t border-gray-100 text-center">
-                         <button onClick={() => fetchProducts(true)} disabled={loadingData || !lastDoc} className="text-orange-600 font-bold text-sm hover:underline disabled:opacity-50">
-                             {loadingData ? "Loading..." : "Muat Lebih Banyak 👇"}
-                         </button>
+                         <button onClick={() => fetchProducts(true)} disabled={loadingData || !lastDoc} className="text-orange-600 font-bold text-sm hover:underline disabled:opacity-50">{loadingData ? "Loading..." : "Muat Lebih Banyak 👇"}</button>
                     </div>
                 </div>
             </div>
-
         </div>
       </div>
     </div>
