@@ -5,7 +5,7 @@ import { ref, onValue } from 'firebase/database';
 import { collection, writeBatch, doc, getDocs, deleteDoc } from 'firebase/firestore'; 
 import Papa from 'papaparse'; 
 
-// --- HELPER: DETEKSI KATEGORI (AI V4 - Tetap Sama) ---
+// --- HELPER: DETEKSI KATEGORI ---
 const detectCategory = (title: string, originalCategory: string) => {
     const tLower = title.toLowerCase();
     
@@ -77,7 +77,7 @@ export default function SecretAdmin() {
     }
   };
 
-  // --- LOGIC SEARCH ADAPTIF (V6) ---
+  // --- LOGIC SEARCH ADAPTIF (V6 - FINAL & BERSIH) ---
   useEffect(() => {
     if (!allProducts.length) return;
 
@@ -94,54 +94,23 @@ export default function SecretAdmin() {
         const name = product.name.toLowerCase();
         const category = product.category.toLowerCase();
         
-        // 1. Cek Kategori Dulu (Kalau kategorinya cocok, langsung lolos)
+        // 1. Cek Kategori Dulu 
         if (category.includes(lowerTerm)) return true;
 
         // 2. Cek Nama dengan LOGIKA PANJANG-PENDEK
         try {
             let regex;
             if (lowerTerm.length <= 3) {
-                // KATA PENDEK (<= 3 Huruf): Pakai "Strict Mode" (Kata Utuh)
+                // KATA PENDEK (<= 3 Huruf): Strict Mode
                 // Cari "ban" -> Hanya "ban" (Bantal TOLAK)
-                // Cari "tas" -> Hanya "tas" (Kertas TOLAK)
                 regex = new RegExp(`\\b${lowerTerm}\\b`, 'i');
             } else {
-                // KATA PANJANG (> 3 Huruf): Pakai "Prefix Mode" (Awalan)
+                // KATA PANJANG (> 3 Huruf): Prefix Mode
                 // Cari "sepa" -> Boleh "sepatu"
-                // Cari "sams" -> Boleh "samsung"
                 regex = new RegExp(`\\b${lowerTerm}`, 'i');
             }
             return regex.test(name);
         } catch (e) {
-            return name.includes(lowerTerm); 
-        }
-    });
-
-    setFilteredProducts(results);
-    setPage(1); 
-    updateDisplay(results, 1);
-    
-  }, [searchTerm, allProducts]);
-
-    
-    // FILTER CANGGIH PAKE REGEX
-    const results = allProducts.filter((product: any) => {
-        const name = product.name.toLowerCase();
-        const category = product.category.toLowerCase();
-        
-        // 1. Prioritas: Cek Kategori (Misal ketik "Tas" -> Kategori Tas muncul semua)
-        if (category.includes(lowerTerm)) return true;
-
-        // 2. Cek Nama Produk dengan BATAS KATA (Word Boundary)
-        // \b artinya "Mulai dari sini".
-        // Jadi "tas" akan cocok dengan "Tas Selempang"
-        // Tapi "tas" TIDAK cocok dengan "Kertas"
-        try {
-            // Regex ini mencari kata yang DIMULAI dengan search term
-            const regex = new RegExp(`\\b${lowerTerm}`, 'i');
-            return regex.test(name);
-        } catch (e) {
-            // Fallback aman kalau regex error
             return name.includes(lowerTerm); 
         }
     });
