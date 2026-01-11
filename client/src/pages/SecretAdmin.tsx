@@ -5,7 +5,7 @@ import { ref, onValue } from 'firebase/database';
 import { collection, writeBatch, doc, getDocs, deleteDoc } from 'firebase/firestore'; 
 import Papa from 'papaparse'; 
 
-// --- HELPER: DETEKSI KATEGORI (AI V4) ---
+// --- HELPER: DETEKSI KATEGORI (AI V4 - Tetap Sama) ---
 const detectCategory = (title: string, originalCategory: string) => {
     const tLower = title.toLowerCase();
     
@@ -29,32 +29,28 @@ export default function SecretAdmin() {
   const [user, setUser] = useState<any>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
   const [visitorCount, setVisitorCount] = useState(0);
   
-  // --- STATE DATA BARU (CLIENT SIDE LOGIC) ---
-  const [allProducts, setAllProducts] = useState<any[]>([]); // Menyimpan SEMUA data master
-  const [filteredProducts, setFilteredProducts] = useState<any[]>([]); // Menyimpan hasil filter/search
-  const [displayedProducts, setDisplayedProducts] = useState<any[]>([]); // Yang ditampilkan di layar (Pagination)
+  // CLIENT SIDE DATA
+  const [allProducts, setAllProducts] = useState<any[]>([]); 
+  const [filteredProducts, setFilteredProducts] = useState<any[]>([]); 
+  const [displayedProducts, setDisplayedProducts] = useState<any[]>([]); 
   
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingData, setLoadingData] = useState(false);
-  const [page, setPage] = useState(1); // Halaman pagination
+  const [page, setPage] = useState(1); 
   const ITEMS_PER_PAGE = 20;
   
   const [isUploading, setIsUploading] = useState(false);
   const [uploadLog, setUploadLog] = useState('');
 
-  // 1. Cek Login & Load Data Awal
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
         const visitorsRef = ref(realtimeDb, 'stats/totalVisitors');
-        onValue(visitorsRef, (snapshot) => {
-          setVisitorCount(snapshot.val() || 0);
-        });
-        fetchAllProducts(); // AMBIL SEMUA DATA SEKALIGUS
+        onValue(visitorsRef, (snapshot) => { setVisitorCount(snapshot.val() || 0); });
+        fetchAllProducts();
       }
     });
     return () => unsubscribe();
@@ -66,18 +62,14 @@ export default function SecretAdmin() {
     catch (err) { alert('Login Gagal! Cek email & password.'); }
   };
 
-  // --- LOGIC: FETCH ALL (Tarik Semua Data) ---
   const fetchAllProducts = async () => {
     setLoadingData(true);
     try {
         const querySnapshot = await getDocs(collection(db, "products"));
         const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        // Simpan ke state Master
         setAllProducts(data);
-        setFilteredProducts(data); // Awalnya filter = semua
+        setFilteredProducts(data); 
         updateDisplay(data, 1);
-        
         setLoadingData(false);
     } catch (error) {
         console.error("Gagal ambil data:", error);
@@ -85,28 +77,49 @@ export default function SecretAdmin() {
     }
   };
 
-  // --- LOGIC: SEARCH (Filter Lokal - Cepat & Akurat) ---
+  // --- LOGIC SEARCH PINTAR (ANTI KERTAS) ---
   useEffect(() => {
     if (!allProducts.length) return;
 
+    // Kalau kosong, tampilkan semua
+    if (!searchTerm) {
+        setFilteredProducts(allProducts);
+        setPage(1);
+        updateDisplay(allProducts, 1);
+        return;
+    }
+
     const lowerTerm = searchTerm.toLowerCase();
     
-    // Filter dari Master Data
-    const results = allProducts.filter((product: any) => 
-        product.name.toLowerCase().includes(lowerTerm) || 
-        product.category.toLowerCase().includes(lowerTerm)
-    );
+    // FILTER CANGGIH PAKE REGEX
+    const results = allProducts.filter((product: any) => {
+        const name = product.name.toLowerCase();
+        const category = product.category.toLowerCase();
+        
+        // 1. Prioritas: Cek Kategori (Misal ketik "Tas" -> Kategori Tas muncul semua)
+        if (category.includes(lowerTerm)) return true;
+
+        // 2. Cek Nama Produk dengan BATAS KATA (Word Boundary)
+        // \b artinya "Mulai dari sini".
+        // Jadi "tas" akan cocok dengan "Tas Selempang"
+        // Tapi "tas" TIDAK cocok dengan "Kertas"
+        try {
+            // Regex ini mencari kata yang DIMULAI dengan search term
+            const regex = new RegExp(`\\b${lowerTerm}`, 'i');
+            return regex.test(name);
+        } catch (e) {
+            // Fallback aman kalau regex error
+            return name.includes(lowerTerm); 
+        }
+    });
 
     setFilteredProducts(results);
-    setPage(1); // Reset ke halaman 1 setiap kali search berubah
+    setPage(1); 
     updateDisplay(results, 1);
     
   }, [searchTerm, allProducts]);
 
-  // --- LOGIC: PAGINATION (Potong Data untuk Tampilan) ---
   const updateDisplay = (sourceData: any[], pageNum: number) => {
-     // Kita potong array sesuai halaman. 
-     // Halaman 1: 0 - 20, Halaman 2: 0 - 40 (Load More Style)
      const end = pageNum * ITEMS_PER_PAGE;
      setDisplayedProducts(sourceData.slice(0, end));
   };
@@ -121,16 +134,12 @@ export default function SecretAdmin() {
     if (window.confirm("Yakin ingin menghapus produk ini?")) {
         try {
             await deleteDoc(doc(db, "products", id));
-            
-            // Hapus dari state lokal biar langsung hilang tanpa refresh
             const newList = allProducts.filter(p => p.id !== id);
-            setAllProducts(newList); // Update master
-            // useEffect search akan otomatis jalan dan update tampilan
+            setAllProducts(newList); 
         } catch (error) { alert("Gagal menghapus."); }
     }
   };
 
-  // --- LOGIC UPLOAD (Tetap Sama) ---
   const handleFileUpload = (event: any) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -184,7 +193,7 @@ export default function SecretAdmin() {
 
           setUploadLog(`🎉 SELESAI! Database diperbarui.`);
           setIsUploading(false);
-          fetchAllProducts(); // Refresh data setelah upload
+          fetchAllProducts(); 
 
         } catch (error) {
           setUploadLog(`❌ Gagal: ${(error as Error).message}`);
@@ -213,7 +222,7 @@ export default function SecretAdmin() {
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-          <h1 className="text-3xl font-bold text-gray-800">🕵️‍♂️ Secret Dashboard <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded ml-2">Turbo Search</span></h1>
+          <h1 className="text-3xl font-bold text-gray-800">🕵️‍♂️ Secret Dashboard <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded ml-2">Smart V5</span></h1>
           <button onClick={() => signOut(auth)} className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 font-bold shadow">Logout</button>
         </div>
 
@@ -224,7 +233,6 @@ export default function SecretAdmin() {
           </div>
           <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500">
             <h3 className="text-gray-500 text-sm font-bold uppercase">Total Produk Aktif</h3>
-            {/* Hitung langsung dari Array, pasti akurat */}
             <p className="text-4xl font-bold text-gray-900 mt-2">{allProducts.length.toLocaleString()}</p>
             <p className="text-gray-400 text-xs mt-1">Ready in Memory</p>
           </div>
@@ -248,13 +256,7 @@ export default function SecretAdmin() {
                     <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
                         <h2 className="text-lg font-bold text-gray-800">📦 Gudang Produk ({filteredProducts.length})</h2>
                         <div className="w-full sm:w-64">
-                            <input 
-                                type="text" 
-                                placeholder="Cari apa saja (Tanpa Enter)..." 
-                                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-500 w-full" 
-                                value={searchTerm} 
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                            <input type="text" placeholder="Cari (Cth: Tas, Sepatu)..." className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-500 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/>
                         </div>
                     </div>
 
@@ -298,13 +300,9 @@ export default function SecretAdmin() {
                             </tbody>
                         </table>
                     </div>
-                    
-                    {/* Tombol Load More hanya muncul jika masih ada sisa data */}
                     {displayedProducts.length < filteredProducts.length && (
                         <div className="p-4 border-t border-gray-100 text-center">
-                             <button onClick={handleLoadMore} className="text-orange-600 font-bold text-sm hover:underline">
-                                 Tampilkan {Math.min(20, filteredProducts.length - displayedProducts.length)} lagi 👇
-                             </button>
+                             <button onClick={handleLoadMore} className="text-orange-600 font-bold text-sm hover:underline">Tampilkan {Math.min(20, filteredProducts.length - displayedProducts.length)} lagi 👇</button>
                         </div>
                     )}
                 </div>
