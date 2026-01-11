@@ -2,33 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { auth, realtimeDb, db } from '../firebase'; 
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { ref, onValue } from 'firebase/database';
-import { 
-  collection, writeBatch, doc, getDocs, deleteDoc, 
-  query, limit, startAfter, where, getCountFromServer, orderBy 
-} from 'firebase/firestore'; 
+import { collection, writeBatch, doc, getDocs, deleteDoc } from 'firebase/firestore'; 
 import Papa from 'papaparse'; 
 
-// --- HELPER: TEBAK KATEGORI (LEBIH AGRESIF) ---
-// Kita pakai .includes() saja biar lebih tajam mendeteksi kata
+// --- HELPER: DETEKSI KATEGORI (AI V4) ---
 const detectCategory = (title: string, originalCategory: string) => {
     const tLower = title.toLowerCase();
     
-    // Kamus Kata Kunci
-    const kwSepatu = ['sepatu', 'sneakers', 'sandal', 'boots', 'shoes', 'heels', 'wedges', 'flat', 'pantofel', 'kets', 'slip on', 'loafers', 'trainers', 'running', 'sport', 'futsal', 'bola', 'crocs', 'baim', 'slop'];
-    const kwTas = ['tas', 'bag', 'tote', 'ransel', 'dompet', 'backpack', 'clutch', 'waistbag', 'sling', 'shoulder', 'wallet', 'koper', 'duffel', 'handbag', 'selempang', 'pouch', 'travel bag'];
-    const kwKecantikan = ['serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 'cream', 'lotion', 'masker', 'essence', 'moisturizer', 'foundation', 'powder', 'bedak', 'lip', 'eye', 'hair', 'shampoo', 'sabun', 'body', 'parfum', 'perfume', 'fragrance', 'beauty', 'acne', 'jerawat', 'cleanser', 'micellar', 'wardah', 'somethinc', 'skintific'];
-    const kwElektronik = ['hp', 'handphone', 'case', 'kabel', 'headset', 'charger', 'iphone', 'android', 'samsung', 'xiaomi', 'oppo', 'vivo', 'realme', 'infinix', 'laptop', 'mouse', 'keyboard', 'earphone', 'tws', 'speaker', 'bluetooth', 'powerbank', 'usb', 'monitor', 'tv', 'kamera', 'camera', 'tripod', 'watch', 'jam tangan'];
-    const kwFashion = ['baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket', 'hoodie', 'sweater', 't-shirt', 'shirt', 'blouse', 'tunik', 'gamis', 'hijab', 'jilbab', 'batik', 'piyama', 'underwear', 'bra', 'cd', 'sarinah', 'pakaian', 'jeans', 'chino', 'kulot', 'cardigan', 'vest', 'blazer', 'setelan', 'polo', 'sock', 'kaos kaki'];
+    const kwSepatu = ['sepatu', 'sneakers', 'sandal', 'boots', 'shoes', 'heels', 'wedges', 'flat', 'pantofel', 'kets', 'slip on', 'loafers', 'trainers', 'running', 'sport', 'futsal', 'bola', 'crocs', 'baim', 'slop', 'sandals'];
+    const kwTas = ['tas', 'bag', 'tote', 'ransel', 'dompet', 'backpack', 'clutch', 'waistbag', 'sling', 'shoulder', 'wallet', 'koper', 'duffel', 'handbag', 'selempang', 'pouch', 'travel', 'luggage'];
+    const kwKecantikan = ['serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 'cream', 'lotion', 'masker', 'essence', 'moisturizer', 'foundation', 'powder', 'bedak', 'lip', 'eye', 'hair', 'shampoo', 'sabun', 'body', 'parfum', 'perfume', 'fragrance', 'beauty', 'acne', 'jerawat', 'cleanser', 'micellar', 'wardah', 'somethinc', 'skintific', 'msglow', 'scarlett'];
+    const kwElektronik = ['hp', 'handphone', 'case', 'kabel', 'headset', 'charger', 'iphone', 'android', 'samsung', 'xiaomi', 'oppo', 'vivo', 'realme', 'infinix', 'laptop', 'mouse', 'keyboard', 'earphone', 'tws', 'speaker', 'bluetooth', 'powerbank', 'usb', 'monitor', 'tv', 'kamera', 'camera', 'tripod', 'watch', 'jam', 'smartwatch'];
+    const kwFashion = ['baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket', 'hoodie', 'sweater', 't-shirt', 'shirt', 'blouse', 'tunik', 'gamis', 'hijab', 'jilbab', 'batik', 'piyama', 'underwear', 'bra', 'cd', 'sarinah', 'pakaian', 'jeans', 'chino', 'kulot', 'cardigan', 'vest', 'blazer', 'setelan', 'polo', 'sock', 'kaos kaki', 'daster', 'mukena', 'ciput', 'manset'];
 
-    // Cek satu per satu (Prioritas)
     if (kwSepatu.some(k => tLower.includes(k))) return "Sepatu";
     if (kwTas.some(k => tLower.includes(k))) return "Tas";
     if (kwKecantikan.some(k => tLower.includes(k))) return "Kecantikan";
     if (kwElektronik.some(k => tLower.includes(k))) return "Elektronik";
     if (kwFashion.some(k => tLower.includes(k))) return "Fashion";
 
-    // Kalau tidak ketemu, baru pakai kategori asli dari CSV (atau Lainnya)
-    if (originalCategory && originalCategory !== "General") return originalCategory;
+    if (originalCategory && originalCategory !== "General" && originalCategory !== "") return originalCategory;
     return "Lainnya";
 };
 
@@ -38,16 +31,21 @@ export default function SecretAdmin() {
   const [password, setPassword] = useState('');
   
   const [visitorCount, setVisitorCount] = useState(0);
-  const [totalProducts, setTotalProducts] = useState(0);
-
-  const [products, setProducts] = useState<any[]>([]);
-  const [lastDoc, setLastDoc] = useState<any>(null); 
+  
+  // --- STATE DATA BARU (CLIENT SIDE LOGIC) ---
+  const [allProducts, setAllProducts] = useState<any[]>([]); // Menyimpan SEMUA data master
+  const [filteredProducts, setFilteredProducts] = useState<any[]>([]); // Menyimpan hasil filter/search
+  const [displayedProducts, setDisplayedProducts] = useState<any[]>([]); // Yang ditampilkan di layar (Pagination)
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingData, setLoadingData] = useState(false);
+  const [page, setPage] = useState(1); // Halaman pagination
+  const ITEMS_PER_PAGE = 20;
   
   const [isUploading, setIsUploading] = useState(false);
   const [uploadLog, setUploadLog] = useState('');
 
+  // 1. Cek Login & Load Data Awal
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -56,8 +54,7 @@ export default function SecretAdmin() {
         onValue(visitorsRef, (snapshot) => {
           setVisitorCount(snapshot.val() || 0);
         });
-        fetchStats();
-        fetchProducts(); 
+        fetchAllProducts(); // AMBIL SEMUA DATA SEKALIGUS
       }
     });
     return () => unsubscribe();
@@ -69,50 +66,18 @@ export default function SecretAdmin() {
     catch (err) { alert('Login Gagal! Cek email & password.'); }
   };
 
-  const fetchStats = async () => {
-    try {
-        const coll = collection(db, "products");
-        const snapshot = await getCountFromServer(coll);
-        setTotalProducts(snapshot.data().count);
-    } catch (e) { console.log("Gagal hitung total:", e); }
-  };
-
-  // --- LOGIC FETCH DATA (SEARCH & LOAD MORE) ---
-  const fetchProducts = async (isLoadMore = false) => {
+  // --- LOGIC: FETCH ALL (Tarik Semua Data) ---
+  const fetchAllProducts = async () => {
     setLoadingData(true);
     try {
-        let q;
-        const productsRef = collection(db, "products");
-
-        if (searchTerm) {
-             // Search Logic
-             q = query(
-                 productsRef, 
-                 where("name", ">=", searchTerm), 
-                 where("name", "<=", searchTerm + '\uf8ff'), 
-                 limit(20)
-             );
-        } else {
-             // Default Load (pake OrderBy biar rapi)
-             if (isLoadMore && lastDoc) {
-                q = query(productsRef, limit(20), startAfter(lastDoc));
-             } else {
-                q = query(productsRef, limit(20));
-             }
-        }
-
-        const querySnapshot = await getDocs(q);
-        const data: any[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const querySnapshot = await getDocs(collection(db, "products"));
+        const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        if (isLoadMore) {
-            // Kalau load more, gabung data lama + baru
-            setProducts(prev => [...prev, ...data]);
-        } else {
-            // Kalau search baru / awal, GANTI total data
-            setProducts(data);
-        }
-
-        setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
+        // Simpan ke state Master
+        setAllProducts(data);
+        setFilteredProducts(data); // Awalnya filter = semua
+        updateDisplay(data, 1);
+        
         setLoadingData(false);
     } catch (error) {
         console.error("Gagal ambil data:", error);
@@ -120,24 +85,52 @@ export default function SecretAdmin() {
     }
   };
 
-  // Wrapper khusus untuk Tombol Cari biar bersih
-  const handleSearchClick = () => {
-      setProducts([]); // Kosongkan tabel dulu (Visual Feedback)
-      setLastDoc(null); // Reset halaman
-      fetchProducts(false); // Ambil data baru
+  // --- LOGIC: SEARCH (Filter Lokal - Cepat & Akurat) ---
+  useEffect(() => {
+    if (!allProducts.length) return;
+
+    const lowerTerm = searchTerm.toLowerCase();
+    
+    // Filter dari Master Data
+    const results = allProducts.filter((product: any) => 
+        product.name.toLowerCase().includes(lowerTerm) || 
+        product.category.toLowerCase().includes(lowerTerm)
+    );
+
+    setFilteredProducts(results);
+    setPage(1); // Reset ke halaman 1 setiap kali search berubah
+    updateDisplay(results, 1);
+    
+  }, [searchTerm, allProducts]);
+
+  // --- LOGIC: PAGINATION (Potong Data untuk Tampilan) ---
+  const updateDisplay = (sourceData: any[], pageNum: number) => {
+     // Kita potong array sesuai halaman. 
+     // Halaman 1: 0 - 20, Halaman 2: 0 - 40 (Load More Style)
+     const end = pageNum * ITEMS_PER_PAGE;
+     setDisplayedProducts(sourceData.slice(0, end));
+  };
+
+  const handleLoadMore = () => {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      updateDisplay(filteredProducts, nextPage);
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Yakin ingin menghapus produk ini?")) {
         try {
             await deleteDoc(doc(db, "products", id));
-            setProducts(products.filter(p => p.id !== id));
-            setTotalProducts(prev => prev - 1);
+            
+            // Hapus dari state lokal biar langsung hilang tanpa refresh
+            const newList = allProducts.filter(p => p.id !== id);
+            setAllProducts(newList); // Update master
+            // useEffect search akan otomatis jalan dan update tampilan
         } catch (error) { alert("Gagal menghapus."); }
     }
   };
 
-  // --- LOGIC UPLOAD SUPER AGRESIF ---
+  // --- LOGIC UPLOAD (Tetap Sama) ---
   const handleFileUpload = (event: any) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -156,20 +149,10 @@ export default function SecretAdmin() {
           const batchSize = 400; 
           const chunks = [];
           
-          // Debugging Counter
-          let countSepatu = 0;
-          let countTas = 0;
-
           const cleanData = rawData.map((item: any) => {
              const rawTitle = item['Title'] || '';
              const cleanId = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 50) || 'no-id';
-
-             // DETEKSI KATEGORI (Auto Detect)
              const finalCategory = detectCategory(rawTitle, item['Category']);
-
-             // Hitung untuk log
-             if (finalCategory === 'Sepatu') countSepatu++;
-             if (finalCategory === 'Tas') countTas++;
 
              return {
                 id: cleanId,
@@ -178,7 +161,7 @@ export default function SecretAdmin() {
                 image: item['ItemCard__image src'] || '',
                 shopeeLink: item['Affiliate Link'] || '',
                 tiktokLink: '', 
-                category: finalCategory, // Hasil deteksi paksa
+                category: finalCategory, 
                 sold: item['Sales'] || '0'
              };
           }).filter((item: any) => item.name !== 'Tanpa Nama' && item.price > 0);
@@ -192,17 +175,16 @@ export default function SecretAdmin() {
             const batch = writeBatch(db);
             chunk.forEach((product: any) => {
               const docRef = doc(db, "products", product.id);
-              batch.set(docRef, product); // Timpa data lama
+              batch.set(docRef, product); 
             });
             await batch.commit();
             totalUploaded += chunk.length;
-            setUploadLog(`🚀 Uploading... ${totalUploaded} / ${cleanData.length} (Terdeteksi: ${countSepatu} Sepatu, ${countTas} Tas)`);
+            setUploadLog(`🚀 Uploading... ${totalUploaded} / ${cleanData.length}`);
           }
 
-          setUploadLog(`🎉 SELESAI! Database diperbarui. ${countSepatu} Sepatu & ${countTas} Tas berhasil dikategorikan.`);
+          setUploadLog(`🎉 SELESAI! Database diperbarui.`);
           setIsUploading(false);
-          fetchStats(); 
-          fetchProducts(); 
+          fetchAllProducts(); // Refresh data setelah upload
 
         } catch (error) {
           setUploadLog(`❌ Gagal: ${(error as Error).message}`);
@@ -231,7 +213,7 @@ export default function SecretAdmin() {
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-          <h1 className="text-3xl font-bold text-gray-800">🕵️‍♂️ Secret Dashboard <span className="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded ml-2">Smart V4</span></h1>
+          <h1 className="text-3xl font-bold text-gray-800">🕵️‍♂️ Secret Dashboard <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded ml-2">Turbo Search</span></h1>
           <button onClick={() => signOut(auth)} className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 font-bold shadow">Logout</button>
         </div>
 
@@ -241,16 +223,18 @@ export default function SecretAdmin() {
             <p className="text-4xl font-bold text-gray-900 mt-2">{visitorCount}</p>
           </div>
           <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500">
-            <h3 className="text-gray-500 text-sm font-bold uppercase">Total Produk di Gudang</h3>
-            <p className="text-4xl font-bold text-gray-900 mt-2">{totalProducts.toLocaleString()}</p>
+            <h3 className="text-gray-500 text-sm font-bold uppercase">Total Produk Aktif</h3>
+            {/* Hitung langsung dari Array, pasti akurat */}
+            <p className="text-4xl font-bold text-gray-900 mt-2">{allProducts.length.toLocaleString()}</p>
+            <p className="text-gray-400 text-xs mt-1">Ready in Memory</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 space-y-6">
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h2 className="text-lg font-bold text-gray-800 mb-2">📥 Import CSV (Force Update)</h2>
-                    <p className="text-xs text-gray-500 mb-4">Otomatis memperbaiki kategori "General" jadi Sepatu/Tas.</p>
+                    <h2 className="text-lg font-bold text-gray-800 mb-2">📥 Import CSV (Auto AI)</h2>
+                    <p className="text-xs text-gray-500 mb-4">Database akan otomatis dirapikan.</p>
                     <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 hover:bg-orange-50 transition cursor-pointer">
                         <input type="file" accept=".csv" onChange={handleFileUpload} disabled={isUploading} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200 cursor-pointer"/>
                         {isUploading && <p className="mt-4 text-orange-600 font-bold animate-pulse text-sm">Sedang Memproses...</p>}
@@ -262,10 +246,15 @@ export default function SecretAdmin() {
             <div className="lg:col-span-2">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <h2 className="text-lg font-bold text-gray-800">📦 Manajemen Produk</h2>
-                        <div className="flex gap-2 w-full sm:w-auto">
-                            <input type="text" placeholder="Cari (Case Sensitive)..." className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-500 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/>
-                            <button onClick={handleSearchClick} className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-600">Cari</button>
+                        <h2 className="text-lg font-bold text-gray-800">📦 Gudang Produk ({filteredProducts.length})</h2>
+                        <div className="w-full sm:w-64">
+                            <input 
+                                type="text" 
+                                placeholder="Cari apa saja (Tanpa Enter)..." 
+                                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-500 w-full" 
+                                value={searchTerm} 
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
                         </div>
                     </div>
 
@@ -281,7 +270,9 @@ export default function SecretAdmin() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {products.length > 0 ? products.map((product) => (
+                                {loadingData ? (
+                                    <tr><td colSpan={5} className="px-4 py-8 text-center text-orange-500 font-bold animate-pulse">Sedang mengambil data dari server...</td></tr>
+                                ) : displayedProducts.length > 0 ? displayedProducts.map((product) => (
                                     <tr key={product.id} className="hover:bg-gray-50 transition">
                                         <td className="px-4 py-3"><img src={product.image} alt="product" className="w-10 h-10 object-cover rounded border border-gray-200" onError={(e:any) => e.target.src='https://via.placeholder.com/40'}/></td>
                                         <td className="px-4 py-3 font-medium text-gray-900 max-w-xs truncate" title={product.name}>{product.name}</td>
@@ -291,8 +282,8 @@ export default function SecretAdmin() {
                                                 product.category === 'Sepatu' ? 'bg-orange-100 text-orange-800' :
                                                 product.category === 'Tas' ? 'bg-pink-100 text-pink-800' :
                                                 product.category === 'Elektronik' ? 'bg-purple-100 text-purple-800' :
-                                                product.category === 'Kecantikan' ? 'bg-red-100 text-red-800' :
-                                                product.category === 'General' ? 'bg-gray-200 text-gray-600' : 'bg-blue-100 text-blue-800'
+                                                product.category === 'Fashion' ? 'bg-blue-100 text-blue-800' :
+                                                'bg-gray-200 text-gray-600'
                                             }`}>
                                                 {product.category}
                                             </span>
@@ -302,14 +293,20 @@ export default function SecretAdmin() {
                                         </td>
                                     </tr>
                                 )) : (
-                                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">{loadingData ? "Sedang memuat data..." : "Tidak ada produk ditemukan."}</td></tr>
+                                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Produk tidak ditemukan.</td></tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
-                    <div className="p-4 border-t border-gray-100 text-center">
-                         <button onClick={() => fetchProducts(true)} disabled={loadingData || !lastDoc} className="text-orange-600 font-bold text-sm hover:underline disabled:opacity-50">{loadingData ? "Loading..." : "Muat Lebih Banyak 👇"}</button>
-                    </div>
+                    
+                    {/* Tombol Load More hanya muncul jika masih ada sisa data */}
+                    {displayedProducts.length < filteredProducts.length && (
+                        <div className="p-4 border-t border-gray-100 text-center">
+                             <button onClick={handleLoadMore} className="text-orange-600 font-bold text-sm hover:underline">
+                                 Tampilkan {Math.min(20, filteredProducts.length - displayedProducts.length)} lagi 👇
+                             </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
