@@ -1,158 +1,195 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-// Definisi tipe data untuk setiap slide
-type SlideData = {
-  type: 'image' | 'custom';
-  content: string; 
-  title?: React.ReactNode;
-  subtitle?: string;
-  buttonText?: string;
-};
+// Interface: Menerima data produk dari Home.tsx
+interface CarouselProps {
+  featuredProducts?: any[]; 
+}
 
-const Carousel = () => {
-  // === DATA SLIDE ===
-  const slides: SlideData[] = [
-    // SLIDE 1: Gambar Tas Belanja (Shopee vs TikTok)
-    { 
-      type: 'image', 
-      content: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=1200&q=80',
-      title: (
-        <span>
-          <span className="text-[#ee4d2d]">Shopee</span> atau <span className="text-black">TikTok</span>?
-        </span>
-      ),
-      subtitle: 'Cek dulu disini. Mana yang lebih murah?',
-      buttonText: 'Bandingkan Sekarang'
-    },
-    // SLIDE 2: Banner Custom Oranye
-    { 
-      type: 'custom', 
-      content: 'Banner Edukasi' 
-    },
-    // SLIDE 3: Gambar Fashion (Wanita belanja)
-    { 
-      type: 'image', 
-      content: 'https://images.unsplash.com/photo-1572584642822-6f8de0243c93?auto=format&fit=crop&w=1200&q=80',
-      title: <span className="text-gray-900">Jangan Sampai Boncos!</span>,
-      subtitle: 'Bandingkan harga di Shoxped sebelum checkout.',
-      buttonText: 'Mulai Hemat'
-    },
-    // SLIDE 4: Gambar Belanja Online (LINK SUDAH DIPERBAIKI)
+const Carousel = ({ featuredProducts = [] }: CarouselProps) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(true); // State untuk mengatur mulus/tidaknya scroll
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // --- 1. DATA BANNER PROMO (STATIC) ---
+  const staticBanners = [
     {
-      type: 'image',
-      // URL Gambar Baru: Konsep belanja online dengan laptop
-      content: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?auto=format&fit=crop&w=1200&q=80',
-      title: <span className="text-gray-900">Pasti Lebih Untung</span>,
-      subtitle: 'Satu aplikasi untuk temukan penawaran terbaik.',
-      buttonText: 'Belanja Cerdas'
+      id: 'static-1',
+      type: 'static',
+      bgClass: 'bg-gradient-to-r from-[#ee4d2d] to-orange-600',
+      title: 'SHOPEE vs TIKTOK',
+      subtitle: 'Mana Lebih Murah?',
+      badge: 'CEK DISINI',
+      image: 'https://cdn-icons-png.flaticon.com/512/2543/2543369.png' 
+    },
+    {
+      id: 'static-2',
+      type: 'static',
+      bgClass: 'bg-gradient-to-r from-blue-600 to-indigo-600',
+      title: 'BELANJA CERDAS',
+      subtitle: 'Jangan Sampai Boncos!',
+      badge: 'TIPS HEMAT',
+      image: 'https://cdn-icons-png.flaticon.com/512/2953/2953363.png'
     }
   ];
 
-  const [currentIndex, setCurrentIndex] = useState(0);
+  // --- 2. DATA PRODUK (DYNAMIC) ---
+  const productSlides = featuredProducts.slice(0, 5).map((product) => ({
+    id: product.id,
+    type: 'product',
+    bgClass: 'bg-white',
+    title: product.title,
+    subtitle: 'Rekomendasi Terbaik',
+    price: product.shopeePrice,
+    image: product.image,
+    link: product.shopeeLink
+  }));
 
-  // Auto slide setiap 6 detik
+  // Gabungkan data asli
+  const originalSlides = [...staticBanners, ...productSlides];
+
+  // --- 3. TRIK INFINITE LOOP (CLONING) ---
+  // Kita tambahkan Slide Pertama ke bagian paling akhir array
+  // Agar saat sampai ujung, seolah-olah masuk lagi ke awal
+  const slides = [...originalSlides, { ...originalSlides[0], id: 'clone-start' }];
+
+  // --- 4. LOGIC AUTO SCROLL (BERPUTAR) ---
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % slides.length);
-    }, 6000); 
+        // Pindah ke slide berikutnya
+        setCurrentIndex((prev) => prev + 1);
+    }, 4000); // Ganti setiap 4 detik
+
     return () => clearInterval(interval);
-  }, [slides.length]);
+  }, []);
+
+  // --- 5. LOGIC TELEPORTASI (RESET POSISI) ---
+  useEffect(() => {
+    if (!scrollRef.current) return;
+
+    // A. JIKA INDEX MENCAPAI CLONE (PALING UJUNG)
+    if (currentIndex === slides.length - 1) {
+        // 1. Scroll mulus ke slide clone
+        setIsTransitioning(true);
+        scrollRef.current.scrollTo({
+            left: scrollRef.current.offsetWidth * currentIndex,
+            behavior: 'smooth'
+        });
+
+        // 2. Tunggu animasi selesai (500ms), lalu teleport ke awal
+        const timeout = setTimeout(() => {
+            setIsTransitioning(false); // Matikan efek smooth
+            scrollRef.current?.scrollTo({ left: 0, behavior: 'auto' }); // Teleport instan
+            setCurrentIndex(0); // Reset index data
+        }, 500); // Sesuaikan durasi ini dengan kecepatan scroll CSS
+
+        return () => clearTimeout(timeout);
+    } 
+    
+    // B. JIKA INDEX NORMAL (BUKAN CLONE)
+    // Pastikan scroll behavior kembali smooth jika sebelumnya dimatikan
+    if (!isTransitioning) setIsTransitioning(true);
+
+    scrollRef.current.scrollTo({
+        left: scrollRef.current.offsetWidth * currentIndex,
+        behavior: isTransitioning ? 'smooth' : 'auto'
+    });
+
+  }, [currentIndex, slides.length]); // Hapus dependency isTransitioning agar tidak loop render
+
 
   return (
-    <div className='relative w-full overflow-hidden bg-gray-100 rounded-xl shadow-sm group'>
-      {/* Container Tinggi Responsif */}
-      <div className='relative w-full h-48 md:h-64 lg:h-80'>
+    <div className="relative w-full group">
+      
+      {/* CONTAINER CAROUSEL */}
+      <div 
+        ref={scrollRef}
+        // Kita matikan scroll snap native saat auto-play agar JS yang pegang kendali penuh
+        // Tapi tetap bisa di-swipe manual karena overflow-x-auto
+        className="flex overflow-x-auto scrollbar-hide h-40 md:h-56 lg:h-64 rounded-xl w-full bg-gray-50 snap-x snap-mandatory"
+        style={{ scrollBehavior: isTransitioning ? 'smooth' : 'auto' }} // CSS Control
+      >
         {slides.map((slide, index) => (
-          <div
-            key={index}
-            className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-              index === currentIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
-            }`}
+          <div 
+            key={`${slide.id}-${index}`} 
+            className={`min-w-full w-full h-full flex items-center justify-between px-5 md:px-12 relative overflow-hidden snap-center ${slide.bgClass}`}
           >
-            {slide.type === 'image' ? (
-              // === TAMPILAN SLIDE GAMBAR DENGAN GLASS CARD ===
-              <div className="relative w-full h-full">
-                {/* Gambar Background */}
-                <img 
-                  src={slide.content} 
-                  alt={`Promo ${index + 1}`} 
-                  className='w-full h-full object-cover object-center' 
-                  // Error handling jika gambar gagal muat lagi
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://via.placeholder.com/1200x800?text=Gagal+Memuat+Gambar';
-                  }}
-                />
-                
-                {/* CONTAINER TEXT: Flexbox Center untuk menaruh di tengah */}
-                <div className="absolute inset-0 flex items-center justify-center p-4">
-                  
-                  {/* GLASS CARD EFFECT */}
-                  <div className={`
-                    bg-white/90 backdrop-blur-sm border border-white/50 
-                    px-6 py-5 md:px-10 md:py-8 rounded-2xl shadow-xl 
-                    text-center max-w-lg w-full transform transition-all duration-700
-                    ${index === currentIndex ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-4 opacity-0 scale-95'}
-                  `}>
-                    
-                    {/* Judul Utama */}
-                    {slide.title && (
-                      <h2 className="text-2xl md:text-4xl font-extrabold mb-2 tracking-tight leading-tight">
-                        {slide.title}
-                      </h2>
-                    )}
-                    
-                    {/* Sub-judul */}
-                    {slide.subtitle && (
-                      <p className="text-gray-600 text-sm md:text-base font-medium mb-5">
-                        {slide.subtitle}
-                      </p>
-                    )}
+            
+            {/* === STATIC BANNER UI === */}
+            {slide.type === 'static' && (
+                <>
+                    <div className="z-10 text-white drop-shadow-md max-w-[65%]">
+                        <span className="bg-white/20 text-[10px] md:text-xs font-bold px-2 py-1 rounded mb-2 inline-block backdrop-blur-sm border border-white/30">
+                           {slide.badge}
+                        </span>
+                        <h2 className="text-xl md:text-3xl font-extrabold italic tracking-tight leading-none mb-1">
+                            {slide.title}
+                        </h2>
+                        <p className="text-xs md:text-base font-medium opacity-90 mb-3">
+                            {slide.subtitle}
+                        </p>
+                        <button className="bg-white text-orange-600 text-[10px] md:text-xs font-bold px-4 py-1.5 rounded-full shadow-lg hover:scale-105 transition-transform">
+                            Lihat Promo &gt;
+                        </button>
+                    </div>
+                    <img 
+                        src={slide.image} 
+                        alt="Icon" 
+                        className="h-20 md:h-32 object-contain z-10 opacity-90 rotate-12 transform translate-x-2 translate-y-2 drop-shadow-xl" 
+                    />
+                    {/* Background Hiasan */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 animate-pulse"></div>
+                </>
+            )}
 
-                    {/* Tombol Action */}
-                    {slide.buttonText && (
-                      <button className="bg-[#ea580c] hover:bg-orange-600 text-white text-xs md:text-sm font-bold py-2.5 px-6 rounded-full transition-transform hover:scale-105 shadow-md">
-                        {slide.buttonText}
-                      </button>
-                    )}
-
-                  </div>
+            {/* === PRODUCT BANNER UI === */}
+            {slide.type === 'product' && (
+                <div 
+                    className="flex w-full items-center justify-between h-full cursor-pointer relative" 
+                    onClick={() => window.open(slide.link, '_blank')}
+                >
+                    <div className="flex-1 pr-2 z-10 py-2">
+                        <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-sm mb-1 inline-block">
+                            🔥 REKOMENDASI
+                        </span>
+                        <h3 className="text-gray-800 font-bold text-sm md:text-xl line-clamp-2 leading-tight mb-2">
+                            {slide.title}
+                        </h3>
+                        <div className="flex flex-col">
+                            <span className="text-xs text-gray-500">Harga Terbaik</span>
+                            <span className="text-[#ee4d2d] font-extrabold text-lg md:text-2xl">
+                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Number(slide.price))}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="w-[120px] md:w-[180px] h-[85%] bg-white p-2 rounded-lg shadow-lg transform rotate-3 border border-gray-100 flex items-center justify-center">
+                        <img 
+                            src={slide.image} 
+                            alt={slide.title} 
+                            className="w-full h-full object-contain"
+                        />
+                    </div>
                 </div>
-              </div>
-            ) : (
-              // === TAMPILAN SLIDE CUSTOM (ORANYE) ===
-              <div className="w-full h-full flex items-center justify-center px-6 relative overflow-hidden bg-gradient-to-r from-orange-500 via-[#ee4d2d] to-red-600">
-                <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, #fff 2px, transparent 2.5px)', backgroundSize: '24px 24px' }}></div>
-                
-                <div className="text-center text-white relative z-10">
-                  <h2 className="text-2xl md:text-5xl font-extrabold mb-3 drop-shadow-sm tracking-tight">
-                    Temukan Harga Terbaik
-                  </h2>
-                  <div className="flex items-center justify-center gap-3 text-lg md:text-2xl font-bold bg-white text-orange-600 py-3 px-8 rounded-full inline-block mt-2 shadow-lg">
-                    <span>Shopee</span>
-                    <span className="text-gray-400 text-sm font-normal">VS</span>
-                    <span className="text-black">TikTok Shop</span>
-                  </div>
-                  <p className="mt-6 text-sm md:text-base text-white font-medium opacity-90 hidden md:block">
-                    Satu kali cari, bandingkan dua platform terbesar di Indonesia.
-                  </p>
-                </div>
-              </div>
             )}
           </div>
         ))}
       </div>
 
-      {/* Indikator Dot */}
-      <div className='absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20'>
-        {slides.map((_, index) => (
+      {/* INDIKATOR TITIK (DOTS) */}
+      {/* Kita sembunyikan dot terakhir (clone) agar user tidak bingung */}
+      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1.5 z-20 bg-black/10 px-2 py-1 rounded-full backdrop-blur-[2px]">
+        {originalSlides.map((_, index) => (
           <button
             key={index}
-            onClick={() => setCurrentIndex(index)}
-            className={`w-2.5 h-2.5 rounded-full transition-all duration-300 shadow-sm ${
-              index === currentIndex ? 'bg-[#ea580c] w-8' : 'bg-white/50 hover:bg-white'
+            className={`rounded-full transition-all duration-300 ${
+              // Logic agar dot tetap aktif di posisi 0 saat sedang di clone (posisi terakhir)
+              (currentIndex === index) || (currentIndex === slides.length - 1 && index === 0) 
+              ? 'bg-orange-600 w-4 h-1.5' : 'bg-white/70 w-1.5 h-1.5 hover:bg-white'
             }`}
-            aria-label={`Go to slide ${index + 1}`}
-          ></button>
+            onClick={() => {
+                // Manual click
+                setCurrentIndex(index);
+            }}
+          />
         ))}
       </div>
     </div>

@@ -1,30 +1,36 @@
 import { useRoutes } from 'react-router-dom';
-import { path } from 'src/constants/path';
+import MainLayout from './layouts/MainLayout/MainLayout';
 
 // === IMPORT HALAMAN ===
-import MainLayout from './layouts/MainLayout/MainLayout';
 import Home from './pages/Home/Home';
-import Search from './pages/Search'; 
-
-// IMPORT HALAMAN RAHASIA (Pastikan file src/pages/SecretAdmin.tsx sudah dibuat)
-import SecretAdmin from './pages/SecretAdmin';
-
-import AboutUs from './pages/AboutUs/AboutUs';
-import PrivacyPolicy from './pages/PrivacyPolicy/PrivacyPolicy';
-import Terms from './pages/Terms/Terms';
+import SecretAdmin from './pages/SecretAdmin'; 
 import NotFound from './pages/NotFound/NotFound';
+
+// === IMPORT HALAMAN BARU ===
+import Search from './pages/Search';
+import Wishlist from './pages/Wishlist';
+import Profile from './pages/Profile';
+import VideoPage from './pages/VideoPage';
 
 export default function useRouteElements() {
   const element = useRoutes([
-    // 1. JALUR RAHASIA (Ditaruh diluar MainLayout agar tanpa Header/Footer)
+    // ==========================================
+    // 1. JALUR ADMIN (BERDIRI SENDIRI)
+    // ==========================================
     {
-      path: '/ruang-rahasia', // <-- Ganti ini jika ingin URL yang lebih sulit ditebak
+      path: '/admin',
+      element: <SecretAdmin />
+    },
+    {
+      path: '/ruang-rahasia',
       element: <SecretAdmin />
     },
 
-    // 2. JALUR UTAMA WEBSITE
+    // ==========================================
+    // 2. JALUR USER (MAIN LAYOUT)
+    // ==========================================
     {
-      path: path.home,
+      path: '/',
       element: <MainLayout />,
       children: [
         {
@@ -32,32 +38,32 @@ export default function useRouteElements() {
           element: <Home />
         },
         {
-          path: path.search,
+          path: 'search', 
           element: <Search />
         },
         {
-          path: path.aboutUs,
-          element: <AboutUs />
+          path: 'wishlist', 
+          element: <Wishlist />
         },
         {
-          path: path.privacyPolicy,
-          element: <PrivacyPolicy />
+          path: 'profile', 
+          element: <Profile />
         },
+        // --- PERBAIKAN DISINI ---
+        // Kita ubah jalurnya jadi 'video-feed' agar sesuai dengan tombol Anda
         {
-          path: path.terms,
-          element: <Terms />
-        }
+          path: 'video-feed', 
+          element: <VideoPage />
+        },
       ]
     },
 
-    // 3. HALAMAN NOT FOUND (404)
+    // ==========================================
+    // 3. JALUR 404 (NOT FOUND)
+    // ==========================================
     {
       path: '*',
-      element: (
-        <MainLayout>
-          <NotFound />
-        </MainLayout>
-      )
+      element: <NotFound />
     }
   ]);
 

@@ -1,94 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { db } from '../firebase'; 
+import { collection, getDocs } from 'firebase/firestore';
 
-const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRHWpsx3G4RMRvKFM-8_TbHXoScIJA_JfyU3yoaUhaKWyIvS0fWixGwsgn8fbotRQ/pub?gid=1694034890&single=true&output=csv";
-
-// --- GAMBAR CADANGAN ---
 const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3EGambar Tidak Tersedia%3C/text%3E%3C/svg%3E";
 
-const isMatch = (text: string, keywords: string[]) => {
-    const pattern = new RegExp(`\\b(${keywords.join('|')})`, 'i');
-    return pattern.test(text);
-};
-
-// --- PARSER DATA ---
-const parseCSV = (text: string) => {
-    const rows = text.split('\n').filter(row => row && row.trim().length > 0);
-    const dataRows = rows.slice(1);
-
-    return dataRows.map((row, index) => {
-        const parts = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-        const cleanParts = parts.map(p => p.trim().replace(/^"|"$/g, '').trim());
-
-        if (cleanParts.length < 3) return null;
-
-        const title = cleanParts[0] || "Produk Tanpa Nama";
-        const price = parseInt(cleanParts[1]) || 0; 
-        
-        let image = cleanParts[2];
-        if (!image || !image.startsWith('http')) image = FALLBACK_IMAGE;
-
-        // LOGIKA KATEGORI DIPERBARUI
-        let category = cleanParts[3];
-        if (!category || category === "" || category === "General") {
-            const tLower = title.toLowerCase();
-
-            // KAMUS LENGKAP
-            const kwSepatu = ['sepatu', 'sneakers', 'sandal', 'boots', 'shoes', 'heels', 'wedges', 'flat', 'pantofel', 'kets', 'slip on', 'loafers', 'trainers', 'running', 'sport', 'futsal', 'bola', 'crocs', 'baim', 'slop'];
-            const kwTas = ['tas', 'bag', 'tote', 'ransel', 'dompet', 'backpack', 'clutch', 'waistbag', 'sling', 'shoulder', 'wallet', 'koper', 'duffel', 'handbag', 'selempang', 'pouch', 'travel bag'];
-            const kwKecantikan = ['serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 'cream', 'lotion', 'masker', 'essence', 'moisturizer', 'foundation', 'powder', 'bedak', 'lip', 'eye', 'hair', 'shampoo', 'sabun', 'body', 'parfum', 'perfume', 'fragrance', 'beauty', 'acne', 'jerawat', 'cleanser', 'micellar'];
-            const kwElektronik = ['hp', 'handphone', 'case', 'kabel', 'headset', 'charger', 'iphone', 'android', 'samsung', 'xiaomi', 'oppo', 'vivo', 'realme', 'infinix', 'laptop', 'mouse', 'keyboard', 'earphone', 'tws', 'speaker', 'bluetooth', 'powerbank', 'usb', 'monitor', 'tv', 'kamera', 'camera', 'tripod', 'watch', 'jam tangan'];
-            const kwFashion = ['baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket', 'hoodie', 'sweater', 't-shirt', 'shirt', 'blouse', 'tunik', 'gamis', 'hijab', 'jilbab', 'batik', 'piyama', 'underwear', 'bra', 'cd', 'sarinah', 'pakaian', 'jeans', 'chino', 'kulot', 'cardigan', 'vest', 'blazer', 'setelan'];
-
-            if (isMatch(tLower, kwSepatu)) category = "Sepatu";
-            else if (isMatch(tLower, kwTas)) category = "Tas";
-            else if (isMatch(tLower, kwKecantikan)) category = "Kecantikan";
-            else if (isMatch(tLower, kwElektronik)) category = "Elektronik";
-            else if (isMatch(tLower, kwFashion)) category = "Fashion";
-            else category = "Lainnya";
-        }
-
-        const sales = cleanParts[4] || "0 Terjual";
-        const shopName = cleanParts[5] || "Star Seller";
-        const shopeeLink = cleanParts[6] || "#";
-
-        const isShopeeCheaper = Math.random() < 0.6;
-        const variance = Math.random() * 0.3; 
-        let tiktokPrice = isShopeeCheaper ? Math.floor(price * (1 + variance)) : Math.floor(price * (1 - variance));
-
-        const cleanTitle = title.replace(/[^a-zA-Z0-9 ]/g, " ").trim();
-        const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
-
-        return {
-            id: index + 5000,
-            title,
-            shopeePrice: price,
-            image,
-            shopeeLink, 
-            shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodeURIComponent(keywords)}`,
-            tiktokPrice,
-            tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(keywords)}`, 
-            sales,
-            shopName,
-            category
-        };
-    }).filter(item => item !== null && item.shopeePrice > 0); 
-};
-
-// --- SMART FILTER ---
-const smartFilter = (products: any[], query: string) => {
+// --- SMART FILTER & SORTER ---
+const processData = (products: any[], query: string) => {
     if (!query) return products;
-    const queryTerms = query.toLowerCase().trim().split(/\s+/);
-    return products.filter(p => {
-        const cleanTitle = p.title.toLowerCase().replace(/[^a-z0-9]/g, ' '); 
-        const titleWords = cleanTitle.split(/\s+/);
-        return queryTerms.every(term => titleWords.includes(term));
+    
+    const lowerQuery = query.toLowerCase().trim();
+    const queryTerms = lowerQuery.split(/\s+/);
+    
+    // 1. FILTER DULU (Hanya ambil yang relevan)
+    let filtered = products.filter(p => {
+        const title = p.title.toLowerCase();
+        // Cek apakah mengandung kata kunci (Whole Word)
+        return queryTerms.every(term => {
+            const regex = new RegExp(`\\b${term}`, 'i');
+            return regex.test(title);
+        });
     });
+
+    // 2. SORTING (URUTKAN PRIORITAS)
+    // Produk yang JUDULNYA DIAWALI kata kunci akan naik ke atas
+    filtered.sort((a, b) => {
+        const titleA = a.title.toLowerCase();
+        const titleB = b.title.toLowerCase();
+
+        const aStarts = titleA.startsWith(lowerQuery);
+        const bStarts = titleB.startsWith(lowerQuery);
+
+        if (aStarts && !bStarts) return -1; // A menang (Naik ke atas)
+        if (!aStarts && bStarts) return 1;  // B menang
+        return 0; // Sama kuat
+    });
+
+    return filtered;
 };
 
 export default function Search() {
   const [searchParams] = useSearchParams();
-  const queryName = searchParams.get('name') || '';
+  const queryName = searchParams.get('q') || searchParams.get('name') || '';
   
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,15 +54,49 @@ export default function Search() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const response = await fetch(GOOGLE_SHEET_CSV_URL);
-            const text = await response.text();
-            const parsedData = parseCSV(text);
-            const filtered = smartFilter(parsedData, queryName);
-            setProducts(filtered);
+            const querySnapshot = await getDocs(collection(db, "products"));
+            
+            const rawData = querySnapshot.docs.map((doc) => {
+                const data = doc.data();
+                
+                const price = parseInt(data.price) || 0;
+                const isShopeeCheaper = Math.random() < 0.6;
+                const variance = Math.random() * 0.2; 
+                let tiktokPrice = isShopeeCheaper 
+                    ? Math.floor(price * (1 + variance)) 
+                    : Math.floor(price * (1 - variance));
+
+                const cleanTitle = (data.name || "").replace(/[^a-zA-Z0-9 ]/g, " ").trim();
+                const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
+
+                return {
+                    id: doc.id,
+                    title: data.name || "Produk Tanpa Nama",
+                    image: data.image || FALLBACK_IMAGE,
+                    shopeePrice: price,
+                    tiktokPrice: tiktokPrice,
+                    shopeeLink: data.shopeeLink || "#",
+                    tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(keywords)}`,
+                    shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodeURIComponent(keywords)}`,
+                    sales: data.sold || data.Sales || "Terlaris",
+                    // Nama toko kita hapus dari tampilan, tapi datanya tetap disimpan kalau butuh
+                    shopName: data['Nama Toko'] || data.shopName || "", 
+                    category: data.category || "Umum"
+                };
+            });
+
+            // Jalankan Filter & Sorting Prioritas
+            const processed = processData(rawData, queryName);
+            setProducts(processed);
             setCurrentPage(1); 
-        } catch (error) { console.error("Error:", error); } 
-        finally { setLoading(false); }
+
+        } catch (error) { 
+            console.error("Gagal ambil data:", error); 
+        } finally { 
+            setLoading(false); 
+        }
     };
+    
     fetchData();
   }, [queryName]);
 
@@ -117,11 +104,13 @@ export default function Search() {
 
   const getSortedProducts = () => {
       let sorted = [...products]; 
+      // Jika user memilih sorting harga, prioritas "Nama" diabaikan
       if (sortOption === "termurah") {
           sorted.sort((a, b) => a.shopeePrice - b.shopeePrice);
       } else if (sortOption === "termahal") {
           sorted.sort((a, b) => b.shopeePrice - a.shopeePrice);
       }
+      // Jika "Terkait", urutan tetap ikut logika processData (Tas di atas)
       return sorted;
   };
 
@@ -137,21 +126,28 @@ export default function Search() {
   };
 
   return (
-    <div className='w-full min-h-screen bg-gray-50 pb-12'>
-      <div className='w-full max-w-[1920px] mx-auto px-4 md:px-8 pt-8'>
+    <div className='w-full min-h-screen bg-gray-50 pb-12 pt-4'>
+      <div className='w-full max-w-[1200px] mx-auto px-4 md:px-6'>
         
-        <div className='flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4'>
+        {/* HEADER */}
+        <div className='flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100'>
             <div>
-                <h1 className='text-xl md:text-2xl font-bold text-gray-800'>Hasil: <span className="text-[#ee4d2d]">"{queryName}"</span></h1>
-                <span className="text-gray-500 text-sm">Ditemukan {products.length} Produk</span>
+                <h1 className='text-lg md:text-xl font-bold text-gray-800'>
+                    {queryName ? (
+                        <>Hasil pencarian: <span className="text-[#ee4d2d]">"{queryName}"</span></>
+                    ) : (
+                        <>Semua Produk</>
+                    )}
+                </h1>
+                <span className="text-gray-500 text-xs md:text-sm">Ditemukan {products.length} barang</span>
             </div>
 
             <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 font-medium">Urutkan:</span>
+                <span className="text-xs md:text-sm text-gray-600 font-medium">Urutkan:</span>
                 <select 
                     value={sortOption}
                     onChange={(e) => setSortOption(e.target.value)}
-                    className="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-[#ee4d2d] focus:border-[#ee4d2d] block p-2.5 cursor-pointer hover:border-orange-400 transition-colors shadow-sm"
+                    className="bg-gray-50 border border-gray-200 text-gray-700 text-xs md:text-sm rounded focus:ring-[#ee4d2d] focus:border-[#ee4d2d] block p-2 cursor-pointer outline-none"
                 >
                     <option value="terkait">Terkait</option>
                     <option value="termurah">Harga Termurah</option>
@@ -160,31 +156,41 @@ export default function Search() {
             </div>
         </div>
 
-        <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 min-h-[500px]'>
+        {/* GRID PRODUK */}
+        <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 min-h-[500px]'>
             {loading ? (
-                 [...Array(10)].map((_, i) => <div key={i} className='bg-white rounded-xl shadow-sm h-80 animate-pulse border border-gray-100' />)
+                 [...Array(10)].map((_, i) => <div key={i} className='bg-white rounded shadow-sm h-96 animate-pulse border border-gray-100' />)
             ) : currentItems.length > 0 ? (
                 currentItems.map((item) => (
                     <div key={item.id} className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col'>
-                        <div className='w-full aspect-square relative overflow-hidden bg-gray-100'>
+                        
+                        {/* Gambar Produk */}
+                        <div className='w-full aspect-square relative overflow-hidden bg-gray-50'>
                             <img 
                                 src={item.image} 
                                 alt={item.title} 
                                 className='w-full h-full object-cover transition-transform duration-500 hover:scale-105' 
                                 onError={(e: any) => { e.target.onerror = null; e.target.src = FALLBACK_IMAGE; }} 
                             />
+                            {/* Star+ Only */}
+                            <div className="absolute top-0 left-0 bg-[#ee4d2d] text-white text-[10px] font-bold px-2 py-1 rounded-br shadow-sm">
+                                Star+
+                            </div>
                         </div>
                         
+                        {/* Detail Produk */}
                         <div className='p-4 flex flex-col flex-grow justify-between'>
-                            <h3 className='text-sm text-gray-800 font-semibold line-clamp-2 leading-snug mb-1' title={item.title}>{item.title}</h3>
-
-                            <div className="flex items-center gap-2 mb-3 text-[10px] text-gray-500">
-                                <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium truncate max-w-[100px]">{item.shopName}</span>
-                                <span>•</span>
-                                <span>{item.sales}</span>
+                            <div>
+                                <h3 className='text-xs md:text-sm text-gray-800 font-semibold line-clamp-2 leading-relaxed mb-2' title={item.title}>{item.title}</h3>
+                                
+                                {/* Info Terjual (Nama Toko DIHAPUS) */}
+                                <div className="flex items-center gap-1 mb-3 text-[10px] text-gray-500">
+                                    <span>🔥 {item.sales}</span>
+                                </div>
                             </div>
 
-                            <div className="space-y-2 mb-4">
+                            {/* Harga */}
+                            <div className="space-y-1 mb-4">
                                 <div className="flex justify-between items-center text-xs md:text-sm">
                                     <span className="font-bold text-[#ee4d2d]">Shopee</span>
                                     <span className="font-bold text-[#ee4d2d]">{formatRupiah(item.shopeePrice)}</span>
@@ -195,14 +201,17 @@ export default function Search() {
                                 </div>
                             </div>
 
+                            {/* Tombol Aksi (UPDATE DESAIN KALEM) */}
                             <div className="flex flex-col gap-2 mt-auto">
                                 <div className="flex flex-col md:flex-row gap-2">
+                                    {/* Tombol Shopee: Border Orange Pudar (border-orange-200) */}
                                     <a href={item.shopeeLink} target="_blank" rel="noreferrer" 
-                                    className="flex-1 bg-white text-[#ee4d2d] border border-[#ee4d2d] text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-[#ee4d2d] hover:text-white hover:shadow-md">
+                                    className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">
                                         Beli di Shopee
                                     </a>
+                                    {/* Tombol TikTok: Border Abu (border-gray-300) */}
                                     <a href={item.tiktokLink} target="_blank" rel="noreferrer" 
-                                    className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-black hover:text-white hover:border-black hover:shadow-md">
+                                    className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm">
                                         Beli di TikTok
                                     </a>
                                 </div>
@@ -214,28 +223,33 @@ export default function Search() {
                                     <p className="text-[9px] text-gray-300 italic">*Harga dapat berubah sewaktu-waktu</p>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 ))
             ) : (
-                <div className="col-span-full py-20 text-center text-gray-500"><p>Produk tidak ditemukan.</p></div>
+                <div className="col-span-full py-20 text-center flex flex-col items-center justify-center text-gray-400">
+                    <div className="text-4xl mb-2">🔍</div>
+                    <p className="font-medium">Waduh, produk "{queryName}" tidak ditemukan.</p>
+                    <button onClick={() => window.location.href='/'} className="mt-4 text-[#ee4d2d] text-sm font-bold border border-[#ee4d2d] px-4 py-2 rounded hover:bg-orange-50">Kembali ke Beranda</button>
+                </div>
             )}
         </div>
 
-        {/* PAGINATION SEARCH */}
+        {/* PAGINATION */}
         {!loading && totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-12 mb-8 flex-wrap">
-                <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-2 border rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-50 bg-white">&lt;</button>
+            <div className="flex justify-center items-center gap-2 mt-10 mb-8 flex-wrap">
+                <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:bg-white disabled:opacity-50 text-sm">&lt;</button>
                 {[...Array(totalPages)].map((_, i) => {
                     const pageNum = i + 1;
                     if (pageNum === 1 || pageNum === totalPages || (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)) {
                          return (
-                            <button key={pageNum} onClick={() => paginate(pageNum)} className={`w-10 h-10 rounded-md font-bold transition-colors ${currentPage === pageNum ? 'bg-[#ee4d2d] text-white border border-[#ee4d2d]' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'}`}>{pageNum}</button>
+                            <button key={pageNum} onClick={() => paginate(pageNum)} className={`w-8 h-8 text-sm flex items-center justify-center rounded transition-colors ${currentPage === pageNum ? 'bg-[#ee4d2d] text-white' : 'bg-transparent text-gray-600 hover:bg-gray-100'}`}>{pageNum}</button>
                         );
-                    } else if (pageNum === currentPage - 2 || pageNum === currentPage + 2) { return <span key={pageNum} className="text-gray-400">...</span>; }
+                    } else if (pageNum === currentPage - 2 || pageNum === currentPage + 2) { return <span key={pageNum} className="text-gray-300 text-xs">...</span>; }
                     return null;
                 })}
-                <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-2 border rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-50 bg-white">&gt;</button>
+                <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages} className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:bg-white disabled:opacity-50 text-sm">&gt;</button>
             </div>
         )}
       </div>

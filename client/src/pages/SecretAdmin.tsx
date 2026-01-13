@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { auth, realtimeDb, db } from '../firebase'; 
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { ref, onValue } from 'firebase/database';
-import { collection, writeBatch, doc, getDocs, deleteDoc } from 'firebase/firestore'; 
+// UPDATE IMPORT PENTING: Menambahkan fungsi-fungsi baru untuk Feed
+import { collection, writeBatch, doc, getDocs, deleteDoc, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore'; 
 import Papa from 'papaparse'; 
 
-// --- HELPER: DETEKSI KATEGORI ---
+// --- HELPER: DETEKSI KATEGORI (Untuk CSV Produk) ---
 const detectCategory = (title: string, originalCategory: string) => {
     const tLower = title.toLowerCase();
     
@@ -31,19 +32,30 @@ export default function SecretAdmin() {
   const [password, setPassword] = useState('');
   const [visitorCount, setVisitorCount] = useState(0);
   
-  // CLIENT SIDE DATA
+  // --- STATE TABS (Pindah Menu) ---
+  const [activeTab, setActiveTab] = useState<'products' | 'feeds'>('products');
+
+  // --- STATE PRODUK (Product Manager) ---
   const [allProducts, setAllProducts] = useState<any[]>([]); 
   const [filteredProducts, setFilteredProducts] = useState<any[]>([]); 
   const [displayedProducts, setDisplayedProducts] = useState<any[]>([]); 
-  
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingData, setLoadingData] = useState(false);
   const [page, setPage] = useState(1); 
   const ITEMS_PER_PAGE = 20;
-  
   const [isUploading, setIsUploading] = useState(false);
   const [uploadLog, setUploadLog] = useState('');
 
+  // --- STATE FEEDS (Feed Manager - FITUR BARU) ---
+  const [feeds, setFeeds] = useState<any[]>([]);
+  const [feedType, setFeedType] = useState('video');
+  const [feedTitle, setFeedTitle] = useState('');
+  const [feedSrc, setFeedSrc] = useState('');
+  const [feedPoster, setFeedPoster] = useState('');
+  const [feedPrice, setFeedPrice] = useState('');
+  const [feedLoading, setFeedLoading] = useState(false);
+
+  // --- AUTH & INIT ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -51,6 +63,7 @@ export default function SecretAdmin() {
         const visitorsRef = ref(realtimeDb, 'stats/totalVisitors');
         onValue(visitorsRef, (snapshot) => { setVisitorCount(snapshot.val() || 0); });
         fetchAllProducts();
+        fetchFeeds(); // Load feeds juga saat login
       }
     });
     return () => unsubscribe();
@@ -62,6 +75,9 @@ export default function SecretAdmin() {
     catch (err) { alert('Login Gagal! Cek email & password.'); }
   };
 
+  // ==========================================
+  // 1. LOGIC PRODUCT MANAGER (Existing)
+  // ==========================================
   const fetchAllProducts = async () => {
     setLoadingData(true);
     try {
@@ -77,36 +93,24 @@ export default function SecretAdmin() {
     }
   };
 
-  // --- LOGIC SEARCH ADAPTIF (V6 - FINAL & BERSIH) ---
   useEffect(() => {
     if (!allProducts.length) return;
-
     if (!searchTerm) {
         setFilteredProducts(allProducts);
         setPage(1);
         updateDisplay(allProducts, 1);
         return;
     }
-
     const lowerTerm = searchTerm.toLowerCase();
-    
     const results = allProducts.filter((product: any) => {
         const name = product.name.toLowerCase();
         const category = product.category.toLowerCase();
-        
-        // 1. Cek Kategori Dulu 
         if (category.includes(lowerTerm)) return true;
-
-        // 2. Cek Nama dengan LOGIKA PANJANG-PENDEK
         try {
             let regex;
             if (lowerTerm.length <= 3) {
-                // KATA PENDEK (<= 3 Huruf): Strict Mode
-                // Cari "ban" -> Hanya "ban" (Bantal TOLAK)
                 regex = new RegExp(`\\b${lowerTerm}\\b`, 'i');
             } else {
-                // KATA PANJANG (> 3 Huruf): Prefix Mode
-                // Cari "sepa" -> Boleh "sepatu"
                 regex = new RegExp(`\\b${lowerTerm}`, 'i');
             }
             return regex.test(name);
@@ -114,11 +118,9 @@ export default function SecretAdmin() {
             return name.includes(lowerTerm); 
         }
     });
-
     setFilteredProducts(results);
     setPage(1); 
     updateDisplay(results, 1);
-    
   }, [searchTerm, allProducts]);
 
   const updateDisplay = (sourceData: any[], pageNum: number) => {
@@ -132,7 +134,7 @@ export default function SecretAdmin() {
       updateDisplay(filteredProducts, nextPage);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDeleteProduct = async (id: string) => {
     if (window.confirm("Yakin ingin menghapus produk ini?")) {
         try {
             await deleteDoc(doc(db, "products", id));
@@ -205,6 +207,52 @@ export default function SecretAdmin() {
     });
   };
 
+  // ==========================================
+  // 2. LOGIC FEED MANAGER (FITUR BARU)
+  // ==========================================
+  const fetchFeeds = async () => {
+    try {
+      // Mengambil data feeds dari koleksi 'feeds'
+      const q = query(collection(db, "feeds"), orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setFeeds(data);
+    } catch (e) { console.error(e); }
+  };
+
+  const handleFeedSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFeedLoading(true);
+    try {
+      await addDoc(collection(db, "feeds"), {
+        type: feedType,
+        title: feedTitle,
+        src: feedSrc || null,
+        poster: feedPoster || null,
+        price: feedPrice || null,
+        createdAt: serverTimestamp()
+      });
+      alert("Feed Berhasil Diupload! Cek Halaman Depan.");
+      setFeedTitle(''); setFeedSrc(''); setFeedPoster(''); setFeedPrice('');
+      fetchFeeds(); 
+    } catch (error) {
+      alert("Gagal upload feed.");
+    }
+    setFeedLoading(false);
+  };
+
+  const handleDeleteFeed = async (id: string) => {
+    if(!confirm("Hapus konten ini?")) return;
+    try {
+      await deleteDoc(doc(db, "feeds", id));
+      fetchFeeds();
+    } catch (error) { alert("Gagal hapus"); }
+  };
+
+  // ==========================================
+  // RENDER UI
+  // ==========================================
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
@@ -221,95 +269,201 @@ export default function SecretAdmin() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-          <h1 className="text-3xl font-bold text-gray-800">🕵️‍♂️ Secret Dashboard <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded ml-2">Smart V5</span></h1>
+        
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+          <h1 className="text-3xl font-bold text-gray-800">🕵️‍♂️ Secret Dashboard <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded ml-2">V6 Ultimate</span></h1>
           <button onClick={() => signOut(auth)} className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 font-bold shadow">Logout</button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* STATS SUMMARY */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
             <h3 className="text-gray-500 text-sm font-bold uppercase">Total Pengunjung</h3>
             <p className="text-4xl font-bold text-gray-900 mt-2">{visitorCount}</p>
           </div>
           <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500">
-            <h3 className="text-gray-500 text-sm font-bold uppercase">Total Produk Aktif</h3>
+            <h3 className="text-gray-500 text-sm font-bold uppercase">Total Produk</h3>
             <p className="text-4xl font-bold text-gray-900 mt-2">{allProducts.length.toLocaleString()}</p>
-            <p className="text-gray-400 text-xs mt-1">Ready in Memory</p>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-purple-500">
+            <h3 className="text-gray-500 text-sm font-bold uppercase">Total Video/Feed</h3>
+            <p className="text-4xl font-bold text-gray-900 mt-2">{feeds.length}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1 space-y-6">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h2 className="text-lg font-bold text-gray-800 mb-2">📥 Import CSV (Auto AI)</h2>
-                    <p className="text-xs text-gray-500 mb-4">Database akan otomatis dirapikan.</p>
-                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 hover:bg-orange-50 transition cursor-pointer">
-                        <input type="file" accept=".csv" onChange={handleFileUpload} disabled={isUploading} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200 cursor-pointer"/>
-                        {isUploading && <p className="mt-4 text-orange-600 font-bold animate-pulse text-sm">Sedang Memproses...</p>}
-                    </div>
-                    {uploadLog && <div className="mt-4 p-3 bg-gray-900 text-green-400 font-mono text-xs rounded h-32 overflow-y-auto shadow-inner">{uploadLog}</div>}
-                </div>
-            </div>
-
-            <div className="lg:col-span-2">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <h2 className="text-lg font-bold text-gray-800">📦 Gudang Produk ({filteredProducts.length})</h2>
-                        <div className="w-full sm:w-64">
-                            <input type="text" placeholder="Cari (Cth: Tas, Sepatu)..." className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-500 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/>
-                        </div>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm text-gray-600">
-                            <thead className="bg-gray-50 text-gray-800 font-semibold uppercase text-xs">
-                                <tr>
-                                    <th className="px-4 py-3">Gambar</th>
-                                    <th className="px-4 py-3">Nama Produk</th>
-                                    <th className="px-4 py-3">Harga</th>
-                                    <th className="px-4 py-3">Kategori</th>
-                                    <th className="px-4 py-3 text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {loadingData ? (
-                                    <tr><td colSpan={5} className="px-4 py-8 text-center text-orange-500 font-bold animate-pulse">Sedang mengambil data dari server...</td></tr>
-                                ) : displayedProducts.length > 0 ? displayedProducts.map((product) => (
-                                    <tr key={product.id} className="hover:bg-gray-50 transition">
-                                        <td className="px-4 py-3"><img src={product.image} alt="product" className="w-10 h-10 object-cover rounded border border-gray-200" onError={(e:any) => e.target.src='https://via.placeholder.com/40'}/></td>
-                                        <td className="px-4 py-3 font-medium text-gray-900 max-w-xs truncate" title={product.name}>{product.name}</td>
-                                        <td className="px-4 py-3">Rp {product.price.toLocaleString('id-ID')}</td>
-                                        <td className="px-4 py-3">
-                                            <span className={`text-xs px-2 py-1 rounded-full ${
-                                                product.category === 'Sepatu' ? 'bg-orange-100 text-orange-800' :
-                                                product.category === 'Tas' ? 'bg-pink-100 text-pink-800' :
-                                                product.category === 'Elektronik' ? 'bg-purple-100 text-purple-800' :
-                                                product.category === 'Fashion' ? 'bg-blue-100 text-blue-800' :
-                                                'bg-gray-200 text-gray-600'
-                                            }`}>
-                                                {product.category}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded transition" title="Hapus">🗑️</button>
-                                        </td>
-                                    </tr>
-                                )) : (
-                                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Produk tidak ditemukan.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    {displayedProducts.length < filteredProducts.length && (
-                        <div className="p-4 border-t border-gray-100 text-center">
-                             <button onClick={handleLoadMore} className="text-orange-600 font-bold text-sm hover:underline">Tampilkan {Math.min(20, filteredProducts.length - displayedProducts.length)} lagi 👇</button>
-                        </div>
-                    )}
-                </div>
-            </div>
+        {/* --- TABS NAVIGATION (DISINI KUNCINYA) --- */}
+        <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
+            <button 
+                onClick={() => setActiveTab('products')}
+                className={`py-3 px-6 font-bold text-sm transition-all border-b-2 whitespace-nowrap ${activeTab === 'products' ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            >
+                📦 MANAGEMENT PRODUK (CSV)
+            </button>
+            <button 
+                onClick={() => setActiveTab('feeds')}
+                className={`py-3 px-6 font-bold text-sm transition-all border-b-2 whitespace-nowrap ${activeTab === 'feeds' ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            >
+                🎬 MANAGEMENT FEED & VIDEO
+            </button>
         </div>
+
+        {/* CONTENT AREA */}
+        
+        {/* === TAB 1: PRODUCT MANAGER === */}
+        {activeTab === 'products' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in-up">
+                {/* Uploader Section */}
+                <div className="lg:col-span-1 space-y-6">
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h2 className="text-lg font-bold text-gray-800 mb-2">📥 Import CSV (Auto AI)</h2>
+                        <p className="text-xs text-gray-500 mb-4">Database akan otomatis dirapikan.</p>
+                        <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 hover:bg-orange-50 transition cursor-pointer">
+                            <input type="file" accept=".csv" onChange={handleFileUpload} disabled={isUploading} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200 cursor-pointer"/>
+                            {isUploading && <p className="mt-4 text-orange-600 font-bold animate-pulse text-sm">Sedang Memproses...</p>}
+                        </div>
+                        {uploadLog && <div className="mt-4 p-3 bg-gray-900 text-green-400 font-mono text-xs rounded h-32 overflow-y-auto shadow-inner">{uploadLog}</div>}
+                    </div>
+                </div>
+
+                {/* Table Section */}
+                <div className="lg:col-span-2">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <h2 className="text-lg font-bold text-gray-800">📦 Gudang Produk ({filteredProducts.length})</h2>
+                            <div className="w-full sm:w-64">
+                                <input type="text" placeholder="Cari (Cth: Tas, Sepatu)..." className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-500 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm text-gray-600">
+                                <thead className="bg-gray-50 text-gray-800 font-semibold uppercase text-xs">
+                                    <tr>
+                                        <th className="px-4 py-3">Gambar</th>
+                                        <th className="px-4 py-3">Nama Produk</th>
+                                        <th className="px-4 py-3">Harga</th>
+                                        <th className="px-4 py-3">Kategori</th>
+                                        <th className="px-4 py-3 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {loadingData ? (
+                                        <tr><td colSpan={5} className="px-4 py-8 text-center text-orange-500 font-bold animate-pulse">Sedang mengambil data dari server...</td></tr>
+                                    ) : displayedProducts.length > 0 ? displayedProducts.map((product) => (
+                                        <tr key={product.id} className="hover:bg-gray-50 transition">
+                                            <td className="px-4 py-3"><img src={product.image} alt="product" className="w-10 h-10 object-cover rounded border border-gray-200" onError={(e:any) => e.target.src='https://via.placeholder.com/40'}/></td>
+                                            <td className="px-4 py-3 font-medium text-gray-900 max-w-xs truncate" title={product.name}>{product.name}</td>
+                                            <td className="px-4 py-3">Rp {product.price.toLocaleString('id-ID')}</td>
+                                            <td className="px-4 py-3">
+                                                <span className={`text-xs px-2 py-1 rounded-full ${
+                                                    product.category === 'Sepatu' ? 'bg-orange-100 text-orange-800' :
+                                                    product.category === 'Tas' ? 'bg-pink-100 text-pink-800' :
+                                                    'bg-gray-200 text-gray-600'
+                                                }`}>
+                                                    {product.category}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                <button onClick={() => handleDeleteProduct(product.id)} className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded transition" title="Hapus">🗑️</button>
+                                            </td>
+                                        </tr>
+                                    )) : (
+                                        <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Produk tidak ditemukan.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        {displayedProducts.length < filteredProducts.length && (
+                            <div className="p-4 border-t border-gray-100 text-center">
+                                <button onClick={handleLoadMore} className="text-orange-600 font-bold text-sm hover:underline">Tampilkan {Math.min(20, filteredProducts.length - displayedProducts.length)} lagi 👇</button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* === TAB 2: FEED MANAGER (INI FITUR BARUNYA) === */}
+        {activeTab === 'feeds' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in-up">
+                {/* Form Upload Feed */}
+                <div className="lg:col-span-1">
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 sticky top-4">
+                        <h2 className="text-lg font-bold text-gray-800 mb-4">🎬 Upload Konten Baru</h2>
+                        <form onSubmit={handleFeedSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold mb-1 text-gray-600">Tipe Konten</label>
+                                <select value={feedType} onChange={(e) => setFeedType(e.target.value)} className="w-full p-2 border rounded text-sm bg-gray-50">
+                                    <option value="video">Video (TikTok Style)</option>
+                                    <option value="image">Gambar Produk</option>
+                                    <option value="banner">Banner Promo</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold mb-1 text-gray-600">Judul / Caption</label>
+                                <input required type="text" value={feedTitle} onChange={e => setFeedTitle(e.target.value)} className="w-full p-2 border rounded text-sm" placeholder="Contoh: Outfit Lebaran..." />
+                            </div>
+                            {feedType !== 'banner' && (
+                                <div>
+                                    <label className="block text-xs font-bold mb-1 text-gray-600">Link URL (Video/Img)</label>
+                                    <input required type="text" value={feedSrc} onChange={e => setFeedSrc(e.target.value)} className="w-full p-2 border rounded text-sm" placeholder="https://..." />
+                                </div>
+                            )}
+                            {feedType === 'video' && (
+                                <div>
+                                    <label className="block text-xs font-bold mb-1 text-gray-600">Link Poster (Thumbnail)</label>
+                                    <input required type="text" value={feedPoster} onChange={e => setFeedPoster(e.target.value)} className="w-full p-2 border rounded text-sm" placeholder="https://..." />
+                                </div>
+                            )}
+                            <div>
+                                <label className="block text-xs font-bold mb-1 text-gray-600">Harga / Subtitle</label>
+                                <input type="text" value={feedPrice} onChange={e => setFeedPrice(e.target.value)} className="w-full p-2 border rounded text-sm" placeholder="Rp150.000" />
+                            </div>
+                            <button disabled={feedLoading} type="submit" className="w-full bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 transition shadow-lg">
+                                {feedLoading ? "Processing..." : "PUBLISH FEED"}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                {/* Feed List Grid */}
+                <div className="lg:col-span-2">
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                         <h2 className="text-lg font-bold text-gray-800 mb-4">Daftar Konten Aktif ({feeds.length})</h2>
+                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {feeds.map((item) => (
+                                <div key={item.id} className="border rounded-lg p-2 relative group bg-white hover:shadow-md transition">
+                                    <button onClick={() => handleDeleteFeed(item.id)} className="absolute top-1 right-1 bg-red-600 text-white text-xs px-2 py-1 rounded shadow z-10 hover:bg-red-700 opacity-0 group-hover:opacity-100 transition">Hapus</button>
+                                    
+                                    <div className="h-32 bg-gray-100 mb-2 rounded overflow-hidden flex items-center justify-center relative">
+                                        {item.type === 'video' ? (
+                                            <>
+                                                <img src={item.poster} className="w-full h-full object-cover opacity-90" alt="thumb"/>
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 text-white text-2xl">▶</div>
+                                            </>
+                                        ) : item.type === 'image' ? (
+                                            <img src={item.src} className="w-full h-full object-cover" alt="img"/>
+                                        ) : (
+                                            <div className="text-center text-xs font-bold p-2 text-orange-600 border-2 border-orange-200 rounded">{item.title}</div>
+                                        )}
+                                    </div>
+                                    
+                                    <p className="text-xs font-bold line-clamp-1">{item.title}</p>
+                                    <div className="flex justify-between items-center mt-1">
+                                        <span className="text-[10px] bg-gray-100 px-1.5 rounded text-gray-500 uppercase">{item.type}</span>
+                                        <span className="text-[10px] font-bold text-orange-600">{item.price}</span>
+                                    </div>
+                                </div>
+                            ))}
+                         </div>
+                    </div>
+                </div>
+            </div>
+        )}
+
       </div>
     </div>
   );

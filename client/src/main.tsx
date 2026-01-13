@@ -2,14 +2,14 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
-// PERUBAHAN DISINI: Ganti BrowserRouter jadi HashRouter
-import { HashRouter } from 'react-router-dom' 
+// PERBAIKAN: Gunakan BrowserRouter (Standar Website Modern)
+import { BrowserRouter } from 'react-router-dom' 
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    {/* Ganti tag pembungkusnya juga jadi HashRouter */}
-    <HashRouter>
+    {/* Gunakan BrowserRouter agar URL bersih tanpa tanda pagar # */}
+    <BrowserRouter>
       <App />
-    </HashRouter>
+    </BrowserRouter>
   </React.StrictMode>,
 )
