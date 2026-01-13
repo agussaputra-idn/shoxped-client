@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { db } from '../firebase'; 
 import { collection, getDocs, query, limit, orderBy } from 'firebase/firestore';
 
@@ -22,6 +22,7 @@ const VideoFeed = () => {
   const [feedItems, setFeedItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // --- LOGIKA PENGACAKAN DIJALANKAN DISINI (OTOMATIS) ---
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -34,7 +35,7 @@ const VideoFeed = () => {
             ...doc.data() 
         }));
 
-        // 2. AMBIL POOL PRODUK & PILIH 3 KATEGORI UNIK
+        // 2. AMBIL POOL PRODUK & PILIH 3 KATEGORI UNIK SECARA ACAK
         const qProd = query(collection(db, "products"), limit(50)); 
         const prodSnapshot = await getDocs(qProd);
         const allProducts = prodSnapshot.docs.map(doc => {
@@ -57,6 +58,7 @@ const VideoFeed = () => {
             productsByCategory[p.category].push(p);
         });
 
+        // Di sini kuncinya: Kategori diacak setiap kali refresh
         let availableCategories = shuffleArray(Object.keys(productsByCategory));
         const selectedProducts: any[] = [];
         const maxProducts = 3;
@@ -64,6 +66,7 @@ const VideoFeed = () => {
         for (const cat of availableCategories) {
             if (selectedProducts.length >= maxProducts) break;
             const productsInCat = productsByCategory[cat];
+            // Produk dalam kategori juga dipilih acak
             selectedProducts.push(productsInCat[Math.floor(Math.random() * productsInCat.length)]);
         }
 
@@ -74,9 +77,8 @@ const VideoFeed = () => {
             selectedProducts.push(...shuffleArray(leftovers).slice(0, remainingNeeded));
         }
 
-        // 3. GENERATE 3 BANNER PREMIUM (Varian Baru!)
+        // 3. BANNER PREMIUM
         const autoBanners = [
-            // Banner 1: Horizontal, Premium Flash Sale (Merah-Oranye)
             {
                 id: 'banner-flash-premium',
                 type: 'banner',
@@ -85,16 +87,14 @@ const VideoFeed = () => {
                 bgClass: 'bg-gradient-to-r from-red-500 to-orange-500 text-white',
                 isVertical: false
             },
-            // Banner 2: Vertikal, Eyecatcher (Ungu-Biru) - INI PEMBEDANYA!
             {
                 id: 'banner-vertical-promo',
                 type: 'banner',
                 title: 'SUPER BRAND DAY',
                 price: 'Ekstra Voucher 50RB + Hadiah Langsung',
                 bgClass: 'bg-gradient-to-b from-purple-600 to-indigo-600 text-white',
-                isVertical: true // Penanda untuk style vertikal
+                isVertical: true
             },
-            // Banner 3: Horizontal, Gratis Ongkir (Biru-Cyan)
             {
                 id: 'banner-gratis-ongkir',
                 type: 'banner',
@@ -105,9 +105,9 @@ const VideoFeed = () => {
             }
         ];
 
-        // 4. GABUNGKAN SEMUA & ACAK
+        // 4. GABUNGKAN SEMUA & ACAK POSISINYA
         let combined = [...manualFeeds, ...autoBanners, ...selectedProducts];
-        combined = shuffleArray(combined);
+        combined = shuffleArray(combined); // Posisi akhir diacak lagi
 
         setFeedItems(combined);
         setLoading(false);
@@ -121,7 +121,7 @@ const VideoFeed = () => {
     fetchData();
   }, []);
 
-  // --- LOGIC AUTOPLAY (Standar) ---
+  // --- LOGIC AUTOPLAY VIDEO ---
   useEffect(() => {
     if (loading || feedItems.length === 0) return;
     const options = { root: null, rootMargin: '0px', threshold: 0.65 };
@@ -164,13 +164,12 @@ const VideoFeed = () => {
   return (
     <div className="p-0 md:p-2" ref={containerRef}>
       
-      <div className="flex items-center justify-between px-3 mb-4 mt-4">
+      {/* --- BAGIAN JUDUL (TOMBOL ACAK SUDAH DIHAPUS) --- */}
+      <div className="flex items-center px-3 mb-4 mt-4">
          <h3 className="font-extrabold text-gray-800 text-lg flex items-center gap-2">
             🎉 Pesta Promo & Racun Belanja
          </h3>
-         <button onClick={() => window.location.reload()} className="text-[10px] text-gray-400 flex items-center gap-1 hover:text-orange-500 transition bg-gray-50 px-2 py-1 rounded-full">
-            🔄 Acak Lagi
-         </button>
+         {/* Tombol <button> "Acak Lagi" telah dihapus dari sini */}
       </div>
       
       {/* MASONRY GRID */}
@@ -178,7 +177,7 @@ const VideoFeed = () => {
         {feedItems.map((item: any) => (
           <div key={item.id} className="break-inside-avoid relative group rounded-xl overflow-hidden shadow-sm bg-white hover:shadow-lg transition-all duration-300 border border-gray-100">
             
-            {/* TIPE 1: VIDEO (Admin) */}
+            {/* TIPE 1: VIDEO */}
             {item.type === 'video' && (
               <div className="relative bg-black w-full">
                 <div className="relative pt-[177%] bg-gray-900"> 
@@ -195,7 +194,7 @@ const VideoFeed = () => {
               </div>
             )}
 
-            {/* TIPE 2: IMAGE (3 Produk Pilihan) */}
+            {/* TIPE 2: IMAGE */}
             {item.type === 'image' && (
               <div className="cursor-pointer relative" onClick={() => item.link && window.open(item.link, '_blank')}>
                 <div className="absolute top-2 left-2 z-10">
@@ -211,14 +210,12 @@ const VideoFeed = () => {
               </div>
             )}
 
-            {/* TIPE 3: BANNER PREMIUM (Baru!) */}
+            {/* TIPE 3: BANNER */}
             {item.type === 'banner' && (
                <div className={`relative p-6 flex flex-col items-center justify-center text-center overflow-hidden ${item.isVertical ? 'h-[300px] md:h-[380px]' : 'h-[180px]'} ${item.bgClass}`}>
-                   {/* Efek Background */}
                    <div className="absolute top-0 left-0 w-full h-full bg-white/10 opacity-30 mix-blend-overlay pointer-events-none"></div>
                    <div className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-white/10 rotate-12 transform-gpu blur-3xl pointer-events-none"></div>
                    
-                   {/* Konten Banner */}
                    <div className="relative z-10">
                        <h3 className={`font-black ${item.isVertical ? 'text-3xl md:text-4xl' : 'text-2xl'} leading-none mb-3 tracking-tighter drop-shadow-sm`}>{item.title}</h3>
                        <p className={`font-bold ${item.isVertical ? 'text-sm md:text-base' : 'text-xs'} bg-white/20 px-4 py-1.5 rounded-full inline-block backdrop-blur-md shadow-sm border border-white/30`}>{item.price}</p>
