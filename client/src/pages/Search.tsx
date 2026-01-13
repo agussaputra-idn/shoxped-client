@@ -12,10 +12,9 @@ const processData = (products: any[], query: string) => {
     const lowerQuery = query.toLowerCase().trim();
     const queryTerms = lowerQuery.split(/\s+/);
     
-    // 1. FILTER DULU (Hanya ambil yang relevan)
+    // 1. FILTER DULU
     let filtered = products.filter(p => {
         const title = p.title.toLowerCase();
-        // Cek apakah mengandung kata kunci (Whole Word)
         return queryTerms.every(term => {
             const regex = new RegExp(`\\b${term}`, 'i');
             return regex.test(title);
@@ -23,7 +22,6 @@ const processData = (products: any[], query: string) => {
     });
 
     // 2. SORTING (URUTKAN PRIORITAS)
-    // Produk yang JUDULNYA DIAWALI kata kunci akan naik ke atas
     filtered.sort((a, b) => {
         const titleA = a.title.toLowerCase();
         const titleB = b.title.toLowerCase();
@@ -31,9 +29,9 @@ const processData = (products: any[], query: string) => {
         const aStarts = titleA.startsWith(lowerQuery);
         const bStarts = titleB.startsWith(lowerQuery);
 
-        if (aStarts && !bStarts) return -1; // A menang (Naik ke atas)
-        if (!aStarts && bStarts) return 1;  // B menang
-        return 0; // Sama kuat
+        if (aStarts && !bStarts) return -1; 
+        if (!aStarts && bStarts) return 1;  
+        return 0; 
     });
 
     return filtered;
@@ -79,13 +77,11 @@ export default function Search() {
                     tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(keywords)}`,
                     shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodeURIComponent(keywords)}`,
                     sales: data.sold || data.Sales || "Terlaris",
-                    // Nama toko kita hapus dari tampilan, tapi datanya tetap disimpan kalau butuh
                     shopName: data['Nama Toko'] || data.shopName || "", 
                     category: data.category || "Umum"
                 };
             });
 
-            // Jalankan Filter & Sorting Prioritas
             const processed = processData(rawData, queryName);
             setProducts(processed);
             setCurrentPage(1); 
@@ -104,13 +100,11 @@ export default function Search() {
 
   const getSortedProducts = () => {
       let sorted = [...products]; 
-      // Jika user memilih sorting harga, prioritas "Nama" diabaikan
       if (sortOption === "termurah") {
           sorted.sort((a, b) => a.shopeePrice - b.shopeePrice);
       } else if (sortOption === "termahal") {
           sorted.sort((a, b) => b.shopeePrice - a.shopeePrice);
       }
-      // Jika "Terkait", urutan tetap ikut logika processData (Tas di atas)
       return sorted;
   };
 
@@ -172,10 +166,7 @@ export default function Search() {
                                 className='w-full h-full object-cover transition-transform duration-500 hover:scale-105' 
                                 onError={(e: any) => { e.target.onerror = null; e.target.src = FALLBACK_IMAGE; }} 
                             />
-                            {/* Star+ Only */}
-                            <div className="absolute top-0 left-0 bg-[#ee4d2d] text-white text-[10px] font-bold px-2 py-1 rounded-br shadow-sm">
-                                Star+
-                            </div>
+                            {/* BADGE STAR+ SUDAH DIHAPUS DARI SINI */}
                         </div>
                         
                         {/* Detail Produk */}
@@ -183,7 +174,6 @@ export default function Search() {
                             <div>
                                 <h3 className='text-xs md:text-sm text-gray-800 font-semibold line-clamp-2 leading-relaxed mb-2' title={item.title}>{item.title}</h3>
                                 
-                                {/* Info Terjual (Nama Toko DIHAPUS) */}
                                 <div className="flex items-center gap-1 mb-3 text-[10px] text-gray-500">
                                     <span>🔥 {item.sales}</span>
                                 </div>
@@ -201,15 +191,13 @@ export default function Search() {
                                 </div>
                             </div>
 
-                            {/* Tombol Aksi (UPDATE DESAIN KALEM) */}
+                            {/* Tombol Aksi */}
                             <div className="flex flex-col gap-2 mt-auto">
                                 <div className="flex flex-col md:flex-row gap-2">
-                                    {/* Tombol Shopee: Border Orange Pudar (border-orange-200) */}
                                     <a href={item.shopeeLink} target="_blank" rel="noreferrer" 
                                     className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">
                                         Beli di Shopee
                                     </a>
-                                    {/* Tombol TikTok: Border Abu (border-gray-300) */}
                                     <a href={item.tiktokLink} target="_blank" rel="noreferrer" 
                                     className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm">
                                         Beli di TikTok
