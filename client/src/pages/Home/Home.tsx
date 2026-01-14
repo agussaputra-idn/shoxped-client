@@ -71,6 +71,17 @@ export default function Home() {
 
             const cleanTitle = (data.name || "").replace(/[^a-zA-Z0-9 ]/g, " ").trim();
             const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
+            const encodedKeywords = encodeURIComponent(keywords);
+
+            // --- UPDATE LOGIKA LINK TIKTOK (ANDROID INTENT) ---
+            // 1. Link Web Biasa (Fallback)
+            const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
+            
+            // 2. Link Khusus Aplikasi (Deep Link)
+            // Ini akan memaksa Android membuka App TikTok.
+            // Jika App tidak ada, dia akan lari ke browser_fallback_url (Web Link).
+            // package=com.ss.android.ugc.trill adalah ID TikTok Asia/Indo.
+            const appDeepLink = `intent://search?q=${encodedKeywords}#Intent;scheme=tiktok;package=com.ss.android.ugc.trill;S.browser_fallback_url=${webLink};end`;
 
             return {
                 id: doc.id,
@@ -79,8 +90,9 @@ export default function Home() {
                 shopeePrice: price,
                 tiktokPrice: tiktokPrice,
                 shopeeLink: data.shopeeLink || "#",
-                tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(keywords)}`,
-                shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodeURIComponent(keywords)}`,
+                // Kita simpan Link Intent ini sebagai link utama
+                tiktokLink: appDeepLink, 
+                shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodedKeywords}`,
                 sales: data.sold || data.Sales || "Terlaris", 
                 category: data.category || "Umum"
             };
@@ -141,10 +153,10 @@ export default function Home() {
 
       <div className='w-full max-w-[1200px] mx-auto px-2 md:px-6'>
         
-        {/* BANNER ATAS - KITA BATASI JADI 2 BIAR RAPI 1 BARIS */}
+        {/* BANNER ATAS */}
         <div className="mt-4 flex flex-col gap-4 mb-6">
             <div className='w-full rounded-xl overflow-hidden shadow-sm'>
-                {/* PERBAIKAN: Ubah jadi slice(0, 2) agar Banner Atas HANYA 1 BARIS (Kiri Kanan) */}
+                {/* 2 ITEM CAROUSEL BIAR RAPI */}
                 <Carousel featuredProducts={products.slice(0, 2)} />
             </div>
             <div className="w-full">
@@ -175,13 +187,13 @@ export default function Home() {
             ))}
         </div>
 
-        {/* GRID PRODUK BAWAH - ANTI BOLONG */}
+        {/* GRID PRODUK */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 min-h-[500px]">
             {loading ? (
                 [...Array(10)].map((_, i) => <div key={i} className="bg-white rounded-xl h-80 animate-pulse border border-gray-100" />)
             ) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
-                    // LOGIKA ANTI BOLONG: Produk terakhir ganjil akan full width
+                    // LOGIKA ANTI BOLONG
                     const isLastAndOdd = index === currentItems.length - 1 && currentItems.length % 2 !== 0;
 
                     return (
@@ -223,7 +235,7 @@ export default function Home() {
                                         className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">
                                             Beli di Shopee
                                         </a>
-                                        <a href={item.tiktokLink} target="_blank" rel="noreferrer" 
+                                        <a href={item.tiktokLink} target="_self" rel="noreferrer" 
                                         className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm">
                                             Beli di TikTok
                                         </a>
@@ -247,9 +259,9 @@ export default function Home() {
             )}
         </div>
 
-        {/* INDIKATOR FINAL - KITA UPDATE JADI v1.3 */}
+        {/* INDIKATOR UPDATE */}
         <div className="mt-8 mb-4 text-center">
-             <p className="text-[10px] text-gray-300">Shoxped v1.3 - Final Layout (2 Rows)</p>
+             <p className="text-[10px] text-gray-300">Shoxped v1.4 - App Link (Android Turbo)</p>
         </div>
 
         {/* PAGINATION */}
