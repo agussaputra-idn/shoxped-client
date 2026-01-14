@@ -62,7 +62,6 @@ export default function Home() {
         
         const rawData = querySnapshot.docs.map((doc) => {
             const data = doc.data();
-            
             const price = parseInt(data.price) || 0;
             const isShopeeCheaper = Math.random() < 0.6;
             const variance = Math.random() * 0.2; 
@@ -145,7 +144,8 @@ export default function Home() {
         {/* BANNER & VIDEO */}
         <div className="mt-4 flex flex-col gap-4 mb-6">
             <div className='w-full rounded-xl overflow-hidden shadow-sm'>
-                <Carousel featuredProducts={products.slice(0, 5)} />
+                {/* PERBAIKAN: Ubah slice(0, 5) menjadi slice(0, 4) agar GENAP & RAPI */}
+                <Carousel featuredProducts={products.slice(0, 4)} />
             </div>
             <div className="w-full">
                  <VideoFeed />
@@ -175,19 +175,18 @@ export default function Home() {
             ))}
         </div>
 
-        {/* GRID PRODUK - UPDATED */}
+        {/* GRID PRODUK - MAIN */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 min-h-[500px]">
             {loading ? (
                 [...Array(10)].map((_, i) => <div key={i} className="bg-white rounded-xl h-80 animate-pulse border border-gray-100" />)
             ) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
-                    // LOGIKA: Jika produk terakhir & ganjil, buat Full Width
+                    // LOGIKA ANTI BOLONG: Produk terakhir ganjil akan full width
                     const isLastAndOdd = index === currentItems.length - 1 && currentItems.length % 2 !== 0;
 
                     return (
                         <div 
                             key={item.id} 
-                            // PERBAIKAN: Ubah 'col-span-2' menjadi 'col-span-full' agar pasti penuh selebar layar
                             className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col ${isLastAndOdd ? 'col-span-full' : ''}`}
                         >
                             <div className={`w-full relative overflow-hidden bg-gray-50 ${isLastAndOdd ? 'aspect-video' : 'aspect-square'}`}>
@@ -247,10 +246,10 @@ export default function Home() {
                 </div>
             )}
         </div>
-        
-        {/* INDIKATOR VERSI - SAYA TAMBAHKAN DISINI UNTUK CEK CACHE HP */}
+
+        {/* INDIKATOR VERSI - SAYA GANTI JADI v1.2 */}
         <div className="mt-8 mb-4 text-center">
-             <p className="text-[10px] text-gray-300">Shoxped v1.1 - Mobile Optimized</p>
+             <p className="text-[10px] text-gray-300">Shoxped v1.2 - Layout Fix (4 Items)</p>
         </div>
 
         {/* PAGINATION */}
