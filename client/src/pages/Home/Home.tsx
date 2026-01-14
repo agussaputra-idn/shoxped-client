@@ -1,27 +1,29 @@
 import React, { useState, useEffect } from 'react'; 
+// Import komponen-komponen penting
 import Carousel from '../../components/Carousel/Carousel'; 
 import VideoFeed from '../../components/VideoFeed'; 
 import ShareButton from '../../components/ShareButton'; 
 import { db } from '../../firebase'; 
 import { doc, updateDoc, increment, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 
+// Gambar cadangan jika gambar produk error
 const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3EGambar Tidak Tersedia%3C/text%3E%3C/svg%3E";
 
 export default function Home() {
+  // --- STATE (PENYIMPANAN DATA SEMENTARA) ---
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("Semua");
-  
-  // STATE PAGINATION
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20; 
-
-  // STATE HEADER TEKS
   const [taglineIndex, setTaglineIndex] = useState(0);
   const [fadeProp, setFadeProp] = useState({ opacity: 1, transition: 'opacity 0.5s ease-in-out' });
+  
+  // STATE BARU: DETEKSI APAKAH USER PAKAI ANDROID?
+  const [isAndroid, setIsAndroid] = useState(false);
 
+  // DATA KATEGORI & TAGLINE
   const categories = ["Semua", "Fashion", "Sepatu", "Tas", "Elektronik", "Kecantikan", "Lainnya"];
-
   const taglines = [
     { text: "Cek Dulu Disini. Shopee atau TikTok yang Lebih Murah?", highlight: ["Shopee", "TikTok"] },
     { text: "Temukan Harga Terbaik, Shopee VS TikTok Shop!", highlight: ["Shopee VS TikTok Shop", "Shoxped"] },
@@ -30,6 +32,17 @@ export default function Home() {
     { text: "Satu Website, Dua Marketplace. Belanja Jadi Cerdas.", highlight: ["Satu Website", "Cerdas"] }
   ];
 
+  // --- USE EFFECTS (LOGIKA OTOMATIS) ---
+
+  // 1. Cek User Agent (Android atau Laptop)
+  useEffect(() => {
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    if (/android/i.test(userAgent)) {
+      setIsAndroid(true);
+    }
+  }, []);
+
+  // 2. Animasi Tagline Header
   useEffect(() => {
     const timeout = setInterval(() => {
         setFadeProp({ opacity: 0, transition: 'opacity 0.5s ease-in-out' });
@@ -41,6 +54,7 @@ export default function Home() {
     return () => clearInterval(timeout);
   }, []);
 
+  // 3. Rekam Analytics (Page View)
   useEffect(() => {
     const logVisit = async () => {
         try {
@@ -53,7 +67,7 @@ export default function Home() {
     logVisit();
   }, []);
 
-  // FETCH DATA
+  // 4. AMBIL DATA PRODUK DARI FIREBASE
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -63,25 +77,25 @@ export default function Home() {
         const rawData = querySnapshot.docs.map((doc) => {
             const data = doc.data();
             const price = parseInt(data.price) || 0;
+            // Simulasi Harga
             const isShopeeCheaper = Math.random() < 0.6;
             const variance = Math.random() * 0.2; 
             let tiktokPrice = isShopeeCheaper 
                 ? Math.floor(price * (1 + variance)) 
                 : Math.floor(price * (1 - variance));
 
+            // Bersihkan Nama Produk untuk Keyword Pencarian
             const cleanTitle = (data.name || "").replace(/[^a-zA-Z0-9 ]/g, " ").trim();
-            const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
+            const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" "); // Ambil 5 kata pertama
             const encodedKeywords = encodeURIComponent(keywords);
 
-            // --- UPDATE LOGIKA LINK TIKTOK (ANDROID INTENT) ---
-            // 1. Link Web Biasa (Fallback)
+            // --- LOGIKA LINK HYBRID (V1.5) ---
+            // Link A: Untuk Laptop (Buka Website TikTok Biasa)
             const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
             
-            // 2. Link Khusus Aplikasi (Deep Link)
-            // Ini akan memaksa Android membuka App TikTok.
-            // Jika App tidak ada, dia akan lari ke browser_fallback_url (Web Link).
-            // package=com.ss.android.ugc.trill adalah ID TikTok Asia/Indo.
-            const appDeepLink = `intent://search?q=${encodedKeywords}#Intent;scheme=tiktok;package=com.ss.android.ugc.trill;S.browser_fallback_url=${webLink};end`;
+            // Link B: Untuk HP Android (Paksa Buka Aplikasi TikTok)
+            // Menggunakan parameter 'keyword=' agar terbaca di search bar aplikasi
+            const appDeepLink = `intent://search?keyword=${encodedKeywords}#Intent;scheme=tiktok;package=com.ss.android.ugc.trill;S.browser_fallback_url=${webLink};end`;
 
             return {
                 id: doc.id,
@@ -90,8 +104,11 @@ export default function Home() {
                 shopeePrice: price,
                 tiktokPrice: tiktokPrice,
                 shopeeLink: data.shopeeLink || "#",
-                // Kita simpan Link Intent ini sebagai link utama
-                tiktokLink: appDeepLink, 
+                
+                // Simpan kedua jenis link
+                tiktokWebLink: webLink,
+                tiktokAppLink: appDeepLink,
+
                 shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodedKeywords}`,
                 sales: data.sold || data.Sales || "Terlaris", 
                 category: data.category || "Umum"
@@ -109,7 +126,7 @@ export default function Home() {
     fetchData();
   }, []);
 
-  // PAGINATION LOGIC
+  // --- LOGIKA PAGINATION & FORMAT ---
   const filteredProducts = activeCategory === "Semua" 
     ? products 
     : products.filter(p => p.category?.toLowerCase() === activeCategory.toLowerCase());
@@ -141,10 +158,11 @@ export default function Home() {
     );
   };
 
+  // --- TAMPILAN UTAMA (JSX) ---
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 pb-12">
       
-      {/* HEADER */}
+      {/* 1. HEADER TAGLINE */}
       <div className="w-full py-2.5 px-2 bg-white border-b border-orange-100 shadow-sm z-10 flex items-center justify-center overflow-hidden">
         <p className="text-center text-xs md:text-sm leading-snug">
             {renderTagline()}
@@ -153,10 +171,10 @@ export default function Home() {
 
       <div className='w-full max-w-[1200px] mx-auto px-2 md:px-6'>
         
-        {/* BANNER ATAS */}
+        {/* 2. BANNER & VIDEO */}
         <div className="mt-4 flex flex-col gap-4 mb-6">
             <div className='w-full rounded-xl overflow-hidden shadow-sm'>
-                {/* 2 ITEM CAROUSEL BIAR RAPI */}
+                {/* Carousel dibatasi 2 item agar rapi di HP */}
                 <Carousel featuredProducts={products.slice(0, 2)} />
             </div>
             <div className="w-full">
@@ -164,13 +182,13 @@ export default function Home() {
             </div>
         </div>
 
-        {/* JUDUL */}
+        {/* 3. JUDUL SECTION */}
         <div id="product-grid-start" className="flex items-center gap-2 mb-4 px-2 pt-2">
             <span className="text-xl animate-pulse">🔥</span>
             <h2 className="font-bold text-gray-800 text-lg">Lagi Trending</h2>
         </div>
 
-        {/* TAB KATEGORI */}
+        {/* 4. TAB KATEGORI */}
         <div className="flex gap-2 overflow-x-auto pb-4 mb-2 px-1 no-scrollbar">
             {categories.map((cat) => (
                 <button 
@@ -187,13 +205,13 @@ export default function Home() {
             ))}
         </div>
 
-        {/* GRID PRODUK */}
+        {/* 5. GRID PRODUK UTAMA */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 min-h-[500px]">
             {loading ? (
                 [...Array(10)].map((_, i) => <div key={i} className="bg-white rounded-xl h-80 animate-pulse border border-gray-100" />)
             ) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
-                    // LOGIKA ANTI BOLONG
+                    // Logika Anti Bolong (Full Width untuk item ganjil terakhir)
                     const isLastAndOdd = index === currentItems.length - 1 && currentItems.length % 2 !== 0;
 
                     return (
@@ -201,6 +219,7 @@ export default function Home() {
                             key={item.id} 
                             className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col ${isLastAndOdd ? 'col-span-full' : ''}`}
                         >
+                            {/* GAMBAR PRODUK */}
                             <div className={`w-full relative overflow-hidden bg-gray-50 ${isLastAndOdd ? 'aspect-video' : 'aspect-square'}`}>
                                 <img 
                                     src={item.image} 
@@ -210,6 +229,7 @@ export default function Home() {
                                 />
                             </div>
                             
+                            {/* DETAIL PRODUK */}
                             <div className='p-3 md:p-4 flex flex-col flex-grow justify-between'>
                                 <div>
                                     <h3 className='text-xs md:text-sm text-gray-800 font-semibold line-clamp-2 leading-relaxed mb-2' title={item.title}>
@@ -229,14 +249,23 @@ export default function Home() {
                                         <span className="font-medium text-gray-600">{formatRupiah(item.tiktokPrice)}</span>
                                     </div>
                                 </div>
+                                
+                                {/* TOMBOL ACTION */}
                                 <div className="flex flex-col gap-2 mt-auto">
                                     <div className="flex flex-col md:flex-row gap-2">
                                         <a href={item.shopeeLink} target="_blank" rel="noreferrer" 
                                         className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">
                                             Beli di Shopee
                                         </a>
-                                        <a href={item.tiktokLink} target="_self" rel="noreferrer" 
-                                        className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm">
+                                        
+                                        {/* LOGIKA SMART LINK TIKTOK */}
+                                        <a 
+                                            // Jika Android -> Pakai Deep Link. Jika Laptop -> Pakai Web Link.
+                                            href={isAndroid ? item.tiktokAppLink : item.tiktokWebLink} 
+                                            target={isAndroid ? "_self" : "_blank"} 
+                                            rel="noreferrer" 
+                                            className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm"
+                                        >
                                             Beli di TikTok
                                         </a>
                                     </div>
@@ -259,12 +288,12 @@ export default function Home() {
             )}
         </div>
 
-        {/* INDIKATOR UPDATE */}
+        {/* 6. INDIKATOR VERSI UPDATE */}
         <div className="mt-8 mb-4 text-center">
-             <p className="text-[10px] text-gray-300">Shoxped v1.4 - App Link (Android Turbo)</p>
+             <p className="text-[10px] text-gray-300">Shoxped v1.5 - Hybrid Link System</p>
         </div>
 
-        {/* PAGINATION */}
+        {/* 7. PAGINATION */}
         {!loading && totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 mt-2 mb-8 flex-wrap">
                 <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-white disabled:opacity-30 bg-transparent transition-all">
@@ -289,6 +318,7 @@ export default function Home() {
             </div>
         )}
 
+      {/* 8. TOMBOL SHARE FLOATING */}
       <ShareButton />
       </div>
     </div>
