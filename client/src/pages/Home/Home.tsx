@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'; 
 import Carousel from '../../components/Carousel/Carousel'; 
 import VideoFeed from '../../components/VideoFeed'; 
-import ShareButton from '../../components/ShareButton'; // <--- IMPORT TOMBOL SHARE
+import ShareButton from '../../components/ShareButton'; 
 import { db } from '../../firebase'; 
 import { doc, updateDoc, increment, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 
@@ -175,63 +175,74 @@ export default function Home() {
             ))}
         </div>
 
-        {/* GRID PRODUK */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 min-h-[500px]">
+        {/* GRID PRODUK - UPDATED */}
+        {/* PERUBAHAN 1: gap-3 saya ubah jadi gap-2 agar lebih rapat & gambar lebih besar */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 min-h-[500px]">
             {loading ? (
                 [...Array(10)].map((_, i) => <div key={i} className="bg-white rounded-xl h-80 animate-pulse border border-gray-100" />)
             ) : currentItems.length > 0 ? (
-                currentItems.map((item) => (
-                    <div key={item.id} className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col'>
-                        <div className='w-full aspect-square relative overflow-hidden bg-gray-50'>
-                            <img 
-                                src={item.image} 
-                                alt={item.title} 
-                                className='w-full h-full object-cover transition-transform duration-500 hover:scale-105' 
-                                onError={(e: any) => { e.target.onerror = null; e.target.src = FALLBACK_IMAGE; }} 
-                            />
+                currentItems.map((item, index) => {
+                    // PERUBAHAN 2: LOGIKA "SMART FULL WIDTH"
+                    // Jika ini produk terakhir DAN total produk di halaman ini ganjil -> buat dia memanjang (col-span-2)
+                    // Ini khusus layar HP (md:col-span-1 akan mengembalikan ke normal di laptop)
+                    const isLastAndOdd = index === currentItems.length - 1 && currentItems.length % 2 !== 0;
+
+                    return (
+                        <div 
+                            key={item.id} 
+                            className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col ${isLastAndOdd ? 'col-span-2' : ''}`}
+                        >
+                            <div className={`w-full relative overflow-hidden bg-gray-50 ${isLastAndOdd ? 'aspect-video' : 'aspect-square'}`}>
+                                <img 
+                                    src={item.image} 
+                                    alt={item.title} 
+                                    className='w-full h-full object-cover transition-transform duration-500 hover:scale-105' 
+                                    onError={(e: any) => { e.target.onerror = null; e.target.src = FALLBACK_IMAGE; }} 
+                                />
+                            </div>
+                            
+                            <div className='p-3 md:p-4 flex flex-col flex-grow justify-between'>
+                                <div>
+                                    <h3 className='text-xs md:text-sm text-gray-800 font-semibold line-clamp-2 leading-relaxed mb-2' title={item.title}>
+                                        {item.title}
+                                    </h3>
+                                    <div className="flex items-center gap-1 mb-3 text-[10px] text-gray-500">
+                                        <span>🔥 {item.sales}</span>
+                                    </div>
+                                </div>
+                                <div className="space-y-1 mb-4">
+                                    <div className="flex justify-between items-center text-xs md:text-sm">
+                                        <span className="font-bold text-[#ee4d2d]">Shopee</span>
+                                        <span className="font-bold text-[#ee4d2d]">{formatRupiah(item.shopeePrice)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs md:text-sm">
+                                        <span className="font-medium text-gray-600">TikTok</span>
+                                        <span className="font-medium text-gray-600">{formatRupiah(item.tiktokPrice)}</span>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-2 mt-auto">
+                                    <div className="flex flex-col md:flex-row gap-2">
+                                        <a href={item.shopeeLink} target="_blank" rel="noreferrer" 
+                                        className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">
+                                            Beli di Shopee
+                                        </a>
+                                        <a href={item.tiktokLink} target="_blank" rel="noreferrer" 
+                                        className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm">
+                                            Beli di TikTok
+                                        </a>
+                                    </div>
+                                    <div className="text-center">
+                                        <a href={item.shopeeSearchFallback} target="_blank" rel="noreferrer" 
+                                           className="text-[10px] text-gray-400 underline hover:text-[#ee4d2d] transition-colors cursor-pointer block mb-1">
+                                            Cari Serupa di Shopee
+                                        </a>
+                                        <p className="text-[9px] text-gray-300 italic">*Harga dapat berubah sewaktu-waktu</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        
-                        <div className='p-4 flex flex-col flex-grow justify-between'>
-                            <div>
-                                <h3 className='text-xs md:text-sm text-gray-800 font-semibold line-clamp-2 leading-relaxed mb-2' title={item.title}>
-                                    {item.title}
-                                </h3>
-                                <div className="flex items-center gap-1 mb-3 text-[10px] text-gray-500">
-                                    <span>🔥 {item.sales}</span>
-                                </div>
-                            </div>
-                            <div className="space-y-1 mb-4">
-                                <div className="flex justify-between items-center text-xs md:text-sm">
-                                    <span className="font-bold text-[#ee4d2d]">Shopee</span>
-                                    <span className="font-bold text-[#ee4d2d]">{formatRupiah(item.shopeePrice)}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-xs md:text-sm">
-                                    <span className="font-medium text-gray-600">TikTok</span>
-                                    <span className="font-medium text-gray-600">{formatRupiah(item.tiktokPrice)}</span>
-                                </div>
-                            </div>
-                            <div className="flex flex-col gap-2 mt-auto">
-                                <div className="flex flex-col md:flex-row gap-2">
-                                    <a href={item.shopeeLink} target="_blank" rel="noreferrer" 
-                                    className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">
-                                        Beli di Shopee
-                                    </a>
-                                    <a href={item.tiktokLink} target="_blank" rel="noreferrer" 
-                                    className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm">
-                                        Beli di TikTok
-                                    </a>
-                                </div>
-                                <div className="text-center">
-                                    <a href={item.shopeeSearchFallback} target="_blank" rel="noreferrer" 
-                                       className="text-[10px] text-gray-400 underline hover:text-[#ee4d2d] transition-colors cursor-pointer block mb-1">
-                                        Cari Serupa di Shopee
-                                    </a>
-                                    <p className="text-[9px] text-gray-300 italic">*Harga dapat berubah sewaktu-waktu</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ))
+                    );
+                })
             ) : (
                 <div className="col-span-full py-10 text-center text-gray-400 text-sm">
                     Belum ada produk untuk kategori ini.
@@ -264,7 +275,7 @@ export default function Home() {
             </div>
         )}
 
-      <ShareButton /> {/* <--- POSISI TOMBOL SHARE DISINI */}
+      <ShareButton />
       </div>
     </div>
   );
