@@ -176,21 +176,19 @@ export default function Home() {
         </div>
 
         {/* GRID PRODUK - UPDATED */}
-        {/* PERUBAHAN 1: gap-3 saya ubah jadi gap-2 agar lebih rapat & gambar lebih besar */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 min-h-[500px]">
             {loading ? (
                 [...Array(10)].map((_, i) => <div key={i} className="bg-white rounded-xl h-80 animate-pulse border border-gray-100" />)
             ) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
-                    // PERUBAHAN 2: LOGIKA "SMART FULL WIDTH"
-                    // Jika ini produk terakhir DAN total produk di halaman ini ganjil -> buat dia memanjang (col-span-2)
-                    // Ini khusus layar HP (md:col-span-1 akan mengembalikan ke normal di laptop)
+                    // LOGIKA: Jika produk terakhir & ganjil, buat Full Width
                     const isLastAndOdd = index === currentItems.length - 1 && currentItems.length % 2 !== 0;
 
                     return (
                         <div 
                             key={item.id} 
-                            className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col ${isLastAndOdd ? 'col-span-2' : ''}`}
+                            // PERBAIKAN: Ubah 'col-span-2' menjadi 'col-span-full' agar pasti penuh selebar layar
+                            className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col ${isLastAndOdd ? 'col-span-full' : ''}`}
                         >
                             <div className={`w-full relative overflow-hidden bg-gray-50 ${isLastAndOdd ? 'aspect-video' : 'aspect-square'}`}>
                                 <img 
@@ -249,10 +247,15 @@ export default function Home() {
                 </div>
             )}
         </div>
+        
+        {/* INDIKATOR VERSI - SAYA TAMBAHKAN DISINI UNTUK CEK CACHE HP */}
+        <div className="mt-8 mb-4 text-center">
+             <p className="text-[10px] text-gray-300">Shoxped v1.1 - Mobile Optimized</p>
+        </div>
 
         {/* PAGINATION */}
         {!loading && totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-12 mb-8 flex-wrap">
+            <div className="flex justify-center items-center gap-2 mt-2 mb-8 flex-wrap">
                 <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-white disabled:opacity-30 bg-transparent transition-all">
                     &lt;
                 </button>
