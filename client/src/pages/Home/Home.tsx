@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'; 
 import Carousel from '../../components/Carousel/Carousel'; 
 import VideoFeed from '../../components/VideoFeed'; 
+import ShareButton from '../../components/ShareButton'; // <--- IMPORT TOMBOL SHARE
 import { db } from '../../firebase'; 
 import { doc, updateDoc, increment, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 
@@ -188,7 +189,6 @@ export default function Home() {
                                 className='w-full h-full object-cover transition-transform duration-500 hover:scale-105' 
                                 onError={(e: any) => { e.target.onerror = null; e.target.src = FALLBACK_IMAGE; }} 
                             />
-                            {/* BADGE STAR+ SUDAH DIHAPUS DARI SINI */}
                         </div>
                         
                         <div className='p-4 flex flex-col flex-grow justify-between'>
@@ -264,6 +264,7 @@ export default function Home() {
             </div>
         )}
 
+      <ShareButton /> {/* <--- POSISI TOMBOL SHARE DISINI */}
       </div>
     </div>
   );
