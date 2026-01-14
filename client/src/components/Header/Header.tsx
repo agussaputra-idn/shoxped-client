@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useLanguage } from '../context/LanguageContext'; // Import Hook Bahasa
+import { useLanguage } from 'src/context/LanguageContext'; // Import Hook Bahasa
 
 export default function Header() {
   const [keyword, setKeyword] = useState("");
