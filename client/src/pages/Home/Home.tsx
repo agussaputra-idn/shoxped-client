@@ -141,11 +141,11 @@ export default function Home() {
 
       <div className='w-full max-w-[1200px] mx-auto px-2 md:px-6'>
         
-        {/* BANNER & VIDEO */}
+        {/* BANNER ATAS - KITA BATASI JADI 2 BIAR RAPI 1 BARIS */}
         <div className="mt-4 flex flex-col gap-4 mb-6">
             <div className='w-full rounded-xl overflow-hidden shadow-sm'>
-                {/* PERBAIKAN: Ubah slice(0, 5) menjadi slice(0, 4) agar GENAP & RAPI */}
-                <Carousel featuredProducts={products.slice(0, 4)} />
+                {/* PERBAIKAN: Ubah jadi slice(0, 2) agar Banner Atas HANYA 1 BARIS (Kiri Kanan) */}
+                <Carousel featuredProducts={products.slice(0, 2)} />
             </div>
             <div className="w-full">
                  <VideoFeed />
@@ -175,7 +175,7 @@ export default function Home() {
             ))}
         </div>
 
-        {/* GRID PRODUK - MAIN */}
+        {/* GRID PRODUK BAWAH - ANTI BOLONG */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 min-h-[500px]">
             {loading ? (
                 [...Array(10)].map((_, i) => <div key={i} className="bg-white rounded-xl h-80 animate-pulse border border-gray-100" />)
@@ -247,9 +247,9 @@ export default function Home() {
             )}
         </div>
 
-        {/* INDIKATOR VERSI - SAYA GANTI JADI v1.2 */}
+        {/* INDIKATOR FINAL - KITA UPDATE JADI v1.3 */}
         <div className="mt-8 mb-4 text-center">
-             <p className="text-[10px] text-gray-300">Shoxped v1.2 - Layout Fix (4 Items)</p>
+             <p className="text-[10px] text-gray-300">Shoxped v1.3 - Final Layout (2 Rows)</p>
         </div>
 
         {/* PAGINATION */}
