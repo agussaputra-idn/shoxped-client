@@ -12,6 +12,11 @@ export default function Header() {
     }
   };
 
+  // FUNGSI BARU: Hapus teks pencarian
+  const handleClear = () => {
+    setKeyword("");
+  };
+
   return (
     <header className="w-full bg-white shadow-sm py-4 sticky top-0 z-50">
       <div className="container mx-auto max-w-[1920px] px-4 md:px-8 flex items-center justify-between gap-4">
@@ -37,10 +42,29 @@ export default function Header() {
             <input 
               type="text" 
               placeholder="Cari produk, merek, dan toko..." 
-              className="w-full border border-gray-300 rounded-md py-2.5 px-4 pr-14 text-sm focus:outline-none focus:border-[#ee4d2d] focus:ring-1 focus:ring-[#ee4d2d] transition-all bg-gray-50 focus:bg-white"
+              // UPDATE: pr-14 diubah jadi pr-24 agar teks tidak menabrak tombol X
+              className="w-full border border-gray-300 rounded-md py-2.5 px-4 pr-24 text-sm focus:outline-none focus:border-[#ee4d2d] focus:ring-1 focus:ring-[#ee4d2d] transition-all bg-gray-50 focus:bg-white"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
             />
+
+            {/* --- TOMBOL X (BARU) --- */}
+            {/* Hanya muncul jika ada keyword */}
+            {keyword && (
+              <button
+                type="button"
+                onClick={handleClear}
+                className="absolute right-16 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition"
+                aria-label="Hapus pencarian"
+              >
+                {/* Ikon X Lingkaran Solid */}
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                </svg>
+              </button>
+            )}
+
+            {/* TOMBOL CARI (Existing) */}
             <button type="submit" className="absolute right-1 top-1 bottom-1 bg-[#ee4d2d] text-white px-5 rounded-md hover:bg-orange-600 transition flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
