@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+// Perhatikan baris ini: titiknya dua (..) karena file ada di src/pages/Search.tsx
 import { db } from '../firebase'; 
 import { collection, getDocs } from 'firebase/firestore';
 
 const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3EGambar Tidak Tersedia%3C/text%3E%3C/svg%3E";
 
-// FUNGSI BANTUAN
 const parseSales = (salesRaw: any) => {
     if (typeof salesRaw === 'number') return salesRaw;
     if (!salesRaw) return 0;
@@ -75,16 +75,13 @@ export default function Search() {
                 const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
                 const encodedKeywords = encodeURIComponent(keywords);
 
-                // --- URL GENERATION (THE FIX) ---
-                
-                // 1. Link Web (Fallback jika App tidak ada)
+                // --- THE ULTIMATE FIX: DEEP LINK RESULT ---
+                // Link Web (Fallback)
                 const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
 
-                // 2. Link App (INTENT FORCE RESULT)
-                // - scheme=tiktok : Protokol native
-                // - path=search/result : Wajib ada /result agar tidak cuma buka search bar
-                // - keyword : Kata kunci pencarian
-                // - enter_from=search_result : Context trigger
+                // Link Intent Android (LANGSUNG KE HASIL)
+                // path: search/result (Bukan cuma search)
+                // enter_from: search_result (Wajib agar TikTok menampilkan hasil)
                 const appLink = `intent://search/result?keyword=${encodedKeywords}&enter_from=search_result#Intent;scheme=tiktok;package=com.ss.android.ugc.trill;S.browser_fallback_url=${webLink};end`;
 
                 const rawSales = data.sold || data.Sales || "0";
@@ -133,14 +130,18 @@ export default function Search() {
       return sorted;
   };
 
+  // --- HANDLER KLIK SUPER ---
   const handleTikTokClick = (e: React.MouseEvent, item: any) => {
     if (isMobile) {
       e.preventDefault();
-      // Langsung eksekusi Intent
-      // Android akan otomatis menghandle pembukaan App atau Fallback ke Web
+      
+      // 1. TEMBAK INTENT (Aplikasi)
       window.location.href = item.mobileDeepLink;
+
+      // 2. CEK STATUS (Tanpa memaksa fallback web yg bikin layar hitam)
+      // Kita biarkan Android yang menghandle fallback lewat S.browser_fallback_url
+      // Jika user punya app, dia masuk. Jika tidak, Android otomatis buka browser.
     }
-    // Desktop biarkan buka tab baru
   };
 
   const sortedProducts = getSortedProducts();
