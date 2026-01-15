@@ -74,13 +74,14 @@ export default function Search() {
                 const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
                 const encodedKeywords = encodeURIComponent(keywords);
 
-                // --- LINK SUPER DEEPLINK (v4.0 Final) ---
-                const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
+                // --- LINK LOGIC: SAMAKAN DENGAN HOME.TSX ---
                 
-                // KITA GUNAKAN PARAMETER LENGKAP AGAR SEARCH APP JALAN
-                // snssdk1180 = Scheme TikTok Indonesia
-                // enter_from=search_result = Memberitahu app bahwa ini request pencarian
-                const appLink = `snssdk1180://search/result?keyword=${encodedKeywords}&display_keyword=${encodedKeywords}&enter_from=search_result&is_from_video=1`;
+                // 1. Link Web Biasa
+                const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
+
+                // 2. Link Android Intent (INTENT HTTPS)
+                // Ini membedakan dengan kode lama. Kita paksa buka package com.ss.android.ugc.trill
+                const appLink = `intent://www.tiktok.com/search?q=${encodedKeywords}#Intent;scheme=https;package=com.ss.android.ugc.trill;S.browser_fallback_url=${webLink};end`;
 
                 const rawSales = data.sold || data.Sales || "0";
                 const numericSales = parseSales(rawSales);
@@ -94,7 +95,7 @@ export default function Search() {
                     shopeeLink: data.shopeeLink || "#",
                     
                     finalTikTokLink: webLink,
-                    mobileDeepLink: appLink, // Gunakan Link Super
+                    mobileDeepLink: appLink, // Pakai Intent HTTPS
 
                     shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodedKeywords}`,
                     salesDisplay: rawSales, 
@@ -128,27 +129,14 @@ export default function Search() {
       return sorted;
   };
 
-  // --- HANDLER KLIK SUPER (Tanpa Fallback Web yang Berat) ---
+  // --- HANDLER KLIK: HAPUS SEMUA TIMER (Sama seperti Home.tsx) ---
   const handleTikTokClick = (e: React.MouseEvent, item: any) => {
     if (isMobile) {
       e.preventDefault();
-      
-      // 1. TEMBAK APLIKASI
-      window.location.assign(item.mobileDeepLink);
-
-      // 2. JIKA GAGAL? JANGAN BUKA TIKTOK WEB (Karena Berat/Hitam).
-      // Lebih baik diam atau user install app.
-      // Kalau dipaksa buka web tiktok, user malah kabur karena loading lama.
-      setTimeout(() => {
-        if (!document.hidden) {
-            // Opsional: Bisa arahkan ke Google Search Produk di TikTok kalau mau ringan
-            // window.location.href = `https://www.google.com/search?q=site:tiktok.com+${item.title}`;
-            
-            // Atau coba buka Web TikTok tapi di tab baru biar browser utama gak macet
-            console.log("App tidak merespon, mencoba web di tab baru...");
-            window.open(item.finalTikTokLink, '_blank');
-        }
-      }, 2500);
+      // Langsung eksekusi Intent. 
+      // Android otomatis handle fallback ke Web jika App tidak ada.
+      // TIDAK ADA setTimeout di sini, jadi tidak akan ada loop balik ke web.
+      window.location.href = item.mobileDeepLink;
     }
   };
 
@@ -201,9 +189,6 @@ export default function Search() {
                  [...Array(10)].map((_, i) => <div key={i} className='bg-white rounded shadow-sm h-96 animate-pulse border border-gray-100' />)
             ) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
-                    // LOGIKA ANTI BOLONG
-                    // Jika produk ini adalah urutan terakhir DAN total produk ganjil (sisa 1)
-                    // Maka dia akan melebar memenuhi layar (col-span-full)
                     const isLastAndOdd = index === currentItems.length - 1 && currentItems.length % 2 !== 0;
 
                     return (
