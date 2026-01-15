@@ -21,6 +21,7 @@ export default function Home() {
 
   useEffect(() => {
     const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    // Deteksi sederhana: Jika Android/iOS maka Mobile
     if (/android|iPad|iPhone|iPod/i.test(userAgent)) {
       setIsMobile(true);
     }
@@ -73,13 +74,13 @@ export default function Home() {
             const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
             const encodedKeywords = encodeURIComponent(keywords);
 
-            // 1. LINK WEB STANDAR (HTTPS)
+            // 1. LINK WEB (Cadangan)
             const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
             
-            // 2. LINK APP KHUSUS (HTTPS INTENT)
-            // Trik: Kita minta Android buka link HTTPS di atas, TAPI wajib pakai package TikTok.
-            // Ini akan memaksa App TikTok menangkap link tersebut & menampilkan hasil search yg benar.
-            const appLink = `intent://www.tiktok.com/search?q=${encodedKeywords}#Intent;scheme=https;package=com.ss.android.ugc.trill;S.browser_fallback_url=${webLink};end`;
+            // 2. LINK APP "NATIVE" (Gaya Baru)
+            // Kita pakai scheme 'tiktok://' yang universal.
+            // Kita masukkan DUA parameter 'q' dan 'keyword' biar aman (salah satu pasti kena).
+            const appLink = `tiktok://search?q=${encodedKeywords}&keyword=${encodedKeywords}&is_from_video=1`;
 
             return {
                 id: doc.id,
@@ -128,24 +129,24 @@ export default function Home() {
     );
   };
 
-  // --- LOGIC KLIK TIKTOK (VISIBILITY CHECK v2) ---
+  // --- LOGIC DIRECT NATIVE (v2.2) ---
   const handleTikTokClick = (e: React.MouseEvent, item: any) => {
     if (isMobile) {
       e.preventDefault();
-      const start = Date.now();
       
-      // 1. COBA BUKA APLIKASI (Pakai HTTPS Intent Force)
-      window.location.href = item.mobileDeepLink;
+      // 1. LANGSUNG TEMBAK APLIKASI
+      // Kita pakai window.location.assign() yang lebih agresif daripada href biasa
+      window.location.assign(item.mobileDeepLink);
 
-      // 2. CEK APAKAH BERHASIL?
+      // 2. CEK JIKA GAGAL (Fallback)
+      // Kita beri waktu 2.5 detik (lebih lama dikit).
+      // Jika browser masih aktif (user belum pindah app), baru kita buka Web.
       setTimeout(() => {
-        const elapsed = Date.now() - start;
-        // Jika browser TIDAK hidden (artinya user masih melototin browser), berarti gagal.
-        if (!document.hidden && elapsed < 2000) {
-            console.log("Aplikasi gagal, buka Web...");
+        if (!document.hidden) {
+            console.log("App tidak merespon, buka Web di tab baru...");
             window.open(item.finalTikTokLink, '_blank');
         }
-      }, 1500);
+      }, 2500);
     }
   };
 
@@ -178,7 +179,7 @@ export default function Home() {
             ))}
         </div>
 
-        {/* GRID PRODUK (Anti Bolong) */}
+        {/* GRID PRODUK */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 min-h-[500px]">
             {loading ? ([...Array(10)].map((_, i) => <div key={i} className="bg-white rounded-xl h-80 animate-pulse border border-gray-100" />)) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
@@ -206,8 +207,8 @@ export default function Home() {
                                         
                                         {/* TOMBOL TIKTOK */}
                                         <a 
-                                            href={item.finalTikTokLink}
-                                            onClick={(e) => handleTikTokClick(e, item)}
+                                            href={item.finalTikTokLink} // Web link buat Desktop (Default)
+                                            onClick={(e) => handleTikTokClick(e, item)} // Logic HP
                                             target="_blank" 
                                             rel="noreferrer" 
                                             className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm"
@@ -229,7 +230,7 @@ export default function Home() {
 
         {/* INDIKATOR VERSI */}
         <div className="mt-8 mb-4 text-center">
-             <p className="text-[10px] text-gray-300">Shoxped v2.1 - Search Intent Fix</p>
+             <p className="text-[10px] text-gray-300">Shoxped v2.2 - Native TikTok Link</p>
         </div>
 
         {/* PAGINATION */}
