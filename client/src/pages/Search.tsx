@@ -10,7 +10,7 @@ const parseSales = (salesRaw: any) => {
     if (typeof salesRaw === 'number') return salesRaw;
     if (!salesRaw) return 0;
     
-    const str = salesRaw.toString().toLowerCase().replace(/,/g, '.'); // Ganti koma jadi titik
+    const str = salesRaw.toString().toLowerCase().replace(/,/g, '.'); 
     
     if (str.includes('rb') || str.includes('k')) {
         return parseFloat(str.replace(/[^0-9.]/g, '')) * 1000;
@@ -29,7 +29,6 @@ const processData = (products: any[], query: string) => {
     const lowerQuery = query.toLowerCase().trim();
     const queryTerms = lowerQuery.split(/\s+/);
     
-    // 1. FILTER DULU
     let filtered = products.filter(p => {
         const title = p.title.toLowerCase();
         return queryTerms.every(term => {
@@ -38,7 +37,6 @@ const processData = (products: any[], query: string) => {
         });
     });
 
-    // 2. SORTING RELEVANSI (JUDUL MIRIP DI ATAS)
     filtered.sort((a, b) => {
         const titleA = a.title.toLowerCase();
         const titleB = b.title.toLowerCase();
@@ -59,11 +57,10 @@ export default function Search() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortOption, setSortOption] = useState("terkait"); 
-
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 30; 
   
-  // DETEKSI MOBILE UNTUK LINK TIKTOK
+  // DETEKSI MOBILE
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
@@ -90,12 +87,16 @@ export default function Search() {
                 const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
                 const encodedKeywords = encodeURIComponent(keywords);
 
-                // LOGIKA LINK HYBRID (Updated to match Home.tsx v2.2)
+                // --- LINK LOGIC v3.0 (THE FIX) ---
+                
+                // 1. Link Web Biasa
                 const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
-                // Use tiktok:// scheme with dual parameters for maximum compatibility
-                const appLink = `tiktok://search?q=${encodedKeywords}&keyword=${encodedKeywords}&is_from_video=1`;
 
-                // AMBIL DATA TERJUAL (CLEAN)
+                // 2. Link Intent Android (Force Package)
+                // Ini memerintahkan Android: "Buka URL https ini, tapi PAKSA pakai aplikasi TikTok"
+                // S.browser_fallback_url = Link cadangan jika aplikasi tidak punya
+                const appLink = `intent://www.tiktok.com/search?q=${encodedKeywords}#Intent;scheme=https;package=com.ss.android.ugc.trill;S.browser_fallback_url=${webLink};end`;
+
                 const rawSales = data.sold || data.Sales || "0";
                 const numericSales = parseSales(rawSales);
 
@@ -107,16 +108,13 @@ export default function Search() {
                     tiktokPrice: tiktokPrice,
                     shopeeLink: data.shopeeLink || "#",
                     
-                    // Link TikTok Hybrid
                     finalTikTokLink: webLink,
-                    mobileDeepLink: appLink,
+                    mobileDeepLink: appLink, // Gunakan Intent HTTPS
 
                     shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodedKeywords}`,
                     
-                    // Simpan Data Penjualan (Teks & Angka)
                     salesDisplay: rawSales, 
                     salesNumeric: numericSales,
-
                     shopName: data['Nama Toko'] || data.shopName || "", 
                     category: data.category || "Umum"
                 };
@@ -138,34 +136,28 @@ export default function Search() {
 
   const formatRupiah = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
-  // --- LOGIKA SORTING UTAMA ---
   const getSortedProducts = () => {
       let sorted = [...products]; 
       if (sortOption === "termurah") {
           sorted.sort((a, b) => a.shopeePrice - b.shopeePrice);
       } else if (sortOption === "termahal") {
           sorted.sort((a, b) => b.shopeePrice - a.shopeePrice);
-      } else if (sortOption === "terlaris") { // TAMBAHAN BARU
+      } else if (sortOption === "terlaris") { 
           sorted.sort((a, b) => b.salesNumeric - a.salesNumeric);
       }
       return sorted;
   };
 
+  // --- HANDLER KLIK YANG LEBIH BERSIH ---
   const handleTikTokClick = (e: React.MouseEvent, item: any) => {
     if (isMobile) {
       e.preventDefault();
-      
-      // 1. LANGSUNG TEMBAK APLIKASI
-      window.location.assign(item.mobileDeepLink);
-
-      // 2. CEK JIKA GAGAL (Fallback)
-      setTimeout(() => {
-        if (!document.hidden) {
-            console.log("App tidak merespon, buka Web di tab baru...");
-            window.open(item.finalTikTokLink, '_blank');
-        }
-      }, 2500);
+      // Kita TIDAK PERLU setTimeout lagi.
+      // Intent Android secara otomatis akan membuka Web jika App tidak ada.
+      // Ini mencegah masalah "balik ke web saat tombol back ditekan".
+      window.location.href = item.mobileDeepLink;
     }
+    // Jika Desktop, biarkan default behavior (target="_blank" buka tab baru)
   };
 
   const sortedProducts = getSortedProducts();
@@ -193,7 +185,6 @@ export default function Search() {
                         <>Semua Produk</>
                     )}
                 </h1>
-                {/* UBAH KATA BARANG JADI PRODUK */}
                 <span className="text-gray-500 text-xs md:text-sm">Ditemukan {products.length} produk</span>
             </div>
 
@@ -205,7 +196,7 @@ export default function Search() {
                     className="bg-gray-50 border border-gray-200 text-gray-700 text-xs md:text-sm rounded focus:ring-[#ee4d2d] focus:border-[#ee4d2d] block p-2 cursor-pointer outline-none"
                 >
                     <option value="terkait">Terkait</option>
-                    <option value="terlaris">Terlaris</option> {/* MENU BARU */}
+                    <option value="terlaris">Terlaris</option>
                     <option value="termurah">Harga Termurah</option>
                     <option value="termahal">Harga Termahal</option>
                 </select>
@@ -218,76 +209,64 @@ export default function Search() {
                  [...Array(10)].map((_, i) => <div key={i} className='bg-white rounded shadow-sm h-96 animate-pulse border border-gray-100' />)
             ) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
-                     // --- LOGIKA ANTI BOLONG (SAMA SEPERTI HOME.TSX) ---
-                    // Cek apakah ini produk terakhir DAN total produknya ganjil
+                    // LOGIKA ANTI BOLONG
                     const isLastAndOdd = index === currentItems.length - 1 && currentItems.length % 2 !== 0;
 
                     return (
-                    <div 
-                        key={item.id} 
-                         // Jika ganjil terakhir -> col-span-full (melebar penuh)
-                        className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col ${isLastAndOdd ? 'col-span-full' : ''}`}>
-                        
-                        {/* Gambar Produk */}
-                        <div className={`w-full relative overflow-hidden bg-gray-50 ${isLastAndOdd ? 'aspect-video' : 'aspect-square'}`}>
-                            <img 
-                                src={item.image} 
-                                alt={item.title} 
-                                className='w-full h-full object-cover transition-transform duration-500 hover:scale-105' 
-                                onError={(e: any) => { e.target.onerror = null; e.target.src = FALLBACK_IMAGE; }} 
-                            />
+                        <div 
+                            key={item.id} 
+                            className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col ${isLastAndOdd ? 'col-span-full' : ''}`}
+                        >
+                            <div className={`w-full relative overflow-hidden bg-gray-50 ${isLastAndOdd ? 'aspect-video' : 'aspect-square'}`}>
+                                <img 
+                                    src={item.image} 
+                                    alt={item.title} 
+                                    className='w-full h-full object-cover transition-transform duration-500 hover:scale-105' 
+                                    onError={(e: any) => { e.target.onerror = null; e.target.src = FALLBACK_IMAGE; }} 
+                                />
+                            </div>
+                            
+                            <div className='p-4 flex flex-col flex-grow justify-between'>
+                                <div>
+                                    <h3 className='text-xs md:text-sm text-gray-800 font-semibold line-clamp-2 leading-relaxed mb-2' title={item.title}>{item.title}</h3>
+                                    <div className="flex items-center gap-1 mb-3 text-[10px] text-gray-500">
+                                        <span>🔥 {item.salesDisplay || "Terlaris"}</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1 mb-4">
+                                    <div className="flex justify-between items-center text-xs md:text-sm"><span className="font-bold text-[#ee4d2d]">Shopee</span><span className="font-bold text-[#ee4d2d]">{formatRupiah(item.shopeePrice)}</span></div>
+                                    <div className="flex justify-between items-center text-xs md:text-sm"><span className="font-medium text-gray-600">TikTok</span><span className="font-medium text-gray-600">{formatRupiah(item.tiktokPrice)}</span></div>
+                                </div>
+
+                                <div className="flex flex-col gap-2 mt-auto">
+                                    <div className="flex flex-col md:flex-row gap-2">
+                                        <a href={item.shopeeLink} target="_blank" rel="noreferrer" 
+                                        className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">
+                                            Beli di Shopee
+                                        </a>
+                                        <a 
+                                            href={isMobile ? "#" : item.finalTikTokLink} // Di mobile dihandle onClick, Desktop href biasa
+                                            onClick={(e) => handleTikTokClick(e, item)}
+                                            target={isMobile ? "_self" : "_blank"} // Mobile _self biar intent jalan
+                                            rel="noreferrer" 
+                                            className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm">
+                                            Beli di TikTok
+                                        </a>
+                                    </div>
+                                    <div className="text-center">
+                                        <a href={item.shopeeSearchFallback} target="_blank" rel="noreferrer" 
+                                           className="text-[10px] text-gray-400 underline hover:text-[#ee4d2d] transition-colors cursor-pointer block mb-1">
+                                            Cari Serupa di Shopee
+                                        </a>
+                                        <p className="text-[9px] text-gray-300 italic">*Harga dapat berubah sewaktu-waktu</p>
+                                    </div>
+                                </div>
+
+                            </div>
                         </div>
-                        
-                        {/* Detail Produk */}
-                        <div className='p-4 flex flex-col flex-grow justify-between'>
-                            <div>
-                                <h3 className='text-xs md:text-sm text-gray-800 font-semibold line-clamp-2 leading-relaxed mb-2' title={item.title}>{item.title}</h3>
-                                
-                                <div className="flex items-center gap-1 mb-3 text-[10px] text-gray-500">
-                                    <span>🔥 {item.salesDisplay || "Terlaris"}</span>
-                                </div>
-                            </div>
-
-                            {/* Harga */}
-                            <div className="space-y-1 mb-4">
-                                <div className="flex justify-between items-center text-xs md:text-sm">
-                                    <span className="font-bold text-[#ee4d2d]">Shopee</span>
-                                    <span className="font-bold text-[#ee4d2d]">{formatRupiah(item.shopeePrice)}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-xs md:text-sm">
-                                    <span className="font-medium text-gray-600">TikTok</span>
-                                    <span className="font-medium text-gray-600">{formatRupiah(item.tiktokPrice)}</span>
-                                </div>
-                            </div>
-
-                            {/* Tombol Aksi */}
-                            <div className="flex flex-col gap-2 mt-auto">
-                                <div className="flex flex-col md:flex-row gap-2">
-                                    <a href={item.shopeeLink} target="_blank" rel="noreferrer" 
-                                    className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">
-                                        Beli di Shopee
-                                    </a>
-                                    <a 
-                                        href={item.finalTikTokLink}
-                                        onClick={(e) => handleTikTokClick(e, item)}
-                                        target="_blank" 
-                                        rel="noreferrer" 
-                                        className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm">
-                                        Beli di TikTok
-                                    </a>
-                                </div>
-                                <div className="text-center">
-                                    <a href={item.shopeeSearchFallback} target="_blank" rel="noreferrer" 
-                                       className="text-[10px] text-gray-400 underline hover:text-[#ee4d2d] transition-colors cursor-pointer block mb-1">
-                                        Cari Serupa di Shopee
-                                    </a>
-                                    <p className="text-[9px] text-gray-300 italic">*Harga dapat berubah sewaktu-waktu</p>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-                )})
+                    );
+                })
             ) : (
                 <div className="col-span-full py-20 text-center flex flex-col items-center justify-center text-gray-400">
                     <div className="text-4xl mb-2">🔍</div>
