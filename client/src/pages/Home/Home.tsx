@@ -73,16 +73,13 @@ export default function Home() {
             const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
             const encodedKeywords = encodeURIComponent(keywords);
 
-            // --- PERSIAPAN LINK BERLAPIS (PLAN A, B, C) ---
-            
-            // Plan A: Protokol Khusus Indo (Paling Kuat untuk Search Result)
-            const deepLinkA = `snssdk1180://search/result?keyword=${encodedKeywords}`;
-            
-            // Plan B: Protokol Global (Cadangan jika A gagal)
-            const deepLinkB = `tiktok://search?keyword=${encodedKeywords}`;
-            
-            // Plan C: Web Fallback (Jalan Terakhir)
+            // 1. LINK WEB STANDAR (HTTPS)
             const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
+            
+            // 2. LINK APP KHUSUS (HTTPS INTENT)
+            // Trik: Kita minta Android buka link HTTPS di atas, TAPI wajib pakai package TikTok.
+            // Ini akan memaksa App TikTok menangkap link tersebut & menampilkan hasil search yg benar.
+            const appLink = `intent://www.tiktok.com/search?q=${encodedKeywords}#Intent;scheme=https;package=com.ss.android.ugc.trill;S.browser_fallback_url=${webLink};end`;
 
             return {
                 id: doc.id,
@@ -92,10 +89,8 @@ export default function Home() {
                 tiktokPrice: tiktokPrice,
                 shopeeLink: data.shopeeLink || "#",
                 
-                // Simpan semua Plan
-                planA: deepLinkA,
-                planB: deepLinkB,
-                planC: webLink,
+                finalTikTokLink: webLink,
+                mobileDeepLink: appLink,
 
                 shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodedKeywords}`,
                 sales: data.sold || data.Sales || "Terlaris", 
@@ -133,52 +128,25 @@ export default function Home() {
     );
   };
 
-  // --- LOGIC "ANTI BANTING" v2.0 ---
+  // --- LOGIC KLIK TIKTOK (VISIBILITY CHECK v2) ---
   const handleTikTokClick = (e: React.MouseEvent, item: any) => {
-    // 1. Jika Laptop/Desktop: Langsung buka Web (Tab Baru)
-    if (!isMobile) {
-        return; // Biarkan href default bekerja (target="_blank")
-    }
+    if (isMobile) {
+      e.preventDefault();
+      const start = Date.now();
+      
+      // 1. COBA BUKA APLIKASI (Pakai HTTPS Intent Force)
+      window.location.href = item.mobileDeepLink;
 
-    // 2. Jika HP: Cegah buka web dulu, kita coba buka Aplikasi
-    e.preventDefault();
-
-    // Waktu mulai
-    const start = Date.now();
-    const waitTime = 1500; // 1.5 detik toleransi
-
-    // --- COBA PLAN A (Kuat) ---
-    window.location.href = item.planA;
-
-    // Timer Pengecekan
-    setTimeout(() => {
-        // Hitung selisih waktu
+      // 2. CEK APAKAH BERHASIL?
+      setTimeout(() => {
         const elapsed = Date.now() - start;
-        
-        // --- LOGIKA KUNCI "VISIBILITY CHECK" ---
-        // document.hidden = true artinya user sudah pindah aplikasi (sukses).
-        // document.hidden = false artinya user MASIH di browser (gagal buka app).
-        
-        // Jika browser masih terlihat (artinya Plan A gagal):
-        if (!document.hidden && elapsed < waitTime + 500) {
-            console.log("Plan A gagal, mencoba Plan B...");
-            
-            // --- COBA PLAN B (Cadangan) ---
-            window.location.href = item.planB;
-            
-            // Siapkan Plan C (Web) jika Plan B juga gagal
-            setTimeout(() => {
-                 if (!document.hidden) {
-                     console.log("Plan B gagal, menyerah ke Web...");
-                     // Paksa buka Web di tab baru agar tidak error
-                     window.open(item.planC, '_blank');
-                 }
-            }, 1500);
-        } else {
-            console.log("Sukses pindah ke Aplikasi TikTok!");
-            // Tidak melakukan apa-apa karena user sudah di aplikasi
+        // Jika browser TIDAK hidden (artinya user masih melototin browser), berarti gagal.
+        if (!document.hidden && elapsed < 2000) {
+            console.log("Aplikasi gagal, buka Web...");
+            window.open(item.finalTikTokLink, '_blank');
         }
-    }, waitTime);
+      }, 1500);
+    }
   };
 
   return (
@@ -210,7 +178,7 @@ export default function Home() {
             ))}
         </div>
 
-        {/* GRID PRODUK */}
+        {/* GRID PRODUK (Anti Bolong) */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 min-h-[500px]">
             {loading ? ([...Array(10)].map((_, i) => <div key={i} className="bg-white rounded-xl h-80 animate-pulse border border-gray-100" />)) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
@@ -236,10 +204,10 @@ export default function Home() {
                                     <div className="flex flex-col md:flex-row gap-2">
                                         <a href={item.shopeeLink} target="_blank" rel="noreferrer" className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">Beli di Shopee</a>
                                         
-                                        {/* TOMBOL TIKTOK (SUPREME LOGIC) */}
+                                        {/* TOMBOL TIKTOK */}
                                         <a 
-                                            href={item.planC} // Default ke Web buat Desktop
-                                            onClick={(e) => handleTikTokClick(e, item)} // Logic Super buat HP
+                                            href={item.finalTikTokLink}
+                                            onClick={(e) => handleTikTokClick(e, item)}
                                             target="_blank" 
                                             rel="noreferrer" 
                                             className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm"
@@ -261,7 +229,7 @@ export default function Home() {
 
         {/* INDIKATOR VERSI */}
         <div className="mt-8 mb-4 text-center">
-             <p className="text-[10px] text-gray-300">Shoxped v2.0 - Visibility Check (Anti-Bouncing)</p>
+             <p className="text-[10px] text-gray-300">Shoxped v2.1 - Search Intent Fix</p>
         </div>
 
         {/* PAGINATION */}
