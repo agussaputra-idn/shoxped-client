@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-// Import naik 1 level karena file ada di src/pages/Search.tsx
+// Import naik 1 level
 import { db } from '../firebase'; 
 import { collection, getDocs } from 'firebase/firestore';
 
 const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3EGambar Tidak Tersedia%3C/text%3E%3C/svg%3E";
 
-// FUNGSI BERSIH-BERSIH ANGKA TERJUAL
 const parseSales = (salesRaw: any) => {
     if (typeof salesRaw === 'number') return salesRaw;
     if (!salesRaw) return 0;
@@ -14,6 +13,13 @@ const parseSales = (salesRaw: any) => {
     if (str.includes('rb') || str.includes('k')) return parseFloat(str.replace(/[^0-9.]/g, '')) * 1000;
     if (str.includes('jt') || str.includes('m')) return parseFloat(str.replace(/[^0-9.]/g, '')) * 1000000;
     return parseFloat(str.replace(/[^0-9.]/g, '')) || 0;
+};
+
+// --- FUNGSI UBAH JUDUL JADI HASHTAG ---
+// Contoh: "Sepatu Keren 2024" -> "SepatuKeren2024"
+// Ini trik agar link tidak error
+const createHashtag = (text: string) => {
+    return text.replace(/[^a-zA-Z0-9]/g, ''); 
 };
 
 const processData = (products: any[], query: string) => {
@@ -75,18 +81,18 @@ export default function Search() {
                     : Math.floor(price * (1 - variance));
 
                 const cleanTitle = (data.name || "").replace(/[^a-zA-Z0-9 ]/g, " ").trim();
-                const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
-                const encodedKeywords = encodeURIComponent(keywords);
+                // Ambil 3 kata pertama saja biar hashtagnya akurat
+                const keywordBase = cleanTitle.split(/\s+/).slice(0, 3).join("");
+                const hashtag = createHashtag(keywordBase);
 
-                // --- INI KUNCI SUKSESNYA (SAMA PERSIS DENGAN HOME.TSX) ---
+                // --- STRATEGI BARU: JALUR HASHTAG (PASTI BISA) ---
                 
                 // 1. Link Web (Fallback)
-                const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
+                const webLink = `https://www.tiktok.com/tag/${hashtag}`;
 
-                // 2. Link App (INTENT FORCE)
-                // Kita perintahkan Android: "Buka link web ini, TAPI HARUS PAKAI TIKTOK APP"
-                // Ini dijamin 100% masuk ke hasil pencarian karena formatnya URL web resmi.
-                const appLink = `intent://www.tiktok.com/search?q=${encodedKeywords}#Intent;scheme=https;package=com.ss.android.ugc.trill;S.browser_fallback_url=${webLink};end`;
+                // 2. Link App (HASHTAG DIRECT)
+                // tiktok://tag/namaproduk -> Ini protokol resmi yang paling stabil
+                const appLink = `tiktok://tag/${hashtag}`;
 
                 const rawSales = data.sold || data.Sales || "0";
                 const numericSales = parseSales(rawSales);
@@ -101,8 +107,9 @@ export default function Search() {
                     
                     finalTikTokLink: webLink,
                     mobileDeepLink: appLink, 
-
-                    shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodedKeywords}`,
+                    
+                    // Fallback Shopee tetap search biasa
+                    shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodeURIComponent(cleanTitle)}`,
                     
                     salesDisplay: rawSales, 
                     salesNumeric: numericSales,
@@ -139,14 +146,19 @@ export default function Search() {
       return sorted;
   };
 
-  // --- HANDLER KLIK YANG SIMPEL (SAMA SEPERTI HOME.TSX) ---
   const handleTikTokClick = (e: React.MouseEvent, item: any) => {
     if (isMobile) {
       e.preventDefault();
-      // Langsung buka Intent. Tidak perlu setTimeout.
-      // Jika App ada -> Buka App (Hasil Pencarian Muncul).
-      // Jika App tidak ada -> Android otomatis buka Web (S.browser_fallback_url).
+      // LANGSUNG BUKA APP (Tag)
+      // Jalur Tag/Hashtag jauh lebih ringan dan jarang error dibanding Search
       window.location.href = item.mobileDeepLink;
+
+      // Fallback santai (Jaga-jaga kalau user gak punya app)
+      setTimeout(() => {
+        if (!document.hidden) {
+             window.open(item.finalTikTokLink, '_blank');
+        }
+      }, 2000);
     }
   };
 
@@ -199,7 +211,6 @@ export default function Search() {
                  [...Array(10)].map((_, i) => <div key={i} className='bg-white rounded shadow-sm h-96 animate-pulse border border-gray-100' />)
             ) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
-                    // LOGIKA ANTI BOLONG
                     const isLastAndOdd = index === currentItems.length - 1 && currentItems.length % 2 !== 0;
 
                     return (
@@ -242,7 +253,7 @@ export default function Search() {
                                             target={isMobile ? "_self" : "_blank"}
                                             rel="noreferrer" 
                                             className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm">
-                                            Beli di TikTok
+                                            Cek di TikTok
                                         </a>
                                     </div>
                                     <div className="text-center">
