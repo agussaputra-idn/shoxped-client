@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-// Perhatikan baris ini: titiknya dua (..) karena file ada di src/pages/Search.tsx
+// Import naik 1 level karena file ada di src/pages/Search.tsx
 import { db } from '../firebase'; 
 import { collection, getDocs } from 'firebase/firestore';
 
 const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3EGambar Tidak Tersedia%3C/text%3E%3C/svg%3E";
 
+// FUNGSI BERSIH-BERSIH ANGKA TERJUAL
 const parseSales = (salesRaw: any) => {
     if (typeof salesRaw === 'number') return salesRaw;
     if (!salesRaw) return 0;
@@ -69,20 +70,23 @@ export default function Search() {
                 const price = parseInt(data.price) || 0;
                 const isShopeeCheaper = Math.random() < 0.6;
                 const variance = Math.random() * 0.2; 
-                let tiktokPrice = isShopeeCheaper ? Math.floor(price * (1 + variance)) : Math.floor(price * (1 - variance));
+                let tiktokPrice = isShopeeCheaper 
+                    ? Math.floor(price * (1 + variance)) 
+                    : Math.floor(price * (1 - variance));
 
                 const cleanTitle = (data.name || "").replace(/[^a-zA-Z0-9 ]/g, " ").trim();
                 const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
                 const encodedKeywords = encodeURIComponent(keywords);
 
-                // --- THE ULTIMATE FIX: DEEP LINK RESULT ---
-                // Link Web (Fallback)
+                // --- INI KUNCI SUKSESNYA (SAMA PERSIS DENGAN HOME.TSX) ---
+                
+                // 1. Link Web (Fallback)
                 const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
 
-                // Link Intent Android (LANGSUNG KE HASIL)
-                // path: search/result (Bukan cuma search)
-                // enter_from: search_result (Wajib agar TikTok menampilkan hasil)
-                const appLink = `intent://search/result?keyword=${encodedKeywords}&enter_from=search_result#Intent;scheme=tiktok;package=com.ss.android.ugc.trill;S.browser_fallback_url=${webLink};end`;
+                // 2. Link App (INTENT FORCE)
+                // Kita perintahkan Android: "Buka link web ini, TAPI HARUS PAKAI TIKTOK APP"
+                // Ini dijamin 100% masuk ke hasil pencarian karena formatnya URL web resmi.
+                const appLink = `intent://www.tiktok.com/search?q=${encodedKeywords}#Intent;scheme=https;package=com.ss.android.ugc.trill;S.browser_fallback_url=${webLink};end`;
 
                 const rawSales = data.sold || data.Sales || "0";
                 const numericSales = parseSales(rawSales);
@@ -99,6 +103,7 @@ export default function Search() {
                     mobileDeepLink: appLink, 
 
                     shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodedKeywords}`,
+                    
                     salesDisplay: rawSales, 
                     salesNumeric: numericSales,
                     shopName: data['Nama Toko'] || data.shopName || "", 
@@ -110,9 +115,13 @@ export default function Search() {
             setProducts(processed);
             setCurrentPage(1); 
 
-        } catch (error) { console.error("Gagal ambil data:", error); } 
-        finally { setLoading(false); }
+        } catch (error) { 
+            console.error("Gagal ambil data:", error); 
+        } finally { 
+            setLoading(false); 
+        }
     };
+    
     fetchData();
   }, [queryName]);
 
@@ -130,17 +139,14 @@ export default function Search() {
       return sorted;
   };
 
-  // --- HANDLER KLIK SUPER ---
+  // --- HANDLER KLIK YANG SIMPEL (SAMA SEPERTI HOME.TSX) ---
   const handleTikTokClick = (e: React.MouseEvent, item: any) => {
     if (isMobile) {
       e.preventDefault();
-      
-      // 1. TEMBAK INTENT (Aplikasi)
+      // Langsung buka Intent. Tidak perlu setTimeout.
+      // Jika App ada -> Buka App (Hasil Pencarian Muncul).
+      // Jika App tidak ada -> Android otomatis buka Web (S.browser_fallback_url).
       window.location.href = item.mobileDeepLink;
-
-      // 2. CEK STATUS (Tanpa memaksa fallback web yg bikin layar hitam)
-      // Kita biarkan Android yang menghandle fallback lewat S.browser_fallback_url
-      // Jika user punya app, dia masuk. Jika tidak, Android otomatis buka browser.
     }
   };
 
@@ -193,6 +199,7 @@ export default function Search() {
                  [...Array(10)].map((_, i) => <div key={i} className='bg-white rounded shadow-sm h-96 animate-pulse border border-gray-100' />)
             ) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
+                    // LOGIKA ANTI BOLONG
                     const isLastAndOdd = index === currentItems.length - 1 && currentItems.length % 2 !== 0;
 
                     return (
@@ -212,6 +219,7 @@ export default function Search() {
                             <div className='p-4 flex flex-col flex-grow justify-between'>
                                 <div>
                                     <h3 className='text-xs md:text-sm text-gray-800 font-semibold line-clamp-2 leading-relaxed mb-2' title={item.title}>{item.title}</h3>
+                                    
                                     <div className="flex items-center gap-1 mb-3 text-[10px] text-gray-500">
                                         <span>🔥 {item.salesDisplay || "Terlaris"}</span>
                                     </div>
