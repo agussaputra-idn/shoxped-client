@@ -90,9 +90,10 @@ export default function Search() {
                 const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
                 const encodedKeywords = encodeURIComponent(keywords);
 
-                // LOGIKA LINK HYBRID (Sama seperti Home.tsx)
+                // LOGIKA LINK HYBRID (Updated to match Home.tsx v2.2)
                 const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
-                const appLink = `snssdk1180://search/result?keyword=${encodedKeywords}`;
+                // Use tiktok:// scheme with dual parameters for maximum compatibility
+                const appLink = `tiktok://search?q=${encodedKeywords}&keyword=${encodedKeywords}&is_from_video=1`;
 
                 // AMBIL DATA TERJUAL (CLEAN)
                 const rawSales = data.sold || data.Sales || "0";
@@ -153,8 +154,17 @@ export default function Search() {
   const handleTikTokClick = (e: React.MouseEvent, item: any) => {
     if (isMobile) {
       e.preventDefault();
-      window.location.href = item.mobileDeepLink;
-      setTimeout(() => { window.open(item.finalTikTokLink, '_blank'); }, 1500);
+      
+      // 1. LANGSUNG TEMBAK APLIKASI
+      window.location.assign(item.mobileDeepLink);
+
+      // 2. CEK JIKA GAGAL (Fallback)
+      setTimeout(() => {
+        if (!document.hidden) {
+            console.log("App tidak merespon, buka Web di tab baru...");
+            window.open(item.finalTikTokLink, '_blank');
+        }
+      }, 2500);
     }
   };
 
@@ -207,11 +217,19 @@ export default function Search() {
             {loading ? (
                  [...Array(10)].map((_, i) => <div key={i} className='bg-white rounded shadow-sm h-96 animate-pulse border border-gray-100' />)
             ) : currentItems.length > 0 ? (
-                currentItems.map((item) => (
-                    <div key={item.id} className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col'>
+                currentItems.map((item, index) => {
+                     // --- LOGIKA ANTI BOLONG (SAMA SEPERTI HOME.TSX) ---
+                    // Cek apakah ini produk terakhir DAN total produknya ganjil
+                    const isLastAndOdd = index === currentItems.length - 1 && currentItems.length % 2 !== 0;
+
+                    return (
+                    <div 
+                        key={item.id} 
+                         // Jika ganjil terakhir -> col-span-full (melebar penuh)
+                        className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col ${isLastAndOdd ? 'col-span-full' : ''}`}>
                         
                         {/* Gambar Produk */}
-                        <div className='w-full aspect-square relative overflow-hidden bg-gray-50'>
+                        <div className={`w-full relative overflow-hidden bg-gray-50 ${isLastAndOdd ? 'aspect-video' : 'aspect-square'}`}>
                             <img 
                                 src={item.image} 
                                 alt={item.title} 
@@ -269,7 +287,7 @@ export default function Search() {
 
                         </div>
                     </div>
-                ))
+                )})
             ) : (
                 <div className="col-span-full py-20 text-center flex flex-col items-center justify-center text-gray-400">
                     <div className="text-4xl mb-2">🔍</div>
