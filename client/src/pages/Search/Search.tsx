@@ -5,31 +5,20 @@ import { collection, getDocs } from 'firebase/firestore';
 
 const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3EGambar Tidak Tersedia%3C/text%3E%3C/svg%3E";
 
-// FUNGSI BANTUAN: Ubah "10RB Terjual" jadi angka
 const parseSales = (salesRaw: any) => {
     if (typeof salesRaw === 'number') return salesRaw;
     if (!salesRaw) return 0;
-    
     const str = salesRaw.toString().toLowerCase().replace(/,/g, '.'); 
-    
-    if (str.includes('rb') || str.includes('k')) {
-        return parseFloat(str.replace(/[^0-9.]/g, '')) * 1000;
-    }
-    if (str.includes('jt') || str.includes('m')) {
-        return parseFloat(str.replace(/[^0-9.]/g, '')) * 1000000;
-    }
-    
+    if (str.includes('rb') || str.includes('k')) return parseFloat(str.replace(/[^0-9.]/g, '')) * 1000;
+    if (str.includes('jt') || str.includes('m')) return parseFloat(str.replace(/[^0-9.]/g, '')) * 1000000;
     return parseFloat(str.replace(/[^0-9.]/g, '')) || 0;
 };
 
-// --- SMART FILTER & SORTER ---
 const processData = (products: any[], query: string) => {
     if (!query) return products;
-    
     const lowerQuery = query.toLowerCase().trim();
     const queryTerms = lowerQuery.split(/\s+/);
     
-    // 1. FILTER
     let filtered = products.filter(p => {
         const title = p.title.toLowerCase();
         return queryTerms.every(term => {
@@ -38,7 +27,6 @@ const processData = (products: any[], query: string) => {
         });
     });
 
-    // 2. SORTING RELEVANSI
     filtered.sort((a, b) => {
         const titleA = a.title.toLowerCase();
         const titleB = b.title.toLowerCase();
@@ -62,7 +50,7 @@ export default function Search() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 30; 
   
-  // DETEKSI MOBILE (Sama seperti Home.tsx)
+  // DETEKSI MOBILE
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
@@ -77,28 +65,22 @@ export default function Search() {
             
             const rawData = querySnapshot.docs.map((doc) => {
                 const data = doc.data();
-                
                 const price = parseInt(data.price) || 0;
                 const isShopeeCheaper = Math.random() < 0.6;
                 const variance = Math.random() * 0.2; 
-                let tiktokPrice = isShopeeCheaper 
-                    ? Math.floor(price * (1 + variance)) 
-                    : Math.floor(price * (1 - variance));
+                let tiktokPrice = isShopeeCheaper ? Math.floor(price * (1 + variance)) : Math.floor(price * (1 - variance));
 
                 const cleanTitle = (data.name || "").replace(/[^a-zA-Z0-9 ]/g, " ").trim();
                 const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
                 const encodedKeywords = encodeURIComponent(keywords);
 
-                // === LOGIKA SAKTI DARI HOME.TSX (Intent HTTPS) ===
-                
-                // 1. Link Web Biasa (Untuk Desktop / Fallback)
+                // --- LINK SUPER DEEPLINK (v4.0 Final) ---
                 const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
                 
-                // 2. Link App Android (Intent Force)
-                // Memaksa Android membuka URL web ini MENGGUNAKAN package TikTok.
-                // Jika App tidak ada, dia otomatis lari ke S.browser_fallback_url (Web).
-                // Tidak butuh Timer, Android yang atur sendiri.
-                const appLink = `intent://www.tiktok.com/search?q=${encodedKeywords}#Intent;scheme=https;package=com.ss.android.ugc.trill;S.browser_fallback_url=${webLink};end`;
+                // KITA GUNAKAN PARAMETER LENGKAP AGAR SEARCH APP JALAN
+                // snssdk1180 = Scheme TikTok Indonesia
+                // enter_from=search_result = Memberitahu app bahwa ini request pencarian
+                const appLink = `snssdk1180://search/result?keyword=${encodedKeywords}&display_keyword=${encodedKeywords}&enter_from=search_result&is_from_video=1`;
 
                 const rawSales = data.sold || data.Sales || "0";
                 const numericSales = parseSales(rawSales);
@@ -112,10 +94,9 @@ export default function Search() {
                     shopeeLink: data.shopeeLink || "#",
                     
                     finalTikTokLink: webLink,
-                    mobileDeepLink: appLink, // Gunakan Logika Home.tsx
+                    mobileDeepLink: appLink, // Gunakan Link Super
 
                     shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodedKeywords}`,
-                    
                     salesDisplay: rawSales, 
                     salesNumeric: numericSales,
                     shopName: data['Nama Toko'] || data.shopName || "", 
@@ -127,13 +108,9 @@ export default function Search() {
             setProducts(processed);
             setCurrentPage(1); 
 
-        } catch (error) { 
-            console.error("Gagal ambil data:", error); 
-        } finally { 
-            setLoading(false); 
-        }
+        } catch (error) { console.error("Gagal ambil data:", error); } 
+        finally { setLoading(false); }
     };
-    
     fetchData();
   }, [queryName]);
 
@@ -151,16 +128,28 @@ export default function Search() {
       return sorted;
   };
 
-  // === HANDLER KLIK SAKTI (Dari Home.tsx) ===
+  // --- HANDLER KLIK SUPER (Tanpa Fallback Web yang Berat) ---
   const handleTikTokClick = (e: React.MouseEvent, item: any) => {
     if (isMobile) {
       e.preventDefault();
-      // Langsung eksekusi Intent. 
-      // Android akan otomatis handle: Buka App jika ada, Buka Web jika tidak.
-      // Tidak perlu setTimeout yang bikin "balik lagi ke web".
-      window.location.href = item.mobileDeepLink;
+      
+      // 1. TEMBAK APLIKASI
+      window.location.assign(item.mobileDeepLink);
+
+      // 2. JIKA GAGAL? JANGAN BUKA TIKTOK WEB (Karena Berat/Hitam).
+      // Lebih baik diam atau user install app.
+      // Kalau dipaksa buka web tiktok, user malah kabur karena loading lama.
+      setTimeout(() => {
+        if (!document.hidden) {
+            // Opsional: Bisa arahkan ke Google Search Produk di TikTok kalau mau ringan
+            // window.location.href = `https://www.google.com/search?q=site:tiktok.com+${item.title}`;
+            
+            // Atau coba buka Web TikTok tapi di tab baru biar browser utama gak macet
+            console.log("App tidak merespon, mencoba web di tab baru...");
+            window.open(item.finalTikTokLink, '_blank');
+        }
+      }, 2500);
     }
-    // Jika Desktop, biarkan default behavior (target="_blank" buka tab baru)
   };
 
   const sortedProducts = getSortedProducts();
@@ -212,7 +201,9 @@ export default function Search() {
                  [...Array(10)].map((_, i) => <div key={i} className='bg-white rounded shadow-sm h-96 animate-pulse border border-gray-100' />)
             ) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
-                    // LOGIKA ANTI BOLONG (Tetap Dipertahankan)
+                    // LOGIKA ANTI BOLONG
+                    // Jika produk ini adalah urutan terakhir DAN total produk ganjil (sisa 1)
+                    // Maka dia akan melebar memenuhi layar (col-span-full)
                     const isLastAndOdd = index === currentItems.length - 1 && currentItems.length % 2 !== 0;
 
                     return (
@@ -248,7 +239,6 @@ export default function Search() {
                                         className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">
                                             Beli di Shopee
                                         </a>
-                                        {/* TOMBOL TIKTOK DIPERBAIKI (Sesuai Home.tsx) */}
                                         <a 
                                             href={isMobile ? "#" : item.finalTikTokLink}
                                             onClick={(e) => handleTikTokClick(e, item)}
