@@ -15,13 +15,6 @@ const parseSales = (salesRaw: any) => {
     return parseFloat(str.replace(/[^0-9.]/g, '')) || 0;
 };
 
-// --- FUNGSI UBAH JUDUL JADI HASHTAG ---
-// Contoh: "Sepatu Keren 2024" -> "SepatuKeren2024"
-// Ini trik agar link tidak error
-const createHashtag = (text: string) => {
-    return text.replace(/[^a-zA-Z0-9]/g, ''); 
-};
-
 const processData = (products: any[], query: string) => {
     if (!query) return products;
     const lowerQuery = query.toLowerCase().trim();
@@ -81,18 +74,21 @@ export default function Search() {
                     : Math.floor(price * (1 - variance));
 
                 const cleanTitle = (data.name || "").replace(/[^a-zA-Z0-9 ]/g, " ").trim();
-                // Ambil 3 kata pertama saja biar hashtagnya akurat
-                const keywordBase = cleanTitle.split(/\s+/).slice(0, 3).join("");
-                const hashtag = createHashtag(keywordBase);
+                const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
+                const encodedKeywords = encodeURIComponent(keywords);
 
-                // --- STRATEGI BARU: JALUR HASHTAG (PASTI BISA) ---
-                
-                // 1. Link Web (Fallback)
-                const webLink = `https://www.tiktok.com/tag/${hashtag}`;
+                // --- 1. LINK WEB (Cadangan) ---
+                const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
+                // Kita encode webLink agar aman masuk ke dalam string Intent
+                const encodedWebLink = encodeURIComponent(webLink);
 
-                // 2. Link App (HASHTAG DIRECT)
-                // tiktok://tag/namaproduk -> Ini protokol resmi yang paling stabil
-                const appLink = `tiktok://tag/${hashtag}`;
+                // --- 2. LINK SAKTI (INTENT with FALLBACK) ---
+                // Format: intent://<PATH>#Intent;scheme=<SCHEME>;package=<PKG>;S.browser_fallback_url=<WEB>;end
+                // Path: search/result (Wajib ini biar langsung hasil pencarian)
+                // Scheme: snssdk1180 (ID TikTok Indo, paling kuat)
+                // Package: com.ss.android.ugc.trill (ID Aplikasi di HP)
+                // Fallback: Link Web (Otomatis dibuka jika App gak ada)
+                const appLink = `intent://search/result?keyword=${encodedKeywords}&enter_from=search_result#Intent;scheme=snssdk1180;package=com.ss.android.ugc.trill;S.browser_fallback_url=${encodedWebLink};end`;
 
                 const rawSales = data.sold || data.Sales || "0";
                 const numericSales = parseSales(rawSales);
@@ -107,10 +103,8 @@ export default function Search() {
                     
                     finalTikTokLink: webLink,
                     mobileDeepLink: appLink, 
-                    
-                    // Fallback Shopee tetap search biasa
-                    shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodeURIComponent(cleanTitle)}`,
-                    
+
+                    shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodedKeywords}`,
                     salesDisplay: rawSales, 
                     salesNumeric: numericSales,
                     shopName: data['Nama Toko'] || data.shopName || "", 
@@ -147,19 +141,18 @@ export default function Search() {
   };
 
   const handleTikTokClick = (e: React.MouseEvent, item: any) => {
-    if (isMobile) {
-      e.preventDefault();
-      // LANGSUNG BUKA APP (Tag)
-      // Jalur Tag/Hashtag jauh lebih ringan dan jarang error dibanding Search
-      window.location.href = item.mobileDeepLink;
-
-      // Fallback santai (Jaga-jaga kalau user gak punya app)
-      setTimeout(() => {
-        if (!document.hidden) {
-             window.open(item.finalTikTokLink, '_blank');
-        }
-      }, 2000);
+    // Desktop: Buka Tab Baru Biasa
+    if (!isMobile) {
+        return; 
     }
+
+    // Mobile: Pakai Jurus Intent Murni
+    e.preventDefault();
+    
+    // Kita langsung lempar URL "intent://" ini ke browser.
+    // Browser HP yang akan mikir: "Oh ini Intent TikTok, cek ada app nya gak? Ada? Buka App. Gak ada? Buka link fallback."
+    // TIDAK ADA setTimeout = TIDAK ADA "Balik ke Web" yang tidak diinginkan.
+    window.location.href = item.mobileDeepLink;
   };
 
   const sortedProducts = getSortedProducts();
@@ -248,12 +241,12 @@ export default function Search() {
                                             Beli di Shopee
                                         </a>
                                         <a 
-                                            href={isMobile ? "#" : item.finalTikTokLink}
+                                            href={isMobile ? item.mobileDeepLink : item.finalTikTokLink}
                                             onClick={(e) => handleTikTokClick(e, item)}
                                             target={isMobile ? "_self" : "_blank"}
                                             rel="noreferrer" 
                                             className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm">
-                                            Cek di TikTok
+                                            Beli di TikTok
                                         </a>
                                     </div>
                                     <div className="text-center">
