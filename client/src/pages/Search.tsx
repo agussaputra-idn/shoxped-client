@@ -5,6 +5,23 @@ import { collection, getDocs } from 'firebase/firestore';
 
 const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3EGambar Tidak Tersedia%3C/text%3E%3C/svg%3E";
 
+// FUNGSI BANTUAN: Ubah "10RB Terjual" jadi angka 10000
+const parseSales = (salesRaw: any) => {
+    if (typeof salesRaw === 'number') return salesRaw;
+    if (!salesRaw) return 0;
+    
+    const str = salesRaw.toString().toLowerCase().replace(/,/g, '.'); // Ganti koma jadi titik
+    
+    if (str.includes('rb') || str.includes('k')) {
+        return parseFloat(str.replace(/[^0-9.]/g, '')) * 1000;
+    }
+    if (str.includes('jt') || str.includes('m')) {
+        return parseFloat(str.replace(/[^0-9.]/g, '')) * 1000000;
+    }
+    
+    return parseFloat(str.replace(/[^0-9.]/g, '')) || 0;
+};
+
 // --- SMART FILTER & SORTER ---
 const processData = (products: any[], query: string) => {
     if (!query) return products;
@@ -21,14 +38,12 @@ const processData = (products: any[], query: string) => {
         });
     });
 
-    // 2. SORTING (URUTKAN PRIORITAS)
+    // 2. SORTING RELEVANSI (JUDUL MIRIP DI ATAS)
     filtered.sort((a, b) => {
         const titleA = a.title.toLowerCase();
         const titleB = b.title.toLowerCase();
-
         const aStarts = titleA.startsWith(lowerQuery);
         const bStarts = titleB.startsWith(lowerQuery);
-
         if (aStarts && !bStarts) return -1; 
         if (!aStarts && bStarts) return 1;  
         return 0; 
@@ -47,6 +62,13 @@ export default function Search() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 30; 
+  
+  // DETEKSI MOBILE UNTUK LINK TIKTOK
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    if (/android|iPad|iPhone|iPod/i.test(userAgent)) setIsMobile(true);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,6 +88,15 @@ export default function Search() {
 
                 const cleanTitle = (data.name || "").replace(/[^a-zA-Z0-9 ]/g, " ").trim();
                 const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
+                const encodedKeywords = encodeURIComponent(keywords);
+
+                // LOGIKA LINK HYBRID (Sama seperti Home.tsx)
+                const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
+                const appLink = `snssdk1180://search/result?keyword=${encodedKeywords}`;
+
+                // AMBIL DATA TERJUAL (CLEAN)
+                const rawSales = data.sold || data.Sales || "0";
+                const numericSales = parseSales(rawSales);
 
                 return {
                     id: doc.id,
@@ -74,9 +105,17 @@ export default function Search() {
                     shopeePrice: price,
                     tiktokPrice: tiktokPrice,
                     shopeeLink: data.shopeeLink || "#",
-                    tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(keywords)}`,
-                    shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodeURIComponent(keywords)}`,
-                    sales: data.sold || data.Sales || "Terlaris",
+                    
+                    // Link TikTok Hybrid
+                    finalTikTokLink: webLink,
+                    mobileDeepLink: appLink,
+
+                    shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodedKeywords}`,
+                    
+                    // Simpan Data Penjualan (Teks & Angka)
+                    salesDisplay: rawSales, 
+                    salesNumeric: numericSales,
+
                     shopName: data['Nama Toko'] || data.shopName || "", 
                     category: data.category || "Umum"
                 };
@@ -98,14 +137,25 @@ export default function Search() {
 
   const formatRupiah = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
+  // --- LOGIKA SORTING UTAMA ---
   const getSortedProducts = () => {
       let sorted = [...products]; 
       if (sortOption === "termurah") {
           sorted.sort((a, b) => a.shopeePrice - b.shopeePrice);
       } else if (sortOption === "termahal") {
           sorted.sort((a, b) => b.shopeePrice - a.shopeePrice);
+      } else if (sortOption === "terlaris") { // TAMBAHAN BARU
+          sorted.sort((a, b) => b.salesNumeric - a.salesNumeric);
       }
       return sorted;
+  };
+
+  const handleTikTokClick = (e: React.MouseEvent, item: any) => {
+    if (isMobile) {
+      e.preventDefault();
+      window.location.href = item.mobileDeepLink;
+      setTimeout(() => { window.open(item.finalTikTokLink, '_blank'); }, 1500);
+    }
   };
 
   const sortedProducts = getSortedProducts();
@@ -133,7 +183,8 @@ export default function Search() {
                         <>Semua Produk</>
                     )}
                 </h1>
-                <span className="text-gray-500 text-xs md:text-sm">Ditemukan {products.length} barang</span>
+                {/* UBAH KATA BARANG JADI PRODUK */}
+                <span className="text-gray-500 text-xs md:text-sm">Ditemukan {products.length} produk</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -144,6 +195,7 @@ export default function Search() {
                     className="bg-gray-50 border border-gray-200 text-gray-700 text-xs md:text-sm rounded focus:ring-[#ee4d2d] focus:border-[#ee4d2d] block p-2 cursor-pointer outline-none"
                 >
                     <option value="terkait">Terkait</option>
+                    <option value="terlaris">Terlaris</option> {/* MENU BARU */}
                     <option value="termurah">Harga Termurah</option>
                     <option value="termahal">Harga Termahal</option>
                 </select>
@@ -166,7 +218,6 @@ export default function Search() {
                                 className='w-full h-full object-cover transition-transform duration-500 hover:scale-105' 
                                 onError={(e: any) => { e.target.onerror = null; e.target.src = FALLBACK_IMAGE; }} 
                             />
-                            {/* BADGE STAR+ SUDAH DIHAPUS DARI SINI */}
                         </div>
                         
                         {/* Detail Produk */}
@@ -175,7 +226,7 @@ export default function Search() {
                                 <h3 className='text-xs md:text-sm text-gray-800 font-semibold line-clamp-2 leading-relaxed mb-2' title={item.title}>{item.title}</h3>
                                 
                                 <div className="flex items-center gap-1 mb-3 text-[10px] text-gray-500">
-                                    <span>🔥 {item.sales}</span>
+                                    <span>🔥 {item.salesDisplay || "Terlaris"}</span>
                                 </div>
                             </div>
 
@@ -198,8 +249,12 @@ export default function Search() {
                                     className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">
                                         Beli di Shopee
                                     </a>
-                                    <a href={item.tiktokLink} target="_blank" rel="noreferrer" 
-                                    className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm">
+                                    <a 
+                                        href={item.finalTikTokLink}
+                                        onClick={(e) => handleTikTokClick(e, item)}
+                                        target="_blank" 
+                                        rel="noreferrer" 
+                                        className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm">
                                         Beli di TikTok
                                     </a>
                                 </div>

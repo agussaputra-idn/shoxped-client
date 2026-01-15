@@ -1,16 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 
-// Interface: Menerima data produk dari Home.tsx
 interface CarouselProps {
   featuredProducts?: any[]; 
 }
 
 const Carousel = ({ featuredProducts = [] }: CarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(true); // State untuk mengatur mulus/tidaknya scroll
+  const [isTransitioning, setIsTransitioning] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // --- 1. DATA BANNER PROMO (STATIC) ---
+  // DATA BANNER STATIS
   const staticBanners = [
     {
       id: 'static-1',
@@ -32,8 +31,8 @@ const Carousel = ({ featuredProducts = [] }: CarouselProps) => {
     }
   ];
 
-  // --- 2. DATA PRODUK (DYNAMIC) ---
-  const productSlides = featuredProducts.slice(0, 5).map((product) => ({
+  // DATA PRODUK (Diambil dari props, maksimal 2 agar tidak bolong di mobile)
+  const productSlides = featuredProducts.slice(0, 2).map((product) => ({
     id: product.id,
     type: 'product',
     bgClass: 'bg-white',
@@ -44,77 +43,59 @@ const Carousel = ({ featuredProducts = [] }: CarouselProps) => {
     link: product.shopeeLink
   }));
 
-  // Gabungkan data asli
+  // GABUNGKAN DATA
   const originalSlides = [...staticBanners, ...productSlides];
-
-  // --- 3. TRIK INFINITE LOOP (CLONING) ---
-  // Kita tambahkan Slide Pertama ke bagian paling akhir array
-  // Agar saat sampai ujung, seolah-olah masuk lagi ke awal
+  // CLONING UNTUK INFINITE LOOP
   const slides = [...originalSlides, { ...originalSlides[0], id: 'clone-start' }];
 
-  // --- 4. LOGIC AUTO SCROLL (BERPUTAR) ---
+  // AUTO SCROLL
   useEffect(() => {
     const interval = setInterval(() => {
-        // Pindah ke slide berikutnya
         setCurrentIndex((prev) => prev + 1);
-    }, 4000); // Ganti setiap 4 detik
-
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
-  // --- 5. LOGIC TELEPORTASI (RESET POSISI) ---
+  // TELEPORTASI LOOPING
   useEffect(() => {
     if (!scrollRef.current) return;
 
-    // A. JIKA INDEX MENCAPAI CLONE (PALING UJUNG)
     if (currentIndex === slides.length - 1) {
-        // 1. Scroll mulus ke slide clone
         setIsTransitioning(true);
         scrollRef.current.scrollTo({
             left: scrollRef.current.offsetWidth * currentIndex,
             behavior: 'smooth'
         });
-
-        // 2. Tunggu animasi selesai (500ms), lalu teleport ke awal
         const timeout = setTimeout(() => {
-            setIsTransitioning(false); // Matikan efek smooth
-            scrollRef.current?.scrollTo({ left: 0, behavior: 'auto' }); // Teleport instan
-            setCurrentIndex(0); // Reset index data
-        }, 500); // Sesuaikan durasi ini dengan kecepatan scroll CSS
-
+            setIsTransitioning(false);
+            scrollRef.current?.scrollTo({ left: 0, behavior: 'auto' });
+            setCurrentIndex(0);
+        }, 500);
         return () => clearTimeout(timeout);
     } 
     
-    // B. JIKA INDEX NORMAL (BUKAN CLONE)
-    // Pastikan scroll behavior kembali smooth jika sebelumnya dimatikan
     if (!isTransitioning) setIsTransitioning(true);
-
     scrollRef.current.scrollTo({
         left: scrollRef.current.offsetWidth * currentIndex,
         behavior: isTransitioning ? 'smooth' : 'auto'
     });
 
-  }, [currentIndex, slides.length]); // Hapus dependency isTransitioning agar tidak loop render
-
+  }, [currentIndex, slides.length]);
 
   return (
     <div className="relative w-full group">
-      
       {/* CONTAINER CAROUSEL */}
       <div 
         ref={scrollRef}
-        // Kita matikan scroll snap native saat auto-play agar JS yang pegang kendali penuh
-        // Tapi tetap bisa di-swipe manual karena overflow-x-auto
         className="flex overflow-x-auto scrollbar-hide h-40 md:h-56 lg:h-64 rounded-xl w-full bg-gray-50 snap-x snap-mandatory"
-        style={{ scrollBehavior: isTransitioning ? 'smooth' : 'auto' }} // CSS Control
+        style={{ scrollBehavior: isTransitioning ? 'smooth' : 'auto' }}
       >
         {slides.map((slide, index) => (
           <div 
             key={`${slide.id}-${index}`} 
             className={`min-w-full w-full h-full flex items-center justify-between px-5 md:px-12 relative overflow-hidden snap-center ${slide.bgClass}`}
           >
-            
-            {/* === STATIC BANNER UI === */}
+            {/* STATIC BANNER */}
             {slide.type === 'static' && (
                 <>
                     <div className="z-10 text-white drop-shadow-md max-w-[65%]">
@@ -136,12 +117,11 @@ const Carousel = ({ featuredProducts = [] }: CarouselProps) => {
                         alt="Icon" 
                         className="h-20 md:h-32 object-contain z-10 opacity-90 rotate-12 transform translate-x-2 translate-y-2 drop-shadow-xl" 
                     />
-                    {/* Background Hiasan */}
                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 animate-pulse"></div>
                 </>
             )}
 
-            {/* === PRODUCT BANNER UI === */}
+            {/* PRODUCT BANNER */}
             {slide.type === 'product' && (
                 <div 
                     className="flex w-full items-center justify-between h-full cursor-pointer relative" 
@@ -174,21 +154,16 @@ const Carousel = ({ featuredProducts = [] }: CarouselProps) => {
         ))}
       </div>
 
-      {/* INDIKATOR TITIK (DOTS) */}
-      {/* Kita sembunyikan dot terakhir (clone) agar user tidak bingung */}
+      {/* INDIKATOR DOTS */}
       <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1.5 z-20 bg-black/10 px-2 py-1 rounded-full backdrop-blur-[2px]">
         {originalSlides.map((_, index) => (
           <button
             key={index}
             className={`rounded-full transition-all duration-300 ${
-              // Logic agar dot tetap aktif di posisi 0 saat sedang di clone (posisi terakhir)
               (currentIndex === index) || (currentIndex === slides.length - 1 && index === 0) 
               ? 'bg-orange-600 w-4 h-1.5' : 'bg-white/70 w-1.5 h-1.5 hover:bg-white'
             }`}
-            onClick={() => {
-                // Manual click
-                setCurrentIndex(index);
-            }}
+            onClick={() => setCurrentIndex(index)}
           />
         ))}
       </div>
