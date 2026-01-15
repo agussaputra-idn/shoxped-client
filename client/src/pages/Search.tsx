@@ -5,7 +5,7 @@ import { collection, getDocs } from 'firebase/firestore';
 
 const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3EGambar Tidak Tersedia%3C/text%3E%3C/svg%3E";
 
-// FUNGSI BANTUAN: Ubah "10RB Terjual" jadi angka 10000
+// FUNGSI BANTUAN: Ubah "10RB Terjual" jadi angka
 const parseSales = (salesRaw: any) => {
     if (typeof salesRaw === 'number') return salesRaw;
     if (!salesRaw) return 0;
@@ -29,6 +29,7 @@ const processData = (products: any[], query: string) => {
     const lowerQuery = query.toLowerCase().trim();
     const queryTerms = lowerQuery.split(/\s+/);
     
+    // 1. FILTER
     let filtered = products.filter(p => {
         const title = p.title.toLowerCase();
         return queryTerms.every(term => {
@@ -37,6 +38,7 @@ const processData = (products: any[], query: string) => {
         });
     });
 
+    // 2. SORTING RELEVANSI
     filtered.sort((a, b) => {
         const titleA = a.title.toLowerCase();
         const titleB = b.title.toLowerCase();
@@ -60,7 +62,7 @@ export default function Search() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 30; 
   
-  // DETEKSI MOBILE
+  // DETEKSI MOBILE (Sama seperti Home.tsx)
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
@@ -87,14 +89,15 @@ export default function Search() {
                 const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
                 const encodedKeywords = encodeURIComponent(keywords);
 
-                // --- LINK LOGIC v3.0 (THE FIX) ---
+                // === LOGIKA SAKTI DARI HOME.TSX (Intent HTTPS) ===
                 
-                // 1. Link Web Biasa
+                // 1. Link Web Biasa (Untuk Desktop / Fallback)
                 const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
-
-                // 2. Link Intent Android (Force Package)
-                // Ini memerintahkan Android: "Buka URL https ini, tapi PAKSA pakai aplikasi TikTok"
-                // S.browser_fallback_url = Link cadangan jika aplikasi tidak punya
+                
+                // 2. Link App Android (Intent Force)
+                // Memaksa Android membuka URL web ini MENGGUNAKAN package TikTok.
+                // Jika App tidak ada, dia otomatis lari ke S.browser_fallback_url (Web).
+                // Tidak butuh Timer, Android yang atur sendiri.
                 const appLink = `intent://www.tiktok.com/search?q=${encodedKeywords}#Intent;scheme=https;package=com.ss.android.ugc.trill;S.browser_fallback_url=${webLink};end`;
 
                 const rawSales = data.sold || data.Sales || "0";
@@ -109,7 +112,7 @@ export default function Search() {
                     shopeeLink: data.shopeeLink || "#",
                     
                     finalTikTokLink: webLink,
-                    mobileDeepLink: appLink, // Gunakan Intent HTTPS
+                    mobileDeepLink: appLink, // Gunakan Logika Home.tsx
 
                     shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodedKeywords}`,
                     
@@ -148,13 +151,13 @@ export default function Search() {
       return sorted;
   };
 
-  // --- HANDLER KLIK YANG LEBIH BERSIH ---
+  // === HANDLER KLIK SAKTI (Dari Home.tsx) ===
   const handleTikTokClick = (e: React.MouseEvent, item: any) => {
     if (isMobile) {
       e.preventDefault();
-      // Kita TIDAK PERLU setTimeout lagi.
-      // Intent Android secara otomatis akan membuka Web jika App tidak ada.
-      // Ini mencegah masalah "balik ke web saat tombol back ditekan".
+      // Langsung eksekusi Intent. 
+      // Android akan otomatis handle: Buka App jika ada, Buka Web jika tidak.
+      // Tidak perlu setTimeout yang bikin "balik lagi ke web".
       window.location.href = item.mobileDeepLink;
     }
     // Jika Desktop, biarkan default behavior (target="_blank" buka tab baru)
@@ -209,7 +212,7 @@ export default function Search() {
                  [...Array(10)].map((_, i) => <div key={i} className='bg-white rounded shadow-sm h-96 animate-pulse border border-gray-100' />)
             ) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
-                    // LOGIKA ANTI BOLONG
+                    // LOGIKA ANTI BOLONG (Tetap Dipertahankan)
                     const isLastAndOdd = index === currentItems.length - 1 && currentItems.length % 2 !== 0;
 
                     return (
@@ -245,10 +248,11 @@ export default function Search() {
                                         className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">
                                             Beli di Shopee
                                         </a>
+                                        {/* TOMBOL TIKTOK DIPERBAIKI (Sesuai Home.tsx) */}
                                         <a 
-                                            href={isMobile ? "#" : item.finalTikTokLink} // Di mobile dihandle onClick, Desktop href biasa
+                                            href={isMobile ? "#" : item.finalTikTokLink}
                                             onClick={(e) => handleTikTokClick(e, item)}
-                                            target={isMobile ? "_self" : "_blank"} // Mobile _self biar intent jalan
+                                            target={isMobile ? "_self" : "_blank"}
                                             rel="noreferrer" 
                                             className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm">
                                             Beli di TikTok
