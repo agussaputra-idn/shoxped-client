@@ -20,9 +20,7 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Cek User Agent sederhana
     const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-    // Deteksi Android atau iOS
     if (/android|iPad|iPhone|iPod/i.test(userAgent)) {
       setIsMobile(true);
     }
@@ -75,13 +73,16 @@ export default function Home() {
             const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
             const encodedKeywords = encodeURIComponent(keywords);
 
-            // 1. LINK WEB (Standar HTTPS) - Untuk Laptop
-            const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
+            // --- PERSIAPAN LINK BERLAPIS (PLAN A, B, C) ---
             
-            // 2. LINK APP (Protokol Khusus TikTok Asia/Indo)
-            // snssdk1180:// adalah ID khusus TikTok versi Indonesia.
-            // /search/result?keyword=... memaksa masuk ke hasil pencarian, bukan cuma kolom search.
-            const appLink = `snssdk1180://search/result?keyword=${encodedKeywords}`;
+            // Plan A: Protokol Khusus Indo (Paling Kuat untuk Search Result)
+            const deepLinkA = `snssdk1180://search/result?keyword=${encodedKeywords}`;
+            
+            // Plan B: Protokol Global (Cadangan jika A gagal)
+            const deepLinkB = `tiktok://search?keyword=${encodedKeywords}`;
+            
+            // Plan C: Web Fallback (Jalan Terakhir)
+            const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
 
             return {
                 id: doc.id,
@@ -91,9 +92,10 @@ export default function Home() {
                 tiktokPrice: tiktokPrice,
                 shopeeLink: data.shopeeLink || "#",
                 
-                // Simpan Link
-                finalTikTokLink: webLink, // Default ke Web
-                mobileDeepLink: appLink,  // Cadangan untuk App
+                // Simpan semua Plan
+                planA: deepLinkA,
+                planB: deepLinkB,
+                planC: webLink,
 
                 shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodedKeywords}`,
                 sales: data.sold || data.Sales || "Terlaris", 
@@ -131,22 +133,52 @@ export default function Home() {
     );
   };
 
-  // --- LOGIKA KLIK TOMBOL TIKTOK ---
+  // --- LOGIC "ANTI BANTING" v2.0 ---
   const handleTikTokClick = (e: React.MouseEvent, item: any) => {
-    // Jika user pakai HP (Android/iOS)
-    if (isMobile) {
-      e.preventDefault(); // Cegah buka link web dulu
-      
-      // 1. Coba buka Aplikasi TikTok (Protokol snssdk1180)
-      window.location.href = item.mobileDeepLink;
+    // 1. Jika Laptop/Desktop: Langsung buka Web (Tab Baru)
+    if (!isMobile) {
+        return; // Biarkan href default bekerja (target="_blank")
+    }
 
-      // 2. Fallback (Jaga-jaga kalau gak punya aplikasi)
-      // Kita kasih waktu 1.5 detik. Kalau aplikasi gak kebuka, lari ke Web.
-      setTimeout(() => {
-        window.open(item.finalTikTokLink, '_blank');
-      }, 1500);
-    } 
-    // Jika Laptop, biarkan default behavior (buka tab baru)
+    // 2. Jika HP: Cegah buka web dulu, kita coba buka Aplikasi
+    e.preventDefault();
+
+    // Waktu mulai
+    const start = Date.now();
+    const waitTime = 1500; // 1.5 detik toleransi
+
+    // --- COBA PLAN A (Kuat) ---
+    window.location.href = item.planA;
+
+    // Timer Pengecekan
+    setTimeout(() => {
+        // Hitung selisih waktu
+        const elapsed = Date.now() - start;
+        
+        // --- LOGIKA KUNCI "VISIBILITY CHECK" ---
+        // document.hidden = true artinya user sudah pindah aplikasi (sukses).
+        // document.hidden = false artinya user MASIH di browser (gagal buka app).
+        
+        // Jika browser masih terlihat (artinya Plan A gagal):
+        if (!document.hidden && elapsed < waitTime + 500) {
+            console.log("Plan A gagal, mencoba Plan B...");
+            
+            // --- COBA PLAN B (Cadangan) ---
+            window.location.href = item.planB;
+            
+            // Siapkan Plan C (Web) jika Plan B juga gagal
+            setTimeout(() => {
+                 if (!document.hidden) {
+                     console.log("Plan B gagal, menyerah ke Web...");
+                     // Paksa buka Web di tab baru agar tidak error
+                     window.open(item.planC, '_blank');
+                 }
+            }, 1500);
+        } else {
+            console.log("Sukses pindah ke Aplikasi TikTok!");
+            // Tidak melakukan apa-apa karena user sudah di aplikasi
+        }
+    }, waitTime);
   };
 
   return (
@@ -157,9 +189,12 @@ export default function Home() {
       </div>
 
       <div className='w-full max-w-[1200px] mx-auto px-2 md:px-6'>
+        
         {/* BANNER 2 ITEM */}
         <div className="mt-4 flex flex-col gap-4 mb-6">
-            <div className='w-full rounded-xl overflow-hidden shadow-sm'><Carousel featuredProducts={products.slice(0, 2)} /></div>
+            <div className='w-full rounded-xl overflow-hidden shadow-sm'>
+                <Carousel featuredProducts={products.slice(0, 2)} />
+            </div>
             <div className="w-full"><VideoFeed /></div>
         </div>
 
@@ -180,11 +215,13 @@ export default function Home() {
             {loading ? ([...Array(10)].map((_, i) => <div key={i} className="bg-white rounded-xl h-80 animate-pulse border border-gray-100" />)) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
                     const isLastAndOdd = index === currentItems.length - 1 && currentItems.length % 2 !== 0;
+
                     return (
                         <div key={item.id} className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col ${isLastAndOdd ? 'col-span-full' : ''}`}>
                             <div className={`w-full relative overflow-hidden bg-gray-50 ${isLastAndOdd ? 'aspect-video' : 'aspect-square'}`}>
                                 <img src={item.image} alt={item.title} className='w-full h-full object-cover transition-transform duration-500 hover:scale-105' onError={(e: any) => { e.target.onerror = null; e.target.src = FALLBACK_IMAGE; }} />
                             </div>
+                            
                             <div className='p-3 md:p-4 flex flex-col flex-grow justify-between'>
                                 <div>
                                     <h3 className='text-xs md:text-sm text-gray-800 font-semibold line-clamp-2 leading-relaxed mb-2' title={item.title}>{item.title}</h3>
@@ -194,15 +231,16 @@ export default function Home() {
                                     <div className="flex justify-between items-center text-xs md:text-sm"><span className="font-bold text-[#ee4d2d]">Shopee</span><span className="font-bold text-[#ee4d2d]">{formatRupiah(item.shopeePrice)}</span></div>
                                     <div className="flex justify-between items-center text-xs md:text-sm"><span className="font-medium text-gray-600">TikTok</span><span className="font-medium text-gray-600">{formatRupiah(item.tiktokPrice)}</span></div>
                                 </div>
+                                
                                 <div className="flex flex-col gap-2 mt-auto">
                                     <div className="flex flex-col md:flex-row gap-2">
                                         <a href={item.shopeeLink} target="_blank" rel="noreferrer" className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">Beli di Shopee</a>
                                         
-                                        {/* TOMBOL TIKTOK (FIXED) */}
+                                        {/* TOMBOL TIKTOK (SUPREME LOGIC) */}
                                         <a 
-                                            href={item.finalTikTokLink} // Default Web Link (aman untuk desktop)
-                                            onClick={(e) => handleTikTokClick(e, item)} // Logic khusus HP
-                                            target="_blank" // Wajib _blank agar desktop buka tab baru
+                                            href={item.planC} // Default ke Web buat Desktop
+                                            onClick={(e) => handleTikTokClick(e, item)} // Logic Super buat HP
+                                            target="_blank" 
                                             rel="noreferrer" 
                                             className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm"
                                         >
@@ -221,10 +259,12 @@ export default function Home() {
             ) : <div className="col-span-full py-10 text-center text-gray-400 text-sm">Belum ada produk untuk kategori ini.</div>}
         </div>
 
+        {/* INDIKATOR VERSI */}
         <div className="mt-8 mb-4 text-center">
-             <p className="text-[10px] text-gray-300">Shoxped v1.6 - Direct Protocol Fix</p>
+             <p className="text-[10px] text-gray-300">Shoxped v2.0 - Visibility Check (Anti-Bouncing)</p>
         </div>
 
+        {/* PAGINATION */}
         {!loading && totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 mt-2 mb-8 flex-wrap">
                 <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-white disabled:opacity-30 bg-transparent transition-all">&lt;</button>
