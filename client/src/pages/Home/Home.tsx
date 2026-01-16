@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'; 
-import VideoFeed from '../../components/VideoFeed'; // Pastikan ini terpanggil
+import Carousel from '../../components/Carousel/Carousel'; // CAROUSEL KEMBALI
+import VideoFeed from '../../components/VideoFeed'; 
 import ShareButton from '../../components/ShareButton'; 
 import { db } from '../../firebase'; 
 import { doc, updateDoc, increment, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
@@ -15,7 +16,7 @@ export default function Home() {
   const [taglineIndex, setTaglineIndex] = useState(0);
   const [fadeProp, setFadeProp] = useState({ opacity: 1, transition: 'opacity 0.5s ease-in-out' });
   
-  // --- DETEKSI DEVICE V5.0 ---
+  // --- DETEKSI DEVICE V5.0 (Tetap dipakai karena sudah fix Pixel/iOS) ---
   const [deviceType, setDeviceType] = useState<'android' | 'ios' | 'desktop'>('desktop');
 
   useEffect(() => {
@@ -74,7 +75,7 @@ export default function Home() {
             const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
             const encodedKeywords = encodeURIComponent(keywords);
 
-            // LINK GENERATOR v5.0 (Sama dengan Search.tsx)
+            // LINK GENERATOR v5.0
             const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
             const encodedWebLink = encodeURIComponent(webLink);
             const androidIntent = `intent://www.tiktok.com/search?q=${encodedKeywords}#Intent;scheme=https;package=com.ss.android.ugc.trill;S.browser_fallback_url=${encodedWebLink};end`;
@@ -152,13 +153,24 @@ export default function Home() {
 
       <div className='w-full max-w-[1200px] mx-auto px-2 md:px-6'>
         
-        {/* --- VIDEO FEED DI SINI --- */}
-        {/* Saya menghapus Carousel Banner Statis agar fokus ke Video Feed */}
-        <VideoFeed />
+        {/* --- SECTION ATAS: CAROUSEL + VIDEO FEED --- */}
+        <div className="mt-4 flex flex-col gap-6 mb-6">
+            
+            {/* 1. CAROUSEL (BANNER STATIS) - SUDAH DIKEMBALIKAN */}
+            <div className='w-full rounded-xl overflow-hidden shadow-sm'>
+                {/* Membatasi 5 produk untuk slide agar tidak terlalu banyak */}
+                <Carousel featuredProducts={products.slice(0, 5)} />
+            </div>
+
+            {/* 2. VIDEO FEED (INSPIRASI BELANJA) */}
+            <div className="w-full">
+                <VideoFeed />
+            </div>
+        </div>
 
         {/* JUDUL */}
         <div id="product-grid-start" className="flex items-center gap-2 mb-4 px-2 pt-2">
-            <span className="text-xl animate-pulse">🔥</span><h2 className="font-bold text-gray-800 text-lg">Lagi Trending</h2>
+            <span className="text-xl animate-pulse">🔥</span><h2 className="font-bold text-gray-800 text-lg">Rekomendasi Pilihan</h2>
         </div>
 
         {/* TAB KATEGORI */}
@@ -194,7 +206,7 @@ export default function Home() {
                                     <div className="flex flex-col md:flex-row gap-2">
                                         <a href={item.shopeeLink} target="_blank" rel="noreferrer" className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">Beli di Shopee</a>
                                         
-                                        {/* TOMBOL TIKTOK */}
+                                        {/* TOMBOL TIKTOK (UPDATED v5.0) */}
                                         <a 
                                             href={deviceType === 'desktop' ? item.finalTikTokLink : "#"}
                                             onClick={(e) => handleTikTokClick(e, item)}
@@ -219,7 +231,7 @@ export default function Home() {
 
         {/* INDIKATOR VERSI */}
         <div className="mt-8 mb-4 text-center">
-             <p className="text-[10px] text-gray-300">Shoxped v5.1 - Final Video Feed & Device Fix</p>
+             <p className="text-[10px] text-gray-300">Shoxped v5.2 - Carousel + Inspirasi Belanja (Fixed)</p>
         </div>
 
         {/* PAGINATION */}
