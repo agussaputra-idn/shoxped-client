@@ -11,8 +11,13 @@ export default function Home() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("Semua");
+  
+  // --- STATE BARU UNTUK INFINITE SCROLL ---
+  const [visibleCount, setVisibleCount] = useState(20); // Mula-mula tampil 20 produk
+  const [isPaginationMode, setIsPaginationMode] = useState(false); // Mode Paging vs Scroll
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20; 
+  const itemsPerPage = 30; // Jika mode paging, 30 per halaman
+  
   const [taglineIndex, setTaglineIndex] = useState(0);
   const [fadeProp, setFadeProp] = useState({ opacity: 1, transition: 'opacity 0.5s ease-in-out' });
   const [deviceType, setDeviceType] = useState<'android' | 'ios' | 'desktop'>('desktop');
@@ -28,36 +33,23 @@ export default function Home() {
     }
   }, []);
 
-  // --- 1. DAFTAR KATEGORI DIPERBANYAK (Mirip Shopee) ---
   const categories = [
-    "Semua", 
-    "Fashion Pria", 
-    "Fashion Wanita", 
-    "Sepatu", 
-    "Tas", 
-    "Elektronik", 
-    "Kecantikan", 
-    "Rumah Tangga",
-    "Ibu & Bayi",
-    "Otomotif",
-    "Hobi & Koleksi"
+    "Semua", "Fashion Pria", "Fashion Wanita", "Sepatu", "Tas", "Elektronik", 
+    "Kecantikan", "Rumah Tangga", "Ibu & Bayi", "Otomotif", "Hobi & Koleksi"
   ];
 
-  // --- 2. LOGIKA FILTER CERDAS (KEYWORD MAPPING) ---
-  // Ini rahasianya agar produk tidak salah kamar.
-  // Kita cek JUDUL produk, bukan cuma kategori database.
   const getKeywordsForCategory = (cat: string) => {
     const map: Record<string, string[]> = {
-        "Fashion Pria": ["kemeja pria", "kaos pria", "celana pria", "jaket pria", "batik pria", "hoodie", "distro"],
-        "Fashion Wanita": ["dress", "gamis", "blouse", "rok", "hijab", "kerudung", "tunik", "wanita", "cewek"],
-        "Sepatu": ["sepatu", "sneaker", "sandal", "boots", "flat shoes", "heels"],
-        "Tas": ["tas", "ransel", "totebag", "selempang", "slingbag", "dompet", "backpack"],
-        "Elektronik": ["hp", "handphone", "laptop", "kamera", "speaker", "headset", "charger", "casing", "iphone", "android"],
-        "Kecantikan": ["serum", "toner", "lip", "cream", "sunscreen", "masker", "skincare", "bedak", "parfum"],
-        "Rumah Tangga": ["sprei", "selimut", "bantal", "dapur", "pisau", "rak", "pel", "sapu", "dekorasi"],
-        "Ibu & Bayi": ["popok", "susu", "baju bayi", "mainan", "stroller", "gendongan"],
-        "Otomotif": ["helm", "oli", "motor", "mobil", "sarung tangan", "knalpot"],
-        "Hobi & Koleksi": ["buku", "gitar", "pancing", "sepeda", "camping", "mainan"]
+        "Fashion Pria": ["pria", "cowok", "laki", "kemeja", "kaos", "man", "men", "batik", "jaket", "hoodie", "boxer", "celana panjang", "jeans pria", "chino"],
+        "Fashion Wanita": ["wanita", "cewek", "perempuan", "dress", "gamis", "blouse", "rok", "hijab", "tunik", "kulot", "bra", "cd wanita", "kebaya", "daster", "mukena"],
+        "Sepatu": ["sepatu", "sneaker", "sandal", "boots", "heels", "wedges", "flat", "pantofel", "kaki", "shoes"],
+        "Tas": ["tas", "ransel", "bag", "tote", "sling", "selempang", "dompet", "pouch", "backpack", "carrier", "koper", "waist", "clutch", "shoulder"],
+        "Elektronik": ["hp", "handphone", "laptop", "kamera", "speaker", "headset", "charger", "casing", "iphone", "android", "samsung", "xiaomi", "oppo", "vivo", "kabel", "powerbank"],
+        "Kecantikan": ["serum", "toner", "lip", "cream", "sunscreen", "masker", "skincare", "bedak", "parfum", "body lotion", "sabun wajah", "facial", "makeup"],
+        "Rumah Tangga": ["sprei", "selimut", "bantal", "dapur", "pisau", "rak", "pel", "sapu", "dekorasi", "wajan", "panci", "lampu", "deterjen", "sabun cuci"],
+        "Ibu & Bayi": ["popok", "pampers", "susu", "bayi", "baby", "anak", "mainan", "stroller", "gendongan", "botol"],
+        "Otomotif": ["helm", "oli", "motor", "mobil", "sarung tangan", "knalpot", "wiper", "ban", "spion"],
+        "Hobi & Koleksi": ["buku", "gitar", "pancing", "sepeda", "camping", "tenda", "raket", "bola", "jersey", "mainan", "action figure"]
     };
     return map[cat] || [];
   };
@@ -77,18 +69,6 @@ export default function Home() {
         }, 500);
     }, 4000);
     return () => clearInterval(timeout);
-  }, []);
-
-  useEffect(() => {
-    const logVisit = async () => {
-        try {
-            const docRef = doc(db, "analytics", "page_views");
-            const docSnap = await getDoc(docRef);
-            if (!docSnap.exists()) await setDoc(docRef, { views: 1 });
-            else await updateDoc(docRef, { views: increment(1) });
-        } catch (e) { console.log("Silent Error:", e); }
-    };
-    logVisit();
   }, []);
 
   useEffect(() => {
@@ -133,31 +113,54 @@ export default function Home() {
     fetchData();
   }, []);
 
-  // --- 3. IMPLEMENTASI FILTER CERDAS ---
+  // Filter Logic
   const filteredProducts = products.filter(p => {
     if (activeCategory === "Semua") return true;
-
-    // A. Cek Label Database (Kalau datanya benar, ini jalan)
-    const dbCategoryMatch = p.category?.toLowerCase() === activeCategory.toLowerCase();
-    
-    // B. Cek Judul (Kalau data salah label, ini penyelamatnya)
     const keywords = getKeywordsForCategory(activeCategory);
-    const titleMatch = keywords.some(key => p.title.toLowerCase().includes(key));
-
-    // C. Gabungkan Logika
-    // Jika user klik "Tas", produk harus punya label "Tas" ATAU judulnya mengandung kata "tas/ransel/dll"
-    return dbCategoryMatch || titleMatch;
+    const titleLower = p.title.toLowerCase();
+    if (keywords.length > 0) {
+        return keywords.some(key => titleLower.includes(key));
+    }
+    return p.category?.toLowerCase() === activeCategory.toLowerCase();
   });
 
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
+  // --- INFINITE SCROLL LOGIC (HP) ---
+  useEffect(() => {
+    // Hanya aktif di HP (Android/iOS) dan jika TIDAK dalam mode pagination
+    if ((deviceType === 'android' || deviceType === 'ios') && !isPaginationMode) {
+        const handleScroll = () => {
+            // Cek apakah user sudah scroll sampai bawah (minus 200px buffer)
+            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+                setVisibleCount(prev => prev + 10); // Tambah 10 produk otomatis
+            }
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }
+  }, [deviceType, isPaginationMode]);
+
+  // Reset tampilan saat kategori berubah
+  const handleCategoryChange = (cat: string) => {
+      setActiveCategory(cat);
+      setVisibleCount(20);
+      setIsPaginationMode(false);
+      setCurrentPage(1);
+  };
+
+  // --- LOGIC TAMPILAN PRODUK ---
+  let currentItems = [];
+  if (isPaginationMode) {
+      // Mode Halaman (1, 2, 3...) - Biasanya Desktop
+      const indexOfLastItem = currentPage * itemsPerPage;
+      const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+      currentItems = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
+  } else {
+      // Mode Scroll / Load More - Default HP & Desktop Awal
+      currentItems = filteredProducts.slice(0, visibleCount);
+  }
+
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
-  const paginate = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
-    document.getElementById('product-grid-start')?.scrollIntoView({ behavior: 'smooth' });
-  };
   const formatRupiah = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
   const renderTagline = () => {
@@ -204,12 +207,14 @@ export default function Home() {
             <span className="text-xl animate-pulse">🔥</span><h2 className="font-bold text-gray-800 text-lg">Rekomendasi Pilihan</h2>
         </div>
 
+        {/* TAB KATEGORI */}
         <div className="flex gap-2 overflow-x-auto pb-4 mb-2 px-1 no-scrollbar">
             {categories.map((cat) => (
-                <button key={cat} onClick={() => { setActiveCategory(cat); setCurrentPage(1); }} className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${activeCategory === cat ? 'bg-[#ee4d2d] text-white border-[#ee4d2d] shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>{cat}</button>
+                <button key={cat} onClick={() => handleCategoryChange(cat)} className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${activeCategory === cat ? 'bg-[#ee4d2d] text-white border-[#ee4d2d] shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>{cat}</button>
             ))}
         </div>
 
+        {/* GRID PRODUK */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 min-h-[500px]">
             {loading ? ([...Array(10)].map((_, i) => <div key={i} className="bg-white rounded-xl h-80 animate-pulse border border-gray-100" />)) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
@@ -253,26 +258,61 @@ export default function Home() {
                         </div>
                     );
                 })
-            ) : <div className="col-span-full py-10 text-center text-gray-400 text-sm">Belum ada produk untuk kategori ini.</div>}
+            ) : <div className="col-span-full py-10 text-center text-gray-400 text-sm">Yah, produk kategori ini tidak ditemukan.</div>}
         </div>
 
-        <div className="mt-8 mb-4 text-center">
-             <p className="text-[10px] text-gray-300">Shoxped v5.3 - Smart Category Filter</p>
-        </div>
+        {/* --- KONTROL LOAD MORE & PAGINATION --- */}
+        {!loading && (
+            <div className="mt-8 mb-8 text-center flex flex-col items-center gap-4">
+                
+                {/* 1. TOMBOL "LIHAT LAINNYA" (Hanya Muncul jika belum habis) */}
+                {!isPaginationMode && visibleCount < filteredProducts.length && (
+                    <button 
+                        onClick={() => setVisibleCount(prev => prev + 20)}
+                        className="bg-white border border-gray-300 text-gray-700 font-bold py-3 px-8 rounded-full shadow-sm hover:bg-gray-50 hover:shadow-md transition-all active:scale-95 text-sm"
+                    >
+                        Lihat Lainnya ⬇
+                    </button>
+                )}
 
-        {!loading && totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-2 mb-8 flex-wrap">
-                <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-white disabled:opacity-30 bg-transparent transition-all">&lt;</button>
-                {[...Array(totalPages)].map((_, i) => {
-                    const pageNum = i + 1;
-                    if (pageNum === 1 || pageNum === totalPages || (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)) {
-                         return <button key={pageNum} onClick={() => paginate(pageNum)} className={`w-10 h-10 text-sm font-bold flex items-center justify-center rounded-lg transition-all ${currentPage === pageNum ? 'bg-[#ee4d2d] text-white shadow-md transform scale-105' : 'bg-transparent text-gray-600 hover:bg-gray-100'}`}>{pageNum}</button>;
-                    } else if (pageNum === currentPage - 2 || pageNum === currentPage + 2) { return <span key={pageNum} className="text-gray-300">...</span>; }
-                    return null;
-                })}
-                <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages} className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-white disabled:opacity-30 bg-transparent transition-all">&gt;</button>
+                {/* 2. PAGINATION (Hanya di Desktop, di bawah tombol Lihat Lainnya) */}
+                {deviceType === 'desktop' && totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-2 mt-4 flex-wrap border-t border-gray-100 pt-6 w-full">
+                        <span className="text-xs text-gray-400 w-full mb-2">Atau loncat ke halaman:</span>
+                        
+                        <button onClick={() => { setIsPaginationMode(true); setCurrentPage(prev => Math.max(prev - 1, 1)); document.getElementById('product-grid-start')?.scrollIntoView(); }} disabled={currentPage === 1 && isPaginationMode} className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:bg-white text-xs">&lt;</button>
+                        
+                        {[...Array(totalPages)].map((_, i) => {
+                            const pageNum = i + 1;
+                            // Logic agar pagination tidak terlalu panjang
+                            if (pageNum === 1 || pageNum === totalPages || (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)) {
+                                return (
+                                    <button 
+                                        key={pageNum} 
+                                        onClick={() => { 
+                                            setIsPaginationMode(true); 
+                                            setCurrentPage(pageNum);
+                                            document.getElementById('product-grid-start')?.scrollIntoView({ behavior: 'smooth' });
+                                        }} 
+                                        className={`w-8 h-8 text-xs font-bold flex items-center justify-center rounded transition-all ${isPaginationMode && currentPage === pageNum ? 'bg-[#ee4d2d] text-white' : 'bg-transparent text-gray-600 hover:bg-gray-100'}`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            } else if (pageNum === currentPage - 2 || pageNum === currentPage + 2) { return <span key={pageNum} className="text-gray-300 text-xs">...</span>; }
+                            return null;
+                        })}
+
+                        <button onClick={() => { setIsPaginationMode(true); setCurrentPage(prev => Math.min(prev + 1, totalPages)); document.getElementById('product-grid-start')?.scrollIntoView(); }} disabled={currentPage === totalPages && isPaginationMode} className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:bg-white text-xs">&gt;</button>
+                    </div>
+                )}
             </div>
         )}
+        
+        <div className="text-center mb-4">
+             <p className="text-[10px] text-gray-300">Shoxped v5.5 - Infinite Scroll Mobile & Desktop Hybrid</p>
+        </div>
+
       <ShareButton />
       </div>
     </div>
