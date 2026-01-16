@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'; 
-import Carousel from '../../components/Carousel/Carousel'; // CAROUSEL KEMBALI
+import Carousel from '../../components/Carousel/Carousel'; 
 import VideoFeed from '../../components/VideoFeed'; 
 import ShareButton from '../../components/ShareButton'; 
 import { db } from '../../firebase'; 
@@ -15,8 +15,6 @@ export default function Home() {
   const itemsPerPage = 20; 
   const [taglineIndex, setTaglineIndex] = useState(0);
   const [fadeProp, setFadeProp] = useState({ opacity: 1, transition: 'opacity 0.5s ease-in-out' });
-  
-  // --- DETEKSI DEVICE V5.0 (Tetap dipakai karena sudah fix Pixel/iOS) ---
   const [deviceType, setDeviceType] = useState<'android' | 'ios' | 'desktop'>('desktop');
 
   useEffect(() => {
@@ -30,7 +28,40 @@ export default function Home() {
     }
   }, []);
 
-  const categories = ["Semua", "Fashion", "Sepatu", "Tas", "Elektronik", "Kecantikan", "Lainnya"];
+  // --- 1. DAFTAR KATEGORI DIPERBANYAK (Mirip Shopee) ---
+  const categories = [
+    "Semua", 
+    "Fashion Pria", 
+    "Fashion Wanita", 
+    "Sepatu", 
+    "Tas", 
+    "Elektronik", 
+    "Kecantikan", 
+    "Rumah Tangga",
+    "Ibu & Bayi",
+    "Otomotif",
+    "Hobi & Koleksi"
+  ];
+
+  // --- 2. LOGIKA FILTER CERDAS (KEYWORD MAPPING) ---
+  // Ini rahasianya agar produk tidak salah kamar.
+  // Kita cek JUDUL produk, bukan cuma kategori database.
+  const getKeywordsForCategory = (cat: string) => {
+    const map: Record<string, string[]> = {
+        "Fashion Pria": ["kemeja pria", "kaos pria", "celana pria", "jaket pria", "batik pria", "hoodie", "distro"],
+        "Fashion Wanita": ["dress", "gamis", "blouse", "rok", "hijab", "kerudung", "tunik", "wanita", "cewek"],
+        "Sepatu": ["sepatu", "sneaker", "sandal", "boots", "flat shoes", "heels"],
+        "Tas": ["tas", "ransel", "totebag", "selempang", "slingbag", "dompet", "backpack"],
+        "Elektronik": ["hp", "handphone", "laptop", "kamera", "speaker", "headset", "charger", "casing", "iphone", "android"],
+        "Kecantikan": ["serum", "toner", "lip", "cream", "sunscreen", "masker", "skincare", "bedak", "parfum"],
+        "Rumah Tangga": ["sprei", "selimut", "bantal", "dapur", "pisau", "rak", "pel", "sapu", "dekorasi"],
+        "Ibu & Bayi": ["popok", "susu", "baju bayi", "mainan", "stroller", "gendongan"],
+        "Otomotif": ["helm", "oli", "motor", "mobil", "sarung tangan", "knalpot"],
+        "Hobi & Koleksi": ["buku", "gitar", "pancing", "sepeda", "camping", "mainan"]
+    };
+    return map[cat] || [];
+  };
+
   const taglines = [
     { text: "Cek Dulu Disini. Shopee atau TikTok yang Lebih Murah?", highlight: ["Shopee", "TikTok"] },
     { text: "Temukan Harga Terbaik, Shopee VS TikTok Shop!", highlight: ["Shopee VS TikTok Shop", "Shoxped"] },
@@ -74,8 +105,6 @@ export default function Home() {
             const cleanTitle = (data.name || "").replace(/[^a-zA-Z0-9 ]/g, " ").trim();
             const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
             const encodedKeywords = encodeURIComponent(keywords);
-
-            // LINK GENERATOR v5.0
             const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
             const encodedWebLink = encodeURIComponent(webLink);
             const androidIntent = `intent://www.tiktok.com/search?q=${encodedKeywords}#Intent;scheme=https;package=com.ss.android.ugc.trill;S.browser_fallback_url=${encodedWebLink};end`;
@@ -104,7 +133,22 @@ export default function Home() {
     fetchData();
   }, []);
 
-  const filteredProducts = activeCategory === "Semua" ? products : products.filter(p => p.category?.toLowerCase() === activeCategory.toLowerCase());
+  // --- 3. IMPLEMENTASI FILTER CERDAS ---
+  const filteredProducts = products.filter(p => {
+    if (activeCategory === "Semua") return true;
+
+    // A. Cek Label Database (Kalau datanya benar, ini jalan)
+    const dbCategoryMatch = p.category?.toLowerCase() === activeCategory.toLowerCase();
+    
+    // B. Cek Judul (Kalau data salah label, ini penyelamatnya)
+    const keywords = getKeywordsForCategory(activeCategory);
+    const titleMatch = keywords.some(key => p.title.toLowerCase().includes(key));
+
+    // C. Gabungkan Logika
+    // Jika user klik "Tas", produk harus punya label "Tas" ATAU judulnya mengandung kata "tas/ransel/dll"
+    return dbCategoryMatch || titleMatch;
+  });
+
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
@@ -127,11 +171,9 @@ export default function Home() {
     );
   };
 
-  // --- HANDLER KLIK SAKTI v5.0 ---
   const handleTikTokClick = (e: React.MouseEvent, item: any) => {
     if (deviceType === 'desktop') return;
     e.preventDefault();
-
     if (deviceType === 'android') {
         window.location.href = item.androidLink;
     } else if (deviceType === 'ios') {
@@ -146,41 +188,28 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 pb-12">
-      {/* HEADER */}
       <div className="w-full py-2.5 px-2 bg-white border-b border-orange-100 shadow-sm z-10 flex items-center justify-center overflow-hidden">
         <p className="text-center text-xs md:text-sm leading-snug">{renderTagline()}</p>
       </div>
 
       <div className='w-full max-w-[1200px] mx-auto px-2 md:px-6'>
-        
-        {/* --- SECTION ATAS: CAROUSEL + VIDEO FEED --- */}
         <div className="mt-4 flex flex-col gap-6 mb-6">
-            
-            {/* 1. CAROUSEL (BANNER STATIS) - SUDAH DIKEMBALIKAN */}
             <div className='w-full rounded-xl overflow-hidden shadow-sm'>
-                {/* Membatasi 5 produk untuk slide agar tidak terlalu banyak */}
                 <Carousel featuredProducts={products.slice(0, 5)} />
             </div>
-
-            {/* 2. VIDEO FEED (INSPIRASI BELANJA) */}
-            <div className="w-full">
-                <VideoFeed />
-            </div>
+            <div className="w-full"><VideoFeed /></div>
         </div>
 
-        {/* JUDUL */}
         <div id="product-grid-start" className="flex items-center gap-2 mb-4 px-2 pt-2">
             <span className="text-xl animate-pulse">🔥</span><h2 className="font-bold text-gray-800 text-lg">Rekomendasi Pilihan</h2>
         </div>
 
-        {/* TAB KATEGORI */}
         <div className="flex gap-2 overflow-x-auto pb-4 mb-2 px-1 no-scrollbar">
             {categories.map((cat) => (
                 <button key={cat} onClick={() => { setActiveCategory(cat); setCurrentPage(1); }} className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${activeCategory === cat ? 'bg-[#ee4d2d] text-white border-[#ee4d2d] shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>{cat}</button>
             ))}
         </div>
 
-        {/* GRID PRODUK */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 min-h-[500px]">
             {loading ? ([...Array(10)].map((_, i) => <div key={i} className="bg-white rounded-xl h-80 animate-pulse border border-gray-100" />)) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
@@ -205,8 +234,6 @@ export default function Home() {
                                 <div className="flex flex-col gap-2 mt-auto">
                                     <div className="flex flex-col md:flex-row gap-2">
                                         <a href={item.shopeeLink} target="_blank" rel="noreferrer" className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">Beli di Shopee</a>
-                                        
-                                        {/* TOMBOL TIKTOK (UPDATED v5.0) */}
                                         <a 
                                             href={deviceType === 'desktop' ? item.finalTikTokLink : "#"}
                                             onClick={(e) => handleTikTokClick(e, item)}
@@ -229,12 +256,10 @@ export default function Home() {
             ) : <div className="col-span-full py-10 text-center text-gray-400 text-sm">Belum ada produk untuk kategori ini.</div>}
         </div>
 
-        {/* INDIKATOR VERSI */}
         <div className="mt-8 mb-4 text-center">
-             <p className="text-[10px] text-gray-300">Shoxped v5.2 - Carousel + Inspirasi Belanja (Fixed)</p>
+             <p className="text-[10px] text-gray-300">Shoxped v5.3 - Smart Category Filter</p>
         </div>
 
-        {/* PAGINATION */}
         {!loading && totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 mt-2 mb-8 flex-wrap">
                 <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-white disabled:opacity-30 bg-transparent transition-all">&lt;</button>
