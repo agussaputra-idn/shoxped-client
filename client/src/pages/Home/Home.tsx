@@ -16,14 +16,17 @@ export default function Home() {
   const [taglineIndex, setTaglineIndex] = useState(0);
   const [fadeProp, setFadeProp] = useState({ opacity: 1, transition: 'opacity 0.5s ease-in-out' });
   
-  // DETEKSI DEVICE
-  const [isMobile, setIsMobile] = useState(false);
+  // --- 1. DETEKSI DEVICE CANGGIH (Logika v5.0) ---
+  const [deviceType, setDeviceType] = useState<'android' | 'ios' | 'desktop'>('desktop');
 
   useEffect(() => {
     const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-    // Deteksi sederhana: Jika Android/iOS maka Mobile
-    if (/android|iPad|iPhone|iPod/i.test(userAgent)) {
-      setIsMobile(true);
+    if (/android/i.test(userAgent)) {
+      setDeviceType('android'); // HP Android (Samsung, Pixel, Xiaomi, dll)
+    } else if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) {
+      setDeviceType('ios');     // iPhone / iPad
+    } else {
+      setDeviceType('desktop'); // Laptop / PC
     }
   }, []);
 
@@ -74,13 +77,20 @@ export default function Home() {
             const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
             const encodedKeywords = encodeURIComponent(keywords);
 
-            // 1. LINK WEB (Cadangan)
-            const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
+            // --- 2. PERSIAPAN LINK (Logika v5.0 Pixel + iOS Fix) ---
             
-            // 2. LINK APP "NATIVE" (Gaya Baru)
-            // Kita pakai scheme 'tiktok://' yang universal.
-            // Kita masukkan DUA parameter 'q' dan 'keyword' biar aman (salah satu pasti kena).
-            const appLink = `tiktok://search?q=${encodedKeywords}&keyword=${encodedKeywords}&is_from_video=1`;
+            // A. Link Web (Cadangan Aman)
+            const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
+            const encodedWebLink = encodeURIComponent(webLink);
+
+            // B. Link Android (INTENT KHUSUS PIXEL & ANDROID LAIN)
+            // Trik: Pakai scheme 'https' tapi dipaksa buka via package TikTok.
+            // Pixel akan membacanya sebagai link web resmi, lalu membukanya di App.
+            const androidIntent = `intent://www.tiktok.com/search?q=${encodedKeywords}#Intent;scheme=https;package=com.ss.android.ugc.trill;S.browser_fallback_url=${encodedWebLink};end`;
+
+            // C. Link iOS (Universal Link)
+            // iPhone lebih suka deep link ini
+            const iosDeepLink = `tiktok://search/result?keyword=${encodedKeywords}`;
 
             return {
                 id: doc.id,
@@ -91,7 +101,8 @@ export default function Home() {
                 shopeeLink: data.shopeeLink || "#",
                 
                 finalTikTokLink: webLink,
-                mobileDeepLink: appLink,
+                androidLink: androidIntent,
+                iosLink: iosDeepLink,
 
                 shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodedKeywords}`,
                 sales: data.sold || data.Sales || "Terlaris", 
@@ -129,24 +140,26 @@ export default function Home() {
     );
   };
 
-  // --- LOGIC DIRECT NATIVE (v2.2) ---
+  // --- 3. TOMBOL KLIK SAKTI (Logika v5.0) ---
   const handleTikTokClick = (e: React.MouseEvent, item: any) => {
-    if (isMobile) {
-      e.preventDefault();
-      
-      // 1. LANGSUNG TEMBAK APLIKASI
-      // Kita pakai window.location.assign() yang lebih agresif daripada href biasa
-      window.location.assign(item.mobileDeepLink);
+    // Desktop: Biarkan buka Tab Baru
+    if (deviceType === 'desktop') return;
 
-      // 2. CEK JIKA GAGAL (Fallback)
-      // Kita beri waktu 2.5 detik (lebih lama dikit).
-      // Jika browser masih aktif (user belum pindah app), baru kita buka Web.
-      setTimeout(() => {
-        if (!document.hidden) {
-            console.log("App tidak merespon, buka Web di tab baru...");
-            window.open(item.finalTikTokLink, '_blank');
-        }
-      }, 2500);
+    e.preventDefault();
+
+    // Android (Pixel Fix): Pakai Intent HTTPS
+    if (deviceType === 'android') {
+        window.location.href = item.androidLink;
+    } 
+    // iOS: Pakai Deep Link + Timer Fallback
+    else if (deviceType === 'ios') {
+        window.location.href = item.iosLink;
+        // Jaga-jaga kalau app belum install di iPhone
+        setTimeout(() => {
+             if (!document.hidden) {
+                 window.location.href = item.finalTikTokLink;
+             }
+        }, 2500);
     }
   };
 
@@ -159,11 +172,13 @@ export default function Home() {
 
       <div className='w-full max-w-[1200px] mx-auto px-2 md:px-6'>
         
-        {/* BANNER 2 ITEM */}
+        {/* BANNER & VIDEO FEED */}
         <div className="mt-4 flex flex-col gap-4 mb-6">
             <div className='w-full rounded-xl overflow-hidden shadow-sm'>
+                {/* Carousel Tetap Ada */}
                 <Carousel featuredProducts={products.slice(0, 2)} />
             </div>
+            {/* Video Feed Tetap Ada */}
             <div className="w-full"><VideoFeed /></div>
         </div>
 
@@ -205,11 +220,11 @@ export default function Home() {
                                     <div className="flex flex-col md:flex-row gap-2">
                                         <a href={item.shopeeLink} target="_blank" rel="noreferrer" className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">Beli di Shopee</a>
                                         
-                                        {/* TOMBOL TIKTOK */}
+                                        {/* TOMBOL TIKTOK (Menggunakan Logic v5.0) */}
                                         <a 
-                                            href={item.finalTikTokLink} // Web link buat Desktop (Default)
-                                            onClick={(e) => handleTikTokClick(e, item)} // Logic HP
-                                            target="_blank" 
+                                            href={deviceType === 'desktop' ? item.finalTikTokLink : "#"}
+                                            onClick={(e) => handleTikTokClick(e, item)}
+                                            target={deviceType === 'desktop' ? "_blank" : "_self"}
                                             rel="noreferrer" 
                                             className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm"
                                         >
@@ -230,7 +245,7 @@ export default function Home() {
 
         {/* INDIKATOR VERSI */}
         <div className="mt-8 mb-4 text-center">
-             <p className="text-[10px] text-gray-300">Shoxped v2.2 - Native TikTok Link</p>
+             <p className="text-[10px] text-gray-300">Shoxped v5.0 - Final Device Fix (Pixel & iOS)</p>
         </div>
 
         {/* PAGINATION */}
