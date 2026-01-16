@@ -82,13 +82,26 @@ export default function Home() {
             const isShopeeCheaper = Math.random() < 0.6;
             const variance = Math.random() * 0.2; 
             let tiktokPrice = isShopeeCheaper ? Math.floor(price * (1 + variance)) : Math.floor(price * (1 - variance));
+            
+            // BERSIHKAN JUDUL AGAR PENCARIAN AKURAT
             const cleanTitle = (data.name || "").replace(/[^a-zA-Z0-9 ]/g, " ").trim();
             const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
             const encodedKeywords = encodeURIComponent(keywords);
+
+            // --- LINK LOGIC v6.0 (FIX SEARCH RESULT) ---
+            
+            // 1. Link Web (Fallback)
             const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
             const encodedWebLink = encodeURIComponent(webLink);
-            const androidIntent = `intent://www.tiktok.com/search?q=${encodedKeywords}#Intent;scheme=https;package=com.ss.android.ugc.trill;S.browser_fallback_url=${encodedWebLink};end`;
-            const iosDeepLink = `tiktok://search/result?keyword=${encodedKeywords}`;
+
+            // 2. Android Intent (FORCE SEARCH RESULT)
+            // Perubahan: Menggunakan scheme 'snssdk1180' dan parameter 'enter_from'
+            // 'snssdk1180' adalah ID internal TikTok yang lebih kuat dari 'tiktok://' biasa
+            const androidIntent = `intent://search/result?keyword=${encodedKeywords}&q=${encodedKeywords}&enter_from=search_result#Intent;scheme=snssdk1180;package=com.ss.android.ugc.trill;S.browser_fallback_url=${encodedWebLink};end`;
+
+            // 3. iOS Deep Link
+            // Tambahkan enter_from agar iOS juga paham ini pencarian
+            const iosDeepLink = `tiktok://search/result?keyword=${encodedKeywords}&enter_from=search_result`;
 
             return {
                 id: doc.id,
@@ -228,7 +241,7 @@ export default function Home() {
                                 <div className="flex flex-col gap-2 mt-auto">
                                     <div className="flex flex-col md:flex-row gap-2">
                                         
-                                        {/* TOMBOL SHOPEE - UPDATE: ACTIVE EFFECT */}
+                                        {/* TOMBOL SHOPEE - ACTIVE EFFECT */}
                                         <a href={item.shopeeLink} target="_blank" rel="noreferrer" 
                                            className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all 
                                            hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm 
@@ -236,7 +249,7 @@ export default function Home() {
                                             Beli di Shopee
                                         </a>
                                         
-                                        {/* TOMBOL TIKTOK - UPDATE: ACTIVE EFFECT */}
+                                        {/* TOMBOL TIKTOK - ACTIVE EFFECT & LOGIC v6.0 */}
                                         <a 
                                             href={deviceType === 'desktop' ? item.finalTikTokLink : "#"}
                                             onClick={(e) => handleTikTokClick(e, item)}
@@ -290,7 +303,7 @@ export default function Home() {
         )}
         
         <div className="text-center mb-4">
-             <p className="text-[10px] text-gray-300">Shoxped v5.6 - Active Button Feedback</p>
+             <p className="text-[10px] text-gray-300">Shoxped v6.0 - Fix TikTok Search Result</p>
         </div>
 
       <ShareButton />
