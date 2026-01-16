@@ -12,11 +12,11 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("Semua");
   
-  // --- STATE BARU UNTUK INFINITE SCROLL ---
-  const [visibleCount, setVisibleCount] = useState(20); // Mula-mula tampil 20 produk
-  const [isPaginationMode, setIsPaginationMode] = useState(false); // Mode Paging vs Scroll
+  // INFINITE SCROLL STATE
+  const [visibleCount, setVisibleCount] = useState(20); 
+  const [isPaginationMode, setIsPaginationMode] = useState(false); 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 30; // Jika mode paging, 30 per halaman
+  const itemsPerPage = 30; 
   
   const [taglineIndex, setTaglineIndex] = useState(0);
   const [fadeProp, setFadeProp] = useState({ opacity: 1, transition: 'opacity 0.5s ease-in-out' });
@@ -113,7 +113,6 @@ export default function Home() {
     fetchData();
   }, []);
 
-  // Filter Logic
   const filteredProducts = products.filter(p => {
     if (activeCategory === "Semua") return true;
     const keywords = getKeywordsForCategory(activeCategory);
@@ -124,14 +123,11 @@ export default function Home() {
     return p.category?.toLowerCase() === activeCategory.toLowerCase();
   });
 
-  // --- INFINITE SCROLL LOGIC (HP) ---
   useEffect(() => {
-    // Hanya aktif di HP (Android/iOS) dan jika TIDAK dalam mode pagination
     if ((deviceType === 'android' || deviceType === 'ios') && !isPaginationMode) {
         const handleScroll = () => {
-            // Cek apakah user sudah scroll sampai bawah (minus 200px buffer)
             if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
-                setVisibleCount(prev => prev + 10); // Tambah 10 produk otomatis
+                setVisibleCount(prev => prev + 10); 
             }
         };
         window.addEventListener('scroll', handleScroll);
@@ -139,7 +135,6 @@ export default function Home() {
     }
   }, [deviceType, isPaginationMode]);
 
-  // Reset tampilan saat kategori berubah
   const handleCategoryChange = (cat: string) => {
       setActiveCategory(cat);
       setVisibleCount(20);
@@ -147,20 +142,16 @@ export default function Home() {
       setCurrentPage(1);
   };
 
-  // --- LOGIC TAMPILAN PRODUK ---
   let currentItems = [];
   if (isPaginationMode) {
-      // Mode Halaman (1, 2, 3...) - Biasanya Desktop
       const indexOfLastItem = currentPage * itemsPerPage;
       const indexOfFirstItem = indexOfLastItem - itemsPerPage;
       currentItems = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
   } else {
-      // Mode Scroll / Load More - Default HP & Desktop Awal
       currentItems = filteredProducts.slice(0, visibleCount);
   }
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-
   const formatRupiah = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
   const renderTagline = () => {
@@ -207,14 +198,12 @@ export default function Home() {
             <span className="text-xl animate-pulse">🔥</span><h2 className="font-bold text-gray-800 text-lg">Rekomendasi Pilihan</h2>
         </div>
 
-        {/* TAB KATEGORI */}
         <div className="flex gap-2 overflow-x-auto pb-4 mb-2 px-1 no-scrollbar">
             {categories.map((cat) => (
                 <button key={cat} onClick={() => handleCategoryChange(cat)} className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${activeCategory === cat ? 'bg-[#ee4d2d] text-white border-[#ee4d2d] shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>{cat}</button>
             ))}
         </div>
 
-        {/* GRID PRODUK */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 min-h-[500px]">
             {loading ? ([...Array(10)].map((_, i) => <div key={i} className="bg-white rounded-xl h-80 animate-pulse border border-gray-100" />)) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => {
@@ -238,13 +227,24 @@ export default function Home() {
                                 
                                 <div className="flex flex-col gap-2 mt-auto">
                                     <div className="flex flex-col md:flex-row gap-2">
-                                        <a href={item.shopeeLink} target="_blank" rel="noreferrer" className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm">Beli di Shopee</a>
+                                        
+                                        {/* TOMBOL SHOPEE - UPDATE: ACTIVE EFFECT */}
+                                        <a href={item.shopeeLink} target="_blank" rel="noreferrer" 
+                                           className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all 
+                                           hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm 
+                                           active:bg-[#ee4d2d] active:text-white active:border-[#ee4d2d] active:scale-95">
+                                            Beli di Shopee
+                                        </a>
+                                        
+                                        {/* TOMBOL TIKTOK - UPDATE: ACTIVE EFFECT */}
                                         <a 
                                             href={deviceType === 'desktop' ? item.finalTikTokLink : "#"}
                                             onClick={(e) => handleTikTokClick(e, item)}
                                             target={deviceType === 'desktop' ? "_blank" : "_self"}
                                             rel="noreferrer" 
-                                            className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm"
+                                            className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all 
+                                            hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm
+                                            active:bg-black active:text-white active:border-black active:scale-95"
                                         >
                                             Beli di TikTok
                                         </a>
@@ -261,11 +261,8 @@ export default function Home() {
             ) : <div className="col-span-full py-10 text-center text-gray-400 text-sm">Yah, produk kategori ini tidak ditemukan.</div>}
         </div>
 
-        {/* --- KONTROL LOAD MORE & PAGINATION --- */}
         {!loading && (
             <div className="mt-8 mb-8 text-center flex flex-col items-center gap-4">
-                
-                {/* 1. TOMBOL "LIHAT LAINNYA" (Hanya Muncul jika belum habis) */}
                 {!isPaginationMode && visibleCount < filteredProducts.length && (
                     <button 
                         onClick={() => setVisibleCount(prev => prev + 20)}
@@ -275,34 +272,17 @@ export default function Home() {
                     </button>
                 )}
 
-                {/* 2. PAGINATION (Hanya di Desktop, di bawah tombol Lihat Lainnya) */}
                 {deviceType === 'desktop' && totalPages > 1 && (
                     <div className="flex justify-center items-center gap-2 mt-4 flex-wrap border-t border-gray-100 pt-6 w-full">
                         <span className="text-xs text-gray-400 w-full mb-2">Atau loncat ke halaman:</span>
-                        
                         <button onClick={() => { setIsPaginationMode(true); setCurrentPage(prev => Math.max(prev - 1, 1)); document.getElementById('product-grid-start')?.scrollIntoView(); }} disabled={currentPage === 1 && isPaginationMode} className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:bg-white text-xs">&lt;</button>
-                        
                         {[...Array(totalPages)].map((_, i) => {
                             const pageNum = i + 1;
-                            // Logic agar pagination tidak terlalu panjang
                             if (pageNum === 1 || pageNum === totalPages || (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)) {
-                                return (
-                                    <button 
-                                        key={pageNum} 
-                                        onClick={() => { 
-                                            setIsPaginationMode(true); 
-                                            setCurrentPage(pageNum);
-                                            document.getElementById('product-grid-start')?.scrollIntoView({ behavior: 'smooth' });
-                                        }} 
-                                        className={`w-8 h-8 text-xs font-bold flex items-center justify-center rounded transition-all ${isPaginationMode && currentPage === pageNum ? 'bg-[#ee4d2d] text-white' : 'bg-transparent text-gray-600 hover:bg-gray-100'}`}
-                                    >
-                                        {pageNum}
-                                    </button>
-                                );
+                                return <button key={pageNum} onClick={() => { setIsPaginationMode(true); setCurrentPage(pageNum); document.getElementById('product-grid-start')?.scrollIntoView({ behavior: 'smooth' }); }} className={`w-8 h-8 text-xs font-bold flex items-center justify-center rounded transition-all ${isPaginationMode && currentPage === pageNum ? 'bg-[#ee4d2d] text-white' : 'bg-transparent text-gray-600 hover:bg-gray-100'}`}>{pageNum}</button>;
                             } else if (pageNum === currentPage - 2 || pageNum === currentPage + 2) { return <span key={pageNum} className="text-gray-300 text-xs">...</span>; }
                             return null;
                         })}
-
                         <button onClick={() => { setIsPaginationMode(true); setCurrentPage(prev => Math.min(prev + 1, totalPages)); document.getElementById('product-grid-start')?.scrollIntoView(); }} disabled={currentPage === totalPages && isPaginationMode} className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:bg-white text-xs">&gt;</button>
                     </div>
                 )}
@@ -310,7 +290,7 @@ export default function Home() {
         )}
         
         <div className="text-center mb-4">
-             <p className="text-[10px] text-gray-300">Shoxped v5.5 - Infinite Scroll Mobile & Desktop Hybrid</p>
+             <p className="text-[10px] text-gray-300">Shoxped v5.6 - Active Button Feedback</p>
         </div>
 
       <ShareButton />
