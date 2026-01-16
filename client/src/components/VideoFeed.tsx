@@ -38,10 +38,13 @@ const VideoFeed = () => {
             return {
                 id: doc.id,
                 platform: isTikTok ? 'tiktok' : 'shopee',
-                // UBAH DEFAULT TITLE DI SINI
                 title: data.name || "Inspirasi Belanja",
                 image: data.image || "https://via.placeholder.com/300x400?text=No+Image",
-                affiliateLink: data.shopeeLink || data.tiktokLink || "",
+                
+                // --- PERBAIKAN: SIMPAN KEDUA LINK SECARA TERPISAH ---
+                shopeeLink: data.shopeeLink || "#",
+                tiktokLink: data.tiktokLink || "#", // Pastikan field ini ada di DB jika mau direct link
+                
                 keyword: keywords,
                 views: formatViews(randomViews)
             };
@@ -58,37 +61,53 @@ const VideoFeed = () => {
   }, []);
 
   const handleVideoClick = (video: any) => {
-    // 1. Prioritas Link Affiliate
-    if (video.affiliateLink && video.affiliateLink !== "#") {
-        window.open(video.affiliateLink, '_blank');
-        return;
-    }
-
-    // 2. Fallback Search (Pixel/iOS Fix Logic)
-    const encodedKeyword = encodeURIComponent(video.keyword);
     const isAndroid = /android/i.test(navigator.userAgent);
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isDesktop = !isAndroid && !isIOS;
+    const isMobile = isAndroid || isIOS;
+    const encodedKeyword = encodeURIComponent(video.keyword);
 
-    if (isDesktop) {
-        const searchUrl = video.platform === 'tiktok' 
-            ? `https://www.tiktok.com/search?q=${encodedKeyword}`
-            : `https://shopee.co.id/search?keyword=${encodedKeyword}`;
-        window.open(searchUrl, '_blank');
-        return;
-    }
+    // --- LOGIKA PEMISAH (Platform Strict) ---
 
     if (video.platform === 'tiktok') {
-        const webLink = `https://www.tiktok.com/search?q=${encodedKeyword}`;
-        if (isAndroid) {
-            window.location.href = `intent://www.tiktok.com/search?q=${encodedKeyword}#Intent;scheme=https;package=com.ss.android.ugc.trill;S.browser_fallback_url=${encodeURIComponent(webLink)};end`;
-        } else if (isIOS) {
-            window.location.href = `tiktok://search/result?keyword=${encodedKeyword}`;
-            setTimeout(() => { if (!document.hidden) window.location.href = webLink; }, 2500);
+        // === JIKA BADGE TIKTOK ===
+        
+        // 1. Cek Link Affiliate TikTok Dulu (Jika ada)
+        if (video.tiktokLink && video.tiktokLink !== "#") {
+            window.open(video.tiktokLink, '_blank');
+            return;
         }
+
+        // 2. Fallback: Search di TIKTOK (Bukan Shopee)
+        if (!isMobile) {
+            window.open(`https://www.tiktok.com/search?q=${encodedKeyword}`, '_blank');
+        } else {
+            const webLink = `https://www.tiktok.com/search?q=${encodedKeyword}`;
+            if (isAndroid) {
+                // Pixel Fix Intent
+                window.location.href = `intent://www.tiktok.com/search?q=${encodedKeyword}#Intent;scheme=https;package=com.ss.android.ugc.trill;S.browser_fallback_url=${encodeURIComponent(webLink)};end`;
+            } else {
+                // iOS Deep Link
+                window.location.href = `tiktok://search/result?keyword=${encodedKeyword}`;
+                setTimeout(() => { if (!document.hidden) window.location.href = webLink; }, 2500);
+            }
+        }
+
     } else {
-        const shopeeWeb = `https://shopee.co.id/search?keyword=${encodedKeyword}`;
-        window.location.href = `intent://search?keyword=${encodedKeyword}#Intent;scheme=shopeeid;package=com.shopee.id;S.browser_fallback_url=${encodeURIComponent(shopeeWeb)};end`;
+        // === JIKA BADGE SHOPEE ===
+
+        // 1. Cek Link Affiliate Shopee Dulu
+        if (video.shopeeLink && video.shopeeLink !== "#") {
+            window.open(video.shopeeLink, '_blank');
+            return;
+        }
+
+        // 2. Fallback: Search di SHOPEE
+        if (!isMobile) {
+            window.open(`https://shopee.co.id/search?keyword=${encodedKeyword}`, '_blank');
+        } else {
+            const shopeeWeb = `https://shopee.co.id/search?keyword=${encodedKeyword}`;
+            window.location.href = `intent://search?keyword=${encodedKeyword}#Intent;scheme=shopeeid;package=com.shopee.id;S.browser_fallback_url=${encodeURIComponent(shopeeWeb)};end`;
+        }
     }
   };
 
@@ -100,10 +119,8 @@ const VideoFeed = () => {
 
   return (
     <div className="w-full mb-6">
-      {/* --- JUDUL BARU (REVISI) --- */}
       <div className="flex items-center justify-between mb-3 px-1">
         <h3 className="font-bold text-gray-800 text-sm md:text-base flex items-center gap-2">
-          {/* Ikon Ganti Jadi Sparkles (Kilau) */}
           <span className="text-lg">✨</span> Inspirasi Belanja
         </h3>
         <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
@@ -111,7 +128,6 @@ const VideoFeed = () => {
         </span>
       </div>
 
-      {/* FEED HORIZONTAL */}
       <div className="flex overflow-x-auto gap-3 pb-4 px-1 no-scrollbar snap-x snap-mandatory">
         {videos.map((video) => (
           <div 
@@ -126,10 +142,8 @@ const VideoFeed = () => {
               loading="lazy"
             />
             
-            {/* Gradient Gelap Bawah */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/10"></div>
 
-            {/* BADGE PLATFORM */}
             <div className="absolute top-2 right-2 z-10">
                 {video.platform === 'tiktok' ? (
                     <div className="flex items-center gap-1 bg-black text-white text-[9px] font-bold px-2 py-1 rounded-md border border-gray-600 shadow-sm">
@@ -144,7 +158,6 @@ const VideoFeed = () => {
                 )}
             </div>
 
-            {/* Info Produk */}
             <div className="absolute bottom-2 left-2 right-2">
                 <p className="text-white text-[10px] font-bold line-clamp-2 leading-tight mb-1 drop-shadow-md">
                     {video.title}
