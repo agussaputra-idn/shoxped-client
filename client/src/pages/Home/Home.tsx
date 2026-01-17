@@ -83,25 +83,25 @@ export default function Home() {
             const variance = Math.random() * 0.2; 
             let tiktokPrice = isShopeeCheaper ? Math.floor(price * (1 + variance)) : Math.floor(price * (1 - variance));
             
-            // BERSIHKAN JUDUL AGAR PENCARIAN AKURAT
             const cleanTitle = (data.name || "").replace(/[^a-zA-Z0-9 ]/g, " ").trim();
             const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
             const encodedKeywords = encodeURIComponent(keywords);
 
-            // --- LINK LOGIC v6.0 (FIX SEARCH RESULT) ---
+            // --- PERBAIKAN LINK TIKTOK (V6.1) ---
             
             // 1. Link Web (Fallback)
             const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
             const encodedWebLink = encodeURIComponent(webLink);
 
-            // 2. Android Intent (FORCE SEARCH RESULT)
-            // Perubahan: Menggunakan scheme 'snssdk1180' dan parameter 'enter_from'
-            // 'snssdk1180' adalah ID internal TikTok yang lebih kuat dari 'tiktok://' biasa
-            const androidIntent = `intent://search/result?keyword=${encodedKeywords}&q=${encodedKeywords}&enter_from=search_result#Intent;scheme=snssdk1180;package=com.ss.android.ugc.trill;S.browser_fallback_url=${encodedWebLink};end`;
+            // 2. Android Intent (KEMBALI KE SCHEME TIKTOK TAPI FORCE PACKAGE)
+            // Kita pakai 'scheme=tiktok' karena 'snssdk1180' bikin crash di Pixel.
+            // Kita pakai path 'search' (bukan search/result) dengan parameter lengkap.
+            // Parameter 'enter_from=search_result' dan 'keyword' adalah kuncinya.
+            const androidIntent = `intent://search?keyword=${encodedKeywords}&q=${encodedKeywords}&enter_from=search_result#Intent;scheme=tiktok;package=com.ss.android.ugc.trill;S.browser_fallback_url=${encodedWebLink};end`;
 
             // 3. iOS Deep Link
-            // Tambahkan enter_from agar iOS juga paham ini pencarian
-            const iosDeepLink = `tiktok://search/result?keyword=${encodedKeywords}&enter_from=search_result`;
+            // iOS lebih suka path simple: tiktok://search
+            const iosDeepLink = `tiktok://search?keyword=${encodedKeywords}&enter_from=search_result`;
 
             return {
                 id: doc.id,
@@ -249,7 +249,7 @@ export default function Home() {
                                             Beli di Shopee
                                         </a>
                                         
-                                        {/* TOMBOL TIKTOK - ACTIVE EFFECT & LOGIC v6.0 */}
+                                        {/* TOMBOL TIKTOK - ACTIVE EFFECT */}
                                         <a 
                                             href={deviceType === 'desktop' ? item.finalTikTokLink : "#"}
                                             onClick={(e) => handleTikTokClick(e, item)}
@@ -303,7 +303,7 @@ export default function Home() {
         )}
         
         <div className="text-center mb-4">
-             <p className="text-[10px] text-gray-300">Shoxped v6.0 - Fix TikTok Search Result</p>
+             <p className="text-[10px] text-gray-300">Shoxped v6.1 - Fix TikTok Link & Button Color</p>
         </div>
 
       <ShareButton />
