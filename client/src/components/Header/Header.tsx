@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react'; // 1. Tambah useRef
 import { Link, useNavigate } from 'react-router-dom';
-import { useLanguage } from 'src/context/LanguageContext'; // Import Hook Bahasa
+import { useLanguage } from 'src/context/LanguageContext';
 
 export default function Header() {
   const [keyword, setKeyword] = useState("");
   const navigate = useNavigate();
   
-  // Panggil fungsi bahasa
+  // 2. Ref untuk input file tersembunyi
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const { language, setLanguage, t } = useLanguage(); 
 
   const handleSearch = (e: React.FormEvent) => {
@@ -18,6 +20,22 @@ export default function Header() {
 
   const handleClear = () => {
     setKeyword("");
+  };
+
+  // 3. Logic saat ikon kamera diklik
+  const handleCameraClick = () => {
+    fileInputRef.current?.click(); // Memicu klik pada input file tersembunyi
+  };
+
+  // 4. Logic saat file gambar dipilih
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Disini nanti logika upload ke backend/AI search
+      // Untuk sekarang kita alert dulu nama filenya
+      alert(`Mencari produk berdasarkan gambar: ${file.name}`);
+      console.log("File selected:", file);
+    }
   };
 
   return (
@@ -37,39 +55,71 @@ export default function Header() {
            </div>
         </Link>
 
-        {/* 2. SEARCH BAR (Sekarang Placeholder berubah otomatis!) */}
+        {/* 2. SEARCH BAR */}
         <form onSubmit={handleSearch} className="flex-1 max-w-3xl relative mx-4">
+            {/* Input File Tersembunyi untuk Kamera */}
+            <input 
+              type="file" 
+              accept="image/*" 
+              ref={fileInputRef} 
+              onChange={handleFileChange} 
+              className="hidden" 
+            />
+
             <input 
               type="text" 
               placeholder={t.placeholder} 
-              className="w-full border border-gray-300 rounded-md py-2.5 px-4 pr-24 text-sm focus:outline-none focus:border-[#ee4d2d] focus:ring-1 focus:ring-[#ee4d2d] transition-all bg-gray-50 focus:bg-white"
+              // Tambahkan padding right (pr) lebih besar agar ikon kamera & search muat
+              className="w-full border border-gray-300 rounded-md py-2.5 px-4 pr-32 text-sm focus:outline-none focus:border-[#ee4d2d] focus:ring-1 focus:ring-[#ee4d2d] transition-all bg-gray-50 focus:bg-white"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
             />
 
-            {/* Tombol X Hapus */}
-            {keyword && (
-              <button
-                type="button"
-                onClick={handleClear}
-                className="absolute right-16 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-                </svg>
-              </button>
-            )}
+            {/* Container Ikon di Kanan Input */}
+            <div className="absolute right-1 top-1 bottom-1 flex items-center gap-1">
+                
+                {/* Tombol X Hapus (Muncul jika ada ketikan) */}
+                {keyword && (
+                  <button
+                    type="button"
+                    onClick={handleClear}
+                    className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition mr-1"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
 
-            <button type="submit" className="absolute right-1 top-1 bottom-1 bg-[#ee4d2d] text-white px-5 rounded-md hover:bg-orange-600 transition flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                </svg>
-            </button>
+                {/* Ikon Kamera (Button Tipe Button agar tidak submit form) */}
+                <button 
+                  type="button" 
+                  onClick={handleCameraClick}
+                  className="text-gray-400 hover:text-[#ee4d2d] p-2 hover:bg-orange-50 rounded-full transition mr-1"
+                  title="Cari dengan Gambar"
+                >
+                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                    </svg>
+                </button>
+
+                {/* Separator Kecil */}
+                <div className="w-[1px] h-6 bg-gray-200 mx-1"></div>
+
+                {/* Tombol Search Utama */}
+                <button type="submit" className="bg-[#ee4d2d] text-white px-5 py-2 rounded-md hover:bg-orange-600 transition flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                    </svg>
+                </button>
+            </div>
         </form>
 
-        {/* 3. MENU KANAN (BAHASA BERFUNGSI) */}
+        {/* 3. MENU KANAN (BAHASA DI-HIDE SESUAI REQUEST) */}
         <div className="flex items-center gap-4 text-gray-600 flex-shrink-0">
-            <div className="flex gap-1 text-sm font-bold">
+            {/* Class 'hidden' ditambahkan agar tidak muncul di UI tapi kodenya aman */}
+            <div className="hidden gap-1 text-sm font-bold">
                 <button 
                   onClick={() => setLanguage('id')}
                   className={`${language === 'id' ? 'text-[#ee4d2d] font-extrabold' : 'text-gray-400 hover:text-gray-600'} transition-colors`}
