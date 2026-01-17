@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'; // 1. Tambah useRef
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from 'src/context/LanguageContext';
 
@@ -6,7 +6,6 @@ export default function Header() {
   const [keyword, setKeyword] = useState("");
   const navigate = useNavigate();
   
-  // 2. Ref untuk input file tersembunyi
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { language, setLanguage, t } = useLanguage(); 
@@ -22,19 +21,33 @@ export default function Header() {
     setKeyword("");
   };
 
-  // 3. Logic saat ikon kamera diklik
   const handleCameraClick = () => {
-    fileInputRef.current?.click(); // Memicu klik pada input file tersembunyi
+    fileInputRef.current?.click();
   };
 
-  // 4. Logic saat file gambar dipilih
+  // --- LOGIKA PENCARIAN GAMBAR (JURUS CERDIK) ---
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Disini nanti logika upload ke backend/AI search
-      // Untuk sekarang kita alert dulu nama filenya
-      alert(`Mencari produk berdasarkan gambar: ${file.name}`);
-      console.log("File selected:", file);
+      // 1. Ambil nama file (contoh: "tas-selempang_murah.jpg")
+      const fileName = file.name;
+
+      // 2. Buang ekstensi file (.jpg, .png, dll)
+      // Hasil: "tas-selempang_murah"
+      let cleanName = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
+
+      // 3. Ganti simbol "-" atau "_" menjadi spasi agar jadi kata kunci yang valid
+      // Hasil: "tas selempang murah"
+      cleanName = cleanName.replace(/[-_]/g, ' ');
+
+      // 4. (Opsional) Buang angka acak jika nama file dari WA (misal: "IMG-2023...")
+      // Kita biarkan dulu agar user bisa mengeditnya di kolom pencarian
+
+      // 5. Masukkan ke kolom pencarian
+      setKeyword(cleanName);
+
+      // 6. Langsung Eksekusi Pencarian!
+      navigate(`/search?name=${encodeURIComponent(cleanName)}`);
     }
   };
 
@@ -57,7 +70,7 @@ export default function Header() {
 
         {/* 2. SEARCH BAR */}
         <form onSubmit={handleSearch} className="flex-1 max-w-3xl relative mx-4">
-            {/* Input File Tersembunyi untuk Kamera */}
+            {/* Input File Tersembunyi */}
             <input 
               type="file" 
               accept="image/*" 
@@ -69,16 +82,14 @@ export default function Header() {
             <input 
               type="text" 
               placeholder={t.placeholder} 
-              // Tambahkan padding right (pr) lebih besar agar ikon kamera & search muat
               className="w-full border border-gray-300 rounded-md py-2.5 px-4 pr-32 text-sm focus:outline-none focus:border-[#ee4d2d] focus:ring-1 focus:ring-[#ee4d2d] transition-all bg-gray-50 focus:bg-white"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
             />
 
-            {/* Container Ikon di Kanan Input */}
             <div className="absolute right-1 top-1 bottom-1 flex items-center gap-1">
                 
-                {/* Tombol X Hapus (Muncul jika ada ketikan) */}
+                {/* Tombol X Hapus */}
                 {keyword && (
                   <button
                     type="button"
@@ -91,7 +102,7 @@ export default function Header() {
                   </button>
                 )}
 
-                {/* Ikon Kamera (Button Tipe Button agar tidak submit form) */}
+                {/* Ikon Kamera */}
                 <button 
                   type="button" 
                   onClick={handleCameraClick}
@@ -104,10 +115,9 @@ export default function Header() {
                     </svg>
                 </button>
 
-                {/* Separator Kecil */}
                 <div className="w-[1px] h-6 bg-gray-200 mx-1"></div>
 
-                {/* Tombol Search Utama */}
+                {/* Tombol Search */}
                 <button type="submit" className="bg-[#ee4d2d] text-white px-5 py-2 rounded-md hover:bg-orange-600 transition flex items-center justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -116,9 +126,8 @@ export default function Header() {
             </div>
         </form>
 
-        {/* 3. MENU KANAN (BAHASA DI-HIDE SESUAI REQUEST) */}
+        {/* 3. MENU KANAN (HIDDEN ID | EN) */}
         <div className="flex items-center gap-4 text-gray-600 flex-shrink-0">
-            {/* Class 'hidden' ditambahkan agar tidak muncul di UI tapi kodenya aman */}
             <div className="hidden gap-1 text-sm font-bold">
                 <button 
                   onClick={() => setLanguage('id')}
