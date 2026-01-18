@@ -1,14 +1,35 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from 'src/context/LanguageContext';
 
+// Import AI TensorFlow
+import * as tf from '@tensorflow/tfjs';
+import * as mobilenet from '@tensorflow-models/mobilenet';
+
 export default function Header() {
   const [keyword, setKeyword] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false); // Indikator Loading AI
   const navigate = useNavigate();
-  
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
   const { language, setLanguage, t } = useLanguage(); 
+
+  // Variable untuk menyimpan model AI
+  const [model, setModel] = useState<mobilenet.MobileNet | null>(null);
+
+  // 1. LOAD MODEL AI SAAT WEBSITE DIBUKA (Background Process)
+  useEffect(() => {
+    const loadAI = async () => {
+      try {
+        console.log("Sedang memuat AI...");
+        const loadedModel = await mobilenet.load();
+        setModel(loadedModel);
+        console.log("AI Siap Digunakan!");
+      } catch (error) {
+        console.error("Gagal memuat AI:", error);
+      }
+    };
+    loadAI();
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,29 +46,59 @@ export default function Header() {
     fileInputRef.current?.click();
   };
 
-  // --- LOGIKA PENCARIAN GAMBAR (JURUS CERDIK) ---
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // --- 2. LOGIKA AI VISION (REAL AI) ---
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    
+    // Cek apakah model AI sudah siap
+    if (!model) {
+        alert("AI sedang dipersiapkan, coba 5 detik lagi...");
+        return;
+    }
+
     if (file) {
-      // 1. Ambil nama file (contoh: "tas-selempang_murah.jpg")
-      const fileName = file.name;
+      setIsAnalyzing(true); // Tampilkan loading
+      setKeyword("Menganalisa gambar..."); // Feedback ke user
 
-      // 2. Buang ekstensi file (.jpg, .png, dll)
-      // Hasil: "tas-selempang_murah"
-      let cleanName = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        // Buat elemen gambar HTML sementara di memori
+        const imgElement = document.createElement('img');
+        imgElement.src = e.target?.result as string;
+        
+        imgElement.onload = async () => {
+          try {
+            // AJAIB: AI MENEBAK GAMBAR
+            const predictions = await model.classify(imgElement);
+            
+            if (predictions && predictions.length > 0) {
+                // Ambil tebakan paling yakin (urutan pertama)
+                // Contoh hasil: "running shoe" atau "backpack"
+                const bestGuess = predictions[0].className;
+                
+                // Hapus koma jika ada (kadang AI jawab: "sandal, flip-flop")
+                let cleanKeyword = bestGuess.split(',')[0];
 
-      // 3. Ganti simbol "-" atau "_" menjadi spasi agar jadi kata kunci yang valid
-      // Hasil: "tas selempang murah"
-      cleanName = cleanName.replace(/[-_]/g, ' ');
-
-      // 4. (Opsional) Buang angka acak jika nama file dari WA (misal: "IMG-2023...")
-      // Kita biarkan dulu agar user bisa mengeditnya di kolom pencarian
-
-      // 5. Masukkan ke kolom pencarian
-      setKeyword(cleanName);
-
-      // 6. Langsung Eksekusi Pencarian!
-      navigate(`/search?name=${encodeURIComponent(cleanName)}`);
+                console.log("AI Menebak:", cleanKeyword);
+                
+                // Masukkan ke kolom search
+                setKeyword(cleanKeyword);
+                
+                // Langsung cari!
+                navigate(`/search?name=${encodeURIComponent(cleanKeyword)}`);
+            } else {
+                alert("AI bingung, coba gambar lain yang lebih jelas.");
+                setKeyword("");
+            }
+          } catch (err) {
+            console.error(err);
+            alert("Gagal menganalisa gambar.");
+          } finally {
+            setIsAnalyzing(false);
+          }
+        };
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -55,7 +106,7 @@ export default function Header() {
     <header className="w-full bg-white shadow-sm py-4 sticky top-0 z-50">
       <div className="container mx-auto max-w-[1920px] px-4 md:px-8 flex items-center justify-between gap-4">
         
-        {/* 1. LOGO */}
+        {/* LOGO */}
         <Link to="/" className="flex items-center gap-2 flex-shrink-0 group cursor-pointer">
            <div className="text-[#ee4d2d]">
              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 md:w-9 md:h-9">
@@ -68,9 +119,8 @@ export default function Header() {
            </div>
         </Link>
 
-        {/* 2. SEARCH BAR */}
+        {/* SEARCH BAR */}
         <form onSubmit={handleSearch} className="flex-1 max-w-3xl relative mx-4">
-            {/* Input File Tersembunyi */}
             <input 
               type="file" 
               accept="image/*" 
@@ -81,16 +131,19 @@ export default function Header() {
 
             <input 
               type="text" 
-              placeholder={t.placeholder} 
-              className="w-full border border-gray-300 rounded-md py-2.5 px-4 pr-32 text-sm focus:outline-none focus:border-[#ee4d2d] focus:ring-1 focus:ring-[#ee4d2d] transition-all bg-gray-50 focus:bg-white"
+              placeholder={isAnalyzing ? "🤖 AI sedang melihat..." : t.placeholder}
+              className={`w-full border rounded-md py-2.5 px-4 pr-32 text-sm focus:outline-none transition-all bg-gray-50 focus:bg-white
+                ${isAnalyzing ? 'border-blue-500 animate-pulse' : 'border-gray-300 focus:border-[#ee4d2d] focus:ring-1 focus:ring-[#ee4d2d]'}
+              `}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
+              disabled={isAnalyzing}
             />
 
             <div className="absolute right-1 top-1 bottom-1 flex items-center gap-1">
                 
-                {/* Tombol X Hapus */}
-                {keyword && (
+                {/* Tombol X */}
+                {keyword && !isAnalyzing && (
                   <button
                     type="button"
                     onClick={handleClear}
@@ -102,17 +155,25 @@ export default function Header() {
                   </button>
                 )}
 
-                {/* Ikon Kamera */}
+                {/* Ikon Kamera (Dengan Loading Spinner saat Analisa) */}
                 <button 
                   type="button" 
                   onClick={handleCameraClick}
                   className="text-gray-400 hover:text-[#ee4d2d] p-2 hover:bg-orange-50 rounded-full transition mr-1"
                   title="Cari dengan Gambar"
+                  disabled={isAnalyzing}
                 >
-                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-                    </svg>
+                   {isAnalyzing ? (
+                     <svg className="animate-spin h-5 w-5 text-[#ee4d2d]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                     </svg>
+                   ) : (
+                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                      </svg>
+                   )}
                 </button>
 
                 <div className="w-[1px] h-6 bg-gray-200 mx-1"></div>
@@ -126,22 +187,11 @@ export default function Header() {
             </div>
         </form>
 
-        {/* 3. MENU KANAN (HIDDEN ID | EN) */}
+        {/* MENU KANAN (HIDDEN ID | EN) */}
         <div className="flex items-center gap-4 text-gray-600 flex-shrink-0">
             <div className="hidden gap-1 text-sm font-bold">
-                <button 
-                  onClick={() => setLanguage('id')}
-                  className={`${language === 'id' ? 'text-[#ee4d2d] font-extrabold' : 'text-gray-400 hover:text-gray-600'} transition-colors`}
-                >
-                  ID
-                </button>
-                <span className="text-gray-300">|</span>
-                <button 
-                  onClick={() => setLanguage('en')}
-                  className={`${language === 'en' ? 'text-[#ee4d2d] font-extrabold' : 'text-gray-400 hover:text-gray-600'} transition-colors`}
-                >
-                  EN
-                </button>
+                <button onClick={() => setLanguage('id')} className="text-gray-400">ID</button>
+                <button onClick={() => setLanguage('en')} className="text-gray-400">EN</button>
             </div>
         </div>
 
