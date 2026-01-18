@@ -8,22 +8,22 @@ import * as mobilenet from '@tensorflow-models/mobilenet';
 
 export default function Header() {
   const [keyword, setKeyword] = useState("");
-  const [isAnalyzing, setIsAnalyzing] = useState(false); // Indikator Loading AI
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { language, setLanguage, t } = useLanguage(); 
 
-  // Variable untuk menyimpan model AI
   const [model, setModel] = useState<mobilenet.MobileNet | null>(null);
 
-  // 1. LOAD MODEL AI SAAT WEBSITE DIBUKA (Background Process)
+  // 1. LOAD AI (DENGAN LOG YANG JELAS)
   useEffect(() => {
     const loadAI = async () => {
       try {
-        console.log("Sedang memuat AI...");
-        const loadedModel = await mobilenet.load();
+        // console.log("Sedang memuat AI...");
+        // Menggunakan versi 'quantized' agar lebih ringan di HP
+        const loadedModel = await mobilenet.load({ version: 2, alpha: 0.50 });
         setModel(loadedModel);
-        console.log("AI Siap Digunakan!");
+        // console.log("AI Siap!");
       } catch (error) {
         console.error("Gagal memuat AI:", error);
       }
@@ -43,58 +43,68 @@ export default function Header() {
   };
 
   const handleCameraClick = () => {
+    // Cek kesiapan AI dulu
+    if (!model) {
+        alert("Sabar sebentar, sedang menyiapkan kecerdasan buatan...");
+        return;
+    }
     fileInputRef.current?.click();
   };
 
-  // --- 2. LOGIKA AI VISION (REAL AI) ---
+  // --- 2. LOGIKA AI VISION (VERSI RINGAN KHUSUS HP) ---
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     
-    // Cek apakah model AI sudah siap
-    if (!model) {
-        alert("AI sedang dipersiapkan, coba 5 detik lagi...");
-        return;
-    }
-
     if (file) {
-      setIsAnalyzing(true); // Tampilkan loading
-      setKeyword("Menganalisa gambar..."); // Feedback ke user
+      setIsAnalyzing(true);
+      setKeyword("Menganalisa..."); 
 
       const reader = new FileReader();
-      reader.onload = async (e) => {
-        // Buat elemen gambar HTML sementara di memori
+      
+      reader.onload = (e) => {
         const imgElement = document.createElement('img');
         imgElement.src = e.target?.result as string;
         
+        // PENTING: Tunggu gambar loading, lalu resize paksa agar HP tidak berat
         imgElement.onload = async () => {
           try {
-            // AJAIB: AI MENEBAK GAMBAR
-            const predictions = await model.classify(imgElement);
-            
-            if (predictions && predictions.length > 0) {
-                // Ambil tebakan paling yakin (urutan pertama)
-                // Contoh hasil: "running shoe" atau "backpack"
-                const bestGuess = predictions[0].className;
-                
-                // Hapus koma jika ada (kadang AI jawab: "sandal, flip-flop")
-                let cleanKeyword = bestGuess.split(',')[0];
+            // Kita paksa ukurannya jadi kecil (224px) standar MobileNet
+            // agar memori HP tidak meledak
+            imgElement.width = 224;
+            imgElement.height = 224;
 
-                console.log("AI Menebak:", cleanKeyword);
+            // Proses AI
+            if (model) {
+                const predictions = await model.classify(imgElement);
                 
-                // Masukkan ke kolom search
-                setKeyword(cleanKeyword);
-                
-                // Langsung cari!
-                navigate(`/search?name=${encodeURIComponent(cleanKeyword)}`);
-            } else {
-                alert("AI bingung, coba gambar lain yang lebih jelas.");
-                setKeyword("");
+                if (predictions && predictions.length > 0) {
+                    // Ambil tebakan pertama
+                    const bestGuess = predictions[0].className;
+                    // Bersihkan kata (ambil kata pertama sebelum koma)
+                    let cleanKeyword = bestGuess.split(',')[0];
+                    
+                    // Translate manual sederhana (karena AI outputnya Inggris)
+                    // (Opsional: bisa dihapus kalau mau Inggris aja)
+                    if(cleanKeyword.includes("shoe")) cleanKeyword = "sepatu";
+                    if(cleanKeyword.includes("shirt")) cleanKeyword = "baju";
+                    if(cleanKeyword.includes("bag")) cleanKeyword = "tas";
+                    if(cleanKeyword.includes("phone")) cleanKeyword = "hp";
+
+                    setKeyword(cleanKeyword);
+                    navigate(`/search?name=${encodeURIComponent(cleanKeyword)}`);
+                } else {
+                    alert("AI tidak mengenali objek. Coba foto lebih jelas.");
+                    setKeyword("");
+                }
             }
           } catch (err) {
             console.error(err);
-            alert("Gagal menganalisa gambar.");
+            alert("Gagal analisa. Gunakan foto yang lebih kecil/jelas.");
+            setKeyword("");
           } finally {
             setIsAnalyzing(false);
+            // Reset input agar bisa foto ulang
+            if(fileInputRef.current) fileInputRef.current.value = "";
           }
         };
       };
@@ -121,9 +131,14 @@ export default function Header() {
 
         {/* SEARCH BAR */}
         <form onSubmit={handleSearch} className="flex-1 max-w-3xl relative mx-4">
+            {/* UPDATE INPUT FILE KHUSUS HP:
+               1. accept="image/*" : Biar galeri gambar aja yg muncul
+               2. capture="environment" : Biar default buka Kamera Belakang (di beberapa HP)
+            */}
             <input 
               type="file" 
               accept="image/*" 
+              capture="environment"
               ref={fileInputRef} 
               onChange={handleFileChange} 
               className="hidden" 
@@ -131,9 +146,9 @@ export default function Header() {
 
             <input 
               type="text" 
-              placeholder={isAnalyzing ? "🤖 AI sedang melihat..." : t.placeholder}
+              placeholder={isAnalyzing ? "Menganalisa foto..." : t.placeholder}
               className={`w-full border rounded-md py-2.5 px-4 pr-32 text-sm focus:outline-none transition-all bg-gray-50 focus:bg-white
-                ${isAnalyzing ? 'border-blue-500 animate-pulse' : 'border-gray-300 focus:border-[#ee4d2d] focus:ring-1 focus:ring-[#ee4d2d]'}
+                ${isAnalyzing ? 'border-[#ee4d2d] animate-pulse bg-orange-50' : 'border-gray-300 focus:border-[#ee4d2d] focus:ring-1 focus:ring-[#ee4d2d]'}
               `}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
@@ -155,12 +170,12 @@ export default function Header() {
                   </button>
                 )}
 
-                {/* Ikon Kamera (Dengan Loading Spinner saat Analisa) */}
+                {/* Ikon Kamera (Loading State) */}
                 <button 
                   type="button" 
                   onClick={handleCameraClick}
                   className="text-gray-400 hover:text-[#ee4d2d] p-2 hover:bg-orange-50 rounded-full transition mr-1"
-                  title="Cari dengan Gambar"
+                  title="Foto Barang"
                   disabled={isAnalyzing}
                 >
                    {isAnalyzing ? (
@@ -187,7 +202,7 @@ export default function Header() {
             </div>
         </form>
 
-        {/* MENU KANAN (HIDDEN ID | EN) */}
+        {/* MENU KANAN (HIDDEN) */}
         <div className="flex items-center gap-4 text-gray-600 flex-shrink-0">
             <div className="hidden gap-1 text-sm font-bold">
                 <button onClick={() => setLanguage('id')} className="text-gray-400">ID</button>
