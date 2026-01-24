@@ -1,16 +1,22 @@
 import { useRoutes } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout/MainLayout';
 
-// === IMPORT HALAMAN ===
+// === IMPORT HALAMAN UTAMA ===
 import Home from './pages/Home/Home';
 import SecretAdmin from './pages/SecretAdmin'; 
 import NotFound from './pages/NotFound/NotFound';
 
-// === IMPORT HALAMAN BARU ===
+// === IMPORT HALAMAN FITUR ===
 import Search from './pages/Search';
 import Wishlist from './pages/Wishlist';
 import Profile from './pages/Profile';
 import VideoPage from './pages/VideoPage';
+
+// === IMPORT HALAMAN LEGAL (BARU DITAMBAHKAN) ===
+// Pastikan di dalam folder ini nama filenya adalah 'index.tsx' atau 'AboutUs.tsx'
+import AboutUs from './pages/AboutUs'; 
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import Terms from './pages/Terms';
 
 export default function useRouteElements() {
   const element = useRoutes([
@@ -49,11 +55,23 @@ export default function useRouteElements() {
           path: 'profile', 
           element: <Profile />
         },
-        // --- PERBAIKAN DISINI ---
-        // Kita ubah jalurnya jadi 'video-feed' agar sesuai dengan tombol Anda
         {
           path: 'video-feed', 
           element: <VideoPage />
+        },
+
+        // --- RUTE LEGAL BARU (DITAMBAHKAN DI SINI) ---
+        {
+          path: 'about-us', 
+          element: <AboutUs />
+        },
+        {
+          path: 'privacy-policy', 
+          element: <PrivacyPolicy />
+        },
+        {
+          path: 'terms-conditions', 
+          element: <Terms />
         },
       ]
     },

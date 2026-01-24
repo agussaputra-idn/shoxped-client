@@ -2,8 +2,11 @@ import { useEffect } from 'react';
 import { ref, runTransaction } from 'firebase/database';
 import { realtimeDb } from './firebase';
 import useRouteElements from './useRouteElements'; 
-// Import Logic Affiliate Baru
+// Import Logic Affiliate
 import { useAffiliateConverter } from './hooks/useAffiliateConverter';
+
+// --- [BARU] IMPORT PROVIDER WISHLIST ---
+import { WishlistProvider } from './context/WishlistContext';
 
 function App() {
   // 1. Panggil elemen router (Tampilan Website)
@@ -24,11 +27,14 @@ function App() {
     countVisitor();
   }, []);
 
-  // 4. Render Tampilan Website (TETAP SAMA)
+  // 4. Render Tampilan Website (DIBUNGKUS PROVIDER)
   return (
-    <div>
-      {routeElements}
-    </div>
+    // Kita bungkus semuanya dengan WishlistProvider agar data tersimpan
+    <WishlistProvider>
+      <div>
+        {routeElements}
+      </div>
+    </WishlistProvider>
   );
 }
 
