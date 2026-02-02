@@ -7,10 +7,10 @@ const ShareButton = () => {
     const shareData = {
       title: 'Shoxped',
       text: 'Cek harga termurah Shopee vs TikTok Shop di sini! Anti boncos.',
-      url: 'https://shoxped.com', // Pastikan ini link domain Anda
+      url: 'https://shoxped.com', 
     };
 
-    // Cek apakah browser mendukung fitur Share Native (HP Android/iPhone)
+    // Cek support browser untuk fitur share native
     if (navigator.share) {
       try {
         await navigator.share(shareData);
@@ -18,11 +18,11 @@ const ShareButton = () => {
         console.log('Error sharing:', err);
       }
     } else {
-      // Fallback untuk Laptop/PC (Copy Link)
+      // Fallback copy link
       try {
         await navigator.clipboard.writeText(shareData.url);
         setCopied(true);
-        setTimeout(() => setCopied(false), 2000); // Reset pesan setelah 2 detik
+        setTimeout(() => setCopied(false), 2000);
       } catch (err) {
         console.error('Failed to copy:', err);
       }
@@ -31,7 +31,6 @@ const ShareButton = () => {
 
   return (
     <div className="fixed bottom-24 right-4 z-50 flex flex-col items-end gap-2">
-      {/* Notifikasi Copy untuk Laptop */}
       {copied && (
         <div className="bg-black text-white text-xs py-1 px-3 rounded-lg shadow-lg mb-1 animate-fade-in">
           Link Disalin!
@@ -43,18 +42,7 @@ const ShareButton = () => {
         className="bg-green-500 hover:bg-green-600 text-white p-3.5 rounded-full shadow-xl hover:scale-110 transition-all duration-300 flex items-center justify-center border-2 border-white"
         aria-label="Share Application"
       >
-        {/* Icon Share SVG */}
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          width="24" 
-          height="24" 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round"
-        >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="18" cy="5" r="3"></circle>
           <circle cx="6" cy="12" r="3"></circle>
           <circle cx="18" cy="19" r="3"></circle>

@@ -1,358 +1,268 @@
-import React, { useState, useEffect } from 'react'; 
-import Carousel from '../../components/Carousel/Carousel'; 
-import VideoFeed from '../../components/VideoFeed'; 
-import ShareButton from '../../components/ShareButton'; 
-import { db } from '../../firebase'; 
-import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../firebase';
+import { collection, getDocs, query as firestoreQuery, where } from 'firebase/firestore';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Carousel from '../../components/Carousel'; 
+import VideoFeed from '../../components/VideoFeed'; // FIX: Path diperbaiki agar tidak error merah
+import RacunSection from '../../components/RacunSection';
+import { useWishlist } from '../../context/WishlistContext';
+import Footer from '../../components/Footer/Footer';
 
-// --- [BARU] IMPORT WISHLIST HOOK & ICON ---
-import { useWishlist } from '../../context/WishlistContext'; 
-import { HeartIcon as HeartOutline } from '@heroicons/react/24/outline'; 
-import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid'; 
+// --- ICONS & LOGO ---
+const IconBagLogo = () => (
+  <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M25 30H75C77.7614 30 80 32.2386 80 35V80C80 85.5228 75.5228 90 70 90H30C24.4772 90 20 85.5228 20 80V35C20 32.2386 22.2386 30 25 30Z" fill="#ee4d2d"/>
+    <path d="M35 30V22C35 13.7157 41.7157 7 50 7C58.2843 7 65 13.7157 65 22V30" stroke="#ee4d2d" strokeWidth="6" strokeLinecap="round"/>
+    <path d="M38 55C38 55 42 65 50 65C58 65 62 55 62 55" stroke="white" strokeWidth="6" strokeLinecap="round"/>
+  </svg>
+);
 
-const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3EGambar Tidak Tersedia%3C/text%3E%3C/svg%3E";
+const IconSearch = () => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-white"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>);
+const IconHeartOutline = () => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-gray-400"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>);
+const IconHeartSolid = () => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-[#ee4d2d]"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" /></svg>);
 
-// Fungsi Acak
-const shuffleArray = (array: any[]) => {
-  let currentIndex = array.length, randomIndex;
-  while (currentIndex !== 0) {
-    randomIndex = Math.floor(Math.random() * currentIndex);
-    currentIndex--;
-    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
-  }
-  return array;
+const ShareButtonFix = () => {
+  const [copied, setCopied] = useState(false);
+  const handleShare = async () => {
+    const shareData = { title: 'Shoxped', text: 'Cek harga termurah Shopee vs TikTok Shop!', url: 'https://shoxped.com' };
+    if (navigator.share) { try { await navigator.share(shareData); } catch (err) {} } 
+    else { try { await navigator.clipboard.writeText(shareData.url); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (err) {} }
+  };
+  return (
+    <div className="fixed bottom-24 right-4 z-50 flex flex-col items-end gap-2">
+      {copied && <div className="bg-black text-white text-xs py-1 px-3 rounded-lg shadow-lg mb-1 animate-fade-in">Link Disalin!</div>}
+      <button onClick={handleShare} className="bg-[#2ecc71] hover:bg-[#27ae60] text-white p-3.5 rounded-full shadow-xl hover:scale-110 transition-all border-2 border-white">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+      </button>
+    </div>
+  );
 };
 
 export default function Home() {
-  const [products, setProducts] = useState<any[]>([]); // Data Grid Utama (FULL)
-  const [videoFeedData, setVideoFeedData] = useState<any[]>([]); // Data Video Feed (SLICE)
-  const [carouselData, setCarouselData] = useState<any[]>([]); // Data Carousel (SLICE)
-  
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<any[]>([]);      
+  const [racunData, setRacunData] = useState<any[]>([]); 
+  const [carouselData, setCarouselData] = useState<any[]>([]); 
+  const [loading, setLoading] = useState(false);
   const [activeCategory, setActiveCategory] = useState("Semua");
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  // --- [BARU] PANGGIL FUNGSI WISHLIST DARI CONTEXT ---
+  const [query, setQuery] = useState("");
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const [visibleCount, setVisibleCount] = useState(40); 
+  const observerTarget = useRef(null); 
+  const [hookIndex, setHookIndex] = useState(0);
 
-  // Pagination
-  const [visibleCount, setVisibleCount] = useState(20); 
-  const [isPaginationMode, setIsPaginationMode] = useState(false); 
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 30; 
-  
-  const [taglineIndex, setTaglineIndex] = useState(0);
-  const [fadeProp, setFadeProp] = useState({ opacity: 1, transition: 'opacity 0.5s ease-in-out' });
-  const [deviceType, setDeviceType] = useState<'android' | 'ios' | 'desktop'>('desktop');
-
-  useEffect(() => {
-    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-    if (/android/i.test(userAgent)) setDeviceType('android');
-    else if (/iPad|iPhone|iPod/.test(userAgent)) setDeviceType('ios');
-    else setDeviceType('desktop');
-  }, []);
-
-  const categories = [ "Semua", "Fashion Pria", "Fashion Wanita", "Sepatu", "Tas", "Elektronik", "Kecantikan", "Rumah Tangga", "Ibu & Bayi", "Otomotif", "Hobi & Koleksi" ];
-
-  const getKeywordsForCategory = (cat: string) => {
-    const map: Record<string, string[]> = {
-        "Fashion Pria": ["pria", "cowok", "laki", "kemeja", "kaos", "man", "men", "batik", "jaket", "hoodie", "boxer", "celana panjang", "jeans pria", "chino"],
-        "Fashion Wanita": ["wanita", "cewek", "perempuan", "dress", "gamis", "blouse", "rok", "hijab", "tunik", "kulot", "bra", "cd wanita", "kebaya", "daster", "mukena"],
-        "Sepatu": ["sepatu", "sneaker", "sandal", "boots", "heels", "wedges", "flat", "pantofel", "kaki", "shoes"],
-        "Tas": ["tas", "ransel", "bag", "tote", "sling", "selempang", "dompet", "pouch", "backpack", "carrier", "koper", "waist", "clutch", "shoulder"],
-        "Elektronik": ["hp", "handphone", "laptop", "kamera", "speaker", "headset", "charger", "casing", "iphone", "android", "samsung", "xiaomi", "oppo", "vivo", "kabel", "powerbank"],
-        "Kecantikan": ["serum", "toner", "lip", "cream", "sunscreen", "masker", "skincare", "bedak", "parfum", "body lotion", "sabun wajah", "facial", "makeup"],
-        "Rumah Tangga": ["sprei", "selimut", "bantal", "dapur", "pisau", "rak", "pel", "sapu", "dekorasi", "wajan", "panci", "lampu", "deterjen", "sabun cuci"],
-        "Ibu & Bayi": ["popok", "pampers", "susu", "bayi", "baby", "anak", "mainan", "stroller", "gendongan", "botol"],
-        "Otomotif": ["helm", "oli", "motor", "mobil", "sarung tangan", "knalpot", "wiper", "ban", "spion"],
-        "Hobi & Koleksi": ["buku", "gitar", "pancing", "sepeda", "camping", "tenda", "raket", "bola", "jersey", "mainan", "action figure"]
-    };
-    return map[cat] || [];
-  };
-
-  const taglines = [
-    { text: "Cek Dulu Disini. Shopee atau TikTok yang Lebih Murah?", highlight: ["Shopee", "TikTok"] },
-    { text: "Temukan Harga Terbaik, Shopee VS TikTok Shop!", highlight: ["Shopee VS TikTok Shop", "Shoxped"] },
-    { text: "Cari Produk Murah? Bandingkan Aja Disini.", highlight: ["Anti Boncos", "1 Detik"] }
+  const ACCESSTRADE_ID = "002bc7002mjl"; 
+  const hooks = [
+    "Cek harga Termurah Shopee vs TikTok Shop dalam satu klik!",
+    "Belanja anti-boncos! Bandingkan harga marketplace favoritmu di sini.",
+    "Shoxped Jalan Ninjamu untuk Cari harga Termurah Shopee & TikTok."
   ];
 
-  useEffect(() => {
-    const timeout = setInterval(() => {
-        setFadeProp({ opacity: 0, transition: 'opacity 0.5s ease-in-out' });
-        setTimeout(() => {
-            setTaglineIndex((prevIndex) => (prevIndex + 1) % taglines.length);
-            setFadeProp({ opacity: 1, transition: 'opacity 0.5s ease-in-out' });
-        }, 500);
-    }, 4000);
-    return () => clearInterval(timeout);
-  }, []);
+  // --- LOGIKA PROSES DATA (PERBAIKAN NaN & WARNA) ---
+  const processProducts = useCallback((rawData: any[]) => {
+    return rawData.map((data: any) => {
+      // Membersihkan harga dari karakter non-angka agar tidak NaN
+      const rawPrice = data.price || data.Price || "0";
+      const price = typeof rawPrice === 'number' ? rawPrice : parseInt(rawPrice.toString().replace(/[^0-9]/g, '')) || 0;
+      
+      const randomMarkup = 1.05 + Math.random() * 0.15; 
+      const tiktokPrice = Math.floor(price * randomMarkup);
+      
+      const rawLink = data.link || data['Affiliate Link'] || "";
+      const affiliateLink = rawLink.includes("atid.me") ? rawLink : `https://atid.me/adv.php?rk=${ACCESSTRADE_ID}&url=${encodeURIComponent(rawLink)}`;
 
-  // === FETCH DATA (LOGIKA TETAP SAMA SEPERTI SEBELUMNYA) ===
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const querySnapshot = await getDocs(collection(db, "products"));
-        const rawData = querySnapshot.docs.map((doc) => {
-            const data = doc.data();
-            const price = parseInt(data.price) || 0;
-            const isShopeeCheaper = Math.random() < 0.6;
-            const variance = Math.random() * 0.2; 
-            let tiktokPrice = isShopeeCheaper ? Math.floor(price * (1 + variance)) : Math.floor(price * (1 - variance));
-            
-            const cleanTitle = (data.name || "").replace(/[^a-zA-Z0-9 ]/g, " ").trim();
-            const keywords = cleanTitle.split(/\s+/).slice(0, 5).join(" ");
-            const encodedKeywords = encodeURIComponent(keywords);
-            
-            const webLink = `https://www.tiktok.com/search?q=${encodedKeywords}`;
-            const encodedWebLink = encodeURIComponent(webLink);
-            const androidIntent = `intent://search?keyword=${encodedKeywords}&q=${encodedKeywords}&enter_from=search_result#Intent;scheme=tiktok;package=com.ss.android.ugc.trill;S.browser_fallback_url=${encodedWebLink};end`;
-            const iosDeepLink = `tiktok://search?keyword=${encodedKeywords}&enter_from=search_result`;
+      return {
+        ...data,
+        id: data.id || Math.random().toString(36).substr(2, 9),
+        title: data.name || data.Title || "Produk",
+        shopeePrice: price,
+        tiktokPrice: tiktokPrice,
+        shopeeLink: affiliateLink, 
+        link: affiliateLink,       
+        tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(data.name || data.Title || "")}`,
+        sales: data.sales || data.Sales || "Laris"
+      };
+    });
+  }, [ACCESSTRADE_ID]);
 
-            let salesCount = 0;
-            let salesStr = String(data.sold || data.Sales || "0").toUpperCase().trim().replace(/\s/g, '');
-            const match = salesStr.match(/(\d+[.,]?\d*)(RB|K|JT|M|JUTA)?/);
-            if (match) {
-                let numberPart = parseFloat(match[1].replace(',', '.'));
-                let unitPart = match[2];
-                if (unitPart === 'RB' || unitPart === 'K') { salesCount = numberPart * 1000; } 
-                else if (unitPart === 'JT' || unitPart === 'JUTA' || unitPart === 'M') { salesCount = numberPart * 1000000; } 
-                else { 
-                   let cleanNumStr = salesStr.replace(/\./g, "").replace(/,/g, ""); 
-                   salesCount = parseInt(cleanNumStr) || 0; 
-                }
-            }
+  // --- LOGIKA FETCH DATABASE (PERBAIKAN URUTAN) ---
+  const fetchFromDB = useCallback(async (searchQuery: string, category: string) => {
+    setLoading(true);
+    try {
+      const productsRef = collection(db, "products");
+      let q = firestoreQuery(productsRef);
 
-            return {
-                id: doc.id,
-                title: data.name || "Produk Tanpa Nama",
-                image: data.image || FALLBACK_IMAGE,
-                shopeePrice: price,
-                tiktokPrice: tiktokPrice,
-                shopeeLink: data.shopeeLink || "#",
-                finalTikTokLink: webLink,
-                androidLink: androidIntent,
-                iosLink: iosDeepLink,
-                shopeeSearchFallback: `https://shopee.co.id/search?keyword=${encodedKeywords}`,
-                sales: data.sold || data.Sales || "Terlaris", 
-                salesCount: salesCount, // Pastikan property ini ada untuk logika Wishlist
-                category: data.category || "Umum"
-            };
-        });
+      if (category !== "Semua") {
+        q = firestoreQuery(productsRef, where("category", "==", category));
+      }
 
-        // 1. ACAK TOTAL
-        const shuffled = shuffleArray([...rawData]);
+      const querySnapshot = await getDocs(q);
+      const serverData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      const filteredData = searchQuery 
+        ? serverData.filter((p: any) => (p.name || p.Title || "").toLowerCase().includes(searchQuery.toLowerCase()))
+        : serverData;
 
-        // 2. BAGI JATAH (LOGIKA SAMA)
-        setCarouselData(shuffled.slice(0, 5));
-        setVideoFeedData(shuffled.slice(5, 20));
-        setProducts(shuffled); // Grid pakai semua data (ditimpa, bukan dislice, sesuai request sebelumnya biar aman)
+      const processed = processProducts(filteredData);
+
+      // --- LOGIKA RANDOM PRODUK (PENTING!) ---
+      // Kita acak urutan produk setiap kali data ditarik
+      const shuffledProducts = [...processed].sort(() => 0.5 - Math.random());
+      setProducts(shuffledProducts);
+      
+      if (category === "Semua" && !searchQuery) {
+        // Banner Carousel juga kita ambil 5 produk acak teratas
+        setCarouselData(shuffledProducts.slice(0, 5));
         
-        setRefreshKey(Date.now()); 
-
-      } catch (error) { console.error("Gagal ambil data:", error); } 
-      finally { setLoading(false); }
-    };
-    fetchData();
-  }, []);
-
-  const filteredProducts = products.filter(p => {
-    if (activeCategory === "Semua") return true;
-    const keywords = getKeywordsForCategory(activeCategory);
-    const titleLower = p.title.toLowerCase();
-    if (keywords.length > 0) {
-        return keywords.some(key => titleLower.includes(key));
+        // RacunSection & VideoFeed juga ikut teracak otomatis
+        const selectedRacun = shuffledProducts.slice(0, 10).map((item, idx) => ({
+          ...item,
+          platform: idx % 2 === 0 ? 'shopee' : 'tiktok',
+          price: idx % 2 === 0 ? item.shopeePrice : item.tiktokPrice
+        }));
+        setRacunData(selectedRacun);
+      }
+    } catch (error) { 
+      console.error("Firestore Fetch Error:", error); 
+    } finally { 
+      setLoading(false); 
     }
-    return p.category?.toLowerCase() === activeCategory.toLowerCase();
-  });
+  }, [processProducts]);
 
   useEffect(() => {
-    if ((deviceType === 'android' || deviceType === 'ios') && !isPaginationMode) {
-        const handleScroll = () => {
-            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
-                setVisibleCount(prev => prev + 10); 
-            }
-        };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }
-  }, [deviceType, isPaginationMode]);
+    const timer = setTimeout(() => { setVisibleCount(40); fetchFromDB(query, activeCategory); }, 500);
+    return () => clearTimeout(timer);
+  }, [query, activeCategory, fetchFromDB]);
 
-  const handleCategoryChange = (cat: string) => {
-      setActiveCategory(cat);
-      setVisibleCount(20);
-      setIsPaginationMode(false);
-      setCurrentPage(1);
-  };
+  useEffect(() => {
+    const interval = setInterval(() => { setHookIndex((p) => (p + 1) % hooks.length); }, 4500);
+    return () => clearInterval(interval);
+  }, [hooks.length]);
 
-  let currentItems = [];
-  if (isPaginationMode) {
-      const indexOfLastItem = currentPage * itemsPerPage;
-      const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-      currentItems = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
-  } else {
-      currentItems = filteredProducts.slice(0, visibleCount);
-  }
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !loading) setVisibleCount((prev) => prev + 40);
+    }, { threshold: 0.1 });
+    if (observerTarget.current) observer.observe(observerTarget.current);
+    return () => { if (observerTarget.current) observer.unobserve(observerTarget.current); };
+  }, [loading]);
 
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const formatRupiah = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
-
-  const renderTagline = () => {
-    const current = taglines[taglineIndex];
-    const parts = current.text.split(new RegExp(`(${current.highlight.join('|')})`, 'gi'));
-    return (
-        <span style={fadeProp} className="block">{parts.map((part, i) => {
-            const isHighlight = current.highlight.some(h => h.toLowerCase() === part.toLowerCase());
-            return isHighlight ? <span key={i} className="text-[#ee4d2d] font-bold">{part}</span> : <span key={i} className="text-gray-700 font-medium">{part}</span>;
-        })}</span>
-    );
-  };
-
-  const handleTikTokClick = (e: React.MouseEvent, item: any) => {
-    if (deviceType === 'desktop') return;
-    e.preventDefault();
-    if (deviceType === 'android') {
-        window.location.href = item.androidLink;
-    } else if (deviceType === 'ios') {
-        window.location.href = item.iosLink;
-        setTimeout(() => {
-             if (!document.hidden) {
-                 window.location.href = item.finalTikTokLink;
-             }
-        }, 2500);
-    }
-  };
+  const categories = ["Semua", "Tas Wanita", "Sepatu Wanita", "Sepatu Pria", "Aksesoris Fashion", "Fashion Bayi & Anak", "Makanan & Minuman", "Pakaian Wanita", "Perawatan & Kecantikan", "Handphone & Aksesoris", "Perlengkapan Rumah"];
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 pb-12">
-      <div className="w-full py-2.5 px-2 bg-white border-b border-orange-100 shadow-sm z-10 flex items-center justify-center overflow-hidden">
-        <p className="text-center text-xs md:text-sm leading-snug">{renderTagline()}</p>
+    <div className="flex flex-col min-h-screen bg-gray-50 pb-24 font-sans text-gray-800">
+      <header className="sticky top-0 z-[60] bg-white shadow-sm border-b border-gray-100">
+        <div className="max-w-[1200px] mx-auto px-4 py-3 flex items-center justify-between gap-4"> 
+          <div className="hidden md:flex items-center gap-1 cursor-pointer shrink-0" onClick={() => window.location.reload()}>
+            <IconBagLogo />
+            <h1 className="text-2xl font-bold tracking-tight text-[#ee4d2d]"><span className="text-black">Shox</span>ped</h1>
+          </div>
+          <div className="flex-1 w-full max-w-[1200px]">
+  <form onSubmit={(e) => e.preventDefault()} className="flex w-full shadow-sm relative group">
+      <input 
+        type="text" 
+        value={query} 
+        onChange={(e) => setQuery(e.target.value)} 
+        placeholder="Cari produk akurat..." 
+        className="w-full h-10 px-4 pr-10 bg-gray-50 border border-gray-300 rounded-l-md text-sm focus:outline-none focus:border-[#ee4d2d]"
+      />
+      
+      {/* TOMBOL SILANG (Hanya muncul jika ada teks/query) */}
+      {query && (
+        <button
+          type="button"
+          onClick={() => setQuery("")}
+          className="absolute right-[70px] top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+          </svg>
+        </button>
+      )}
+
+      <button type="button" className="h-10 px-6 bg-[#ee4d2d] rounded-r-md flex items-center justify-center shrink-0">
+        <IconSearch />
+      </button>
+  </form>
+</div>
+        </div>
+      </header>
+
+      <div className="bg-white py-3 border-b border-gray-100 text-center px-4">
+        <p className="text-sm font-semibold text-gray-700">💡 {hooks[hookIndex]}</p>
       </div>
 
-      <div className='w-full max-w-[1200px] mx-auto px-2 md:px-6'>
-        
-        {/* CAROUSEL & VIDEO FEED */}
-        <div className="mt-4 flex flex-col gap-6 mb-6">
-            <div className='w-full rounded-xl overflow-hidden shadow-sm'>
-                <Carousel key={`carousel-${refreshKey}`} featuredProducts={carouselData} />
-            </div>
-            
-            <div className="w-full">
-                <VideoFeed featuredProducts={videoFeedData} />
-            </div>
-        </div>
-
-        {/* GRID PRODUK */}
-        <div id="product-grid-start" className="flex items-center gap-2 mb-4 px-2 pt-2">
-            <span className="text-xl animate-bounce">🎁</span>
-            <h2 className="font-bold text-gray-800 text-lg">Rekomendasi Untukmu</h2>
-        </div>
-
-        <div className="flex gap-2 overflow-x-auto pb-4 mb-2 px-1 no-scrollbar">
-            {categories.map((cat) => (
-                <button key={cat} onClick={() => handleCategoryChange(cat)} className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${activeCategory === cat ? 'bg-[#ee4d2d] text-white border-[#ee4d2d] shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>{cat}</button>
-            ))}
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 min-h-[500px]">
-            {loading ? ([...Array(10)].map((_, i) => <div key={i} className="bg-white rounded-xl h-80 animate-pulse border border-gray-100" />)) : currentItems.length > 0 ? (
-                currentItems.map((item, index) => {
-                    const isLastAndOdd = index === currentItems.length - 1 && currentItems.length % 2 !== 0;
-
-                    return (
-                        <div key={item.id} className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col ${isLastAndOdd ? 'col-span-full' : ''}`}>
-                            <div className={`w-full relative overflow-hidden bg-gray-50 ${isLastAndOdd ? 'aspect-video' : 'aspect-square'}`}>
-                                <img src={item.image} alt={item.title} className='w-full h-full object-cover transition-transform duration-500 hover:scale-105' onError={(e: any) => { e.target.onerror = null; e.target.src = FALLBACK_IMAGE; }} />
-                                
-                                {/* --- [BARU] TOMBOL WISHLIST DI SINI --- */}
-                                {/* Saya pindahkan badge 'Laris' ke KIRI, dan tombol Love di KANAN biar rapi */}
-                                
-                                <button 
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation(); // Biar gak kebuka link produknya
-                                        if (isInWishlist(item.id)) {
-                                            removeFromWishlist(item.id);
-                                        } else {
-                                            addToWishlist(item);
-                                        }
-                                    }}
-                                    className="absolute top-2 right-2 z-20 bg-white/90 p-1.5 rounded-full hover:bg-white shadow-sm transition-all active:scale-90"
-                                    title={isInWishlist(item.id) ? "Hapus dari Wishlist" : "Simpan ke Wishlist"}
-                                >
-                                    {isInWishlist(item.id) ? (
-                                        <HeartSolid className="w-5 h-5 text-[#ee4d2d]" />
-                                    ) : (
-                                        <HeartOutline className="w-5 h-5 text-gray-400 hover:text-[#ee4d2d]" />
-                                    )}
-                                </button>
-
-                                {item.salesCount >= 1000 && (
-                                    <div className="absolute top-2 left-2 bg-yellow-400 text-black text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10">
-                                        Laris 🔥
-                                    </div>
-                                )}
-                                {/* -------------------------------------- */}
-
-                            </div>
-                            
-                            <div className='p-3 md:p-4 flex flex-col flex-grow justify-between'>
-                                <div>
-                                    <h3 className='text-xs md:text-sm text-gray-800 font-semibold line-clamp-2 leading-relaxed mb-2' title={item.title}>{item.title}</h3>
-                                    <div className="flex items-center gap-1 mb-3 text-[10px] text-gray-500"><span>🔥 {item.sales}</span></div>
-                                </div>
-                                <div className="space-y-1 mb-4">
-                                    <div className="flex justify-between items-center text-xs md:text-sm"><span className="font-bold text-[#ee4d2d]">Shopee</span><span className="font-bold text-[#ee4d2d]">{formatRupiah(item.shopeePrice)}</span></div>
-                                    <div className="flex justify-between items-center text-xs md:text-sm"><span className="font-medium text-gray-600">TikTok</span><span className="font-medium text-gray-600">{formatRupiah(item.tiktokPrice)}</span></div>
-                                </div>
-                                
-                                <div className="flex flex-col gap-2 mt-auto">
-                                    <div className="flex flex-col md:flex-row gap-2">
-                                        <a href={item.shopeeLink} target="_blank" rel="noreferrer" 
-                                           className="flex-1 bg-white text-[#ee4d2d] border border-orange-200 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all 
-                                           hover:bg-orange-50 hover:border-[#ee4d2d] hover:shadow-sm active:scale-95">
-                                            Beli di Shopee
-                                        </a>
-                                        <a 
-                                            href={deviceType === 'desktop' ? item.finalTikTokLink : "#"}
-                                            onClick={(e) => handleTikTokClick(e, item)}
-                                            target={deviceType === 'desktop' ? "_blank" : "_self"}
-                                            rel="noreferrer" 
-                                            className="flex-1 bg-white text-gray-800 border border-gray-300 text-[10px] md:text-xs font-bold py-2.5 rounded-lg text-center transition-all 
-                                            hover:bg-gray-50 hover:border-gray-800 hover:shadow-sm active:scale-95"
-                                        >
-                                            Beli di TikTok
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })
-            ) : <div className="col-span-full py-10 text-center text-gray-400 text-sm">Yah, kategori ini kosong. Coba kategori lain!</div>}
-        </div>
-
-        {!loading && (
-            <div className="mt-8 mb-8 text-center flex flex-col items-center gap-4">
-                {!isPaginationMode && visibleCount < filteredProducts.length && (
-                    <button onClick={() => setVisibleCount(prev => prev + 20)} className="bg-white border border-gray-300 text-gray-700 font-bold py-3 px-8 rounded-full shadow-sm hover:bg-gray-50 transition-all active:scale-95 text-sm">Lihat Lainnya ⬇</button>
-                )}
-                {deviceType === 'desktop' && totalPages > 1 && (
-                     <div className="flex justify-center items-center gap-2 mt-4 flex-wrap border-t border-gray-100 pt-6 w-full">
-                        <button onClick={() => { setIsPaginationMode(true); setCurrentPage(prev => Math.max(prev - 1, 1)); document.getElementById('product-grid-start')?.scrollIntoView(); }} disabled={currentPage === 1 && isPaginationMode} className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:bg-white text-xs">&lt;</button>
-                        <span className="text-xs text-gray-400">Halaman {currentPage} dari {totalPages}</span>
-                        <button onClick={() => { setIsPaginationMode(true); setCurrentPage(prev => Math.min(prev + 1, totalPages)); document.getElementById('product-grid-start')?.scrollIntoView(); }} disabled={currentPage === totalPages && isPaginationMode} className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:bg-white text-xs">&gt;</button>
-                    </div>
-                )}
-            </div>
+      <div className='w-full max-w-[1200px] mx-auto px-4 mt-6'>
+        {/* SECTION CAROUSEL, RACUN, & VIDEO FEED */}
+        {query === "" && activeCategory === "Semua" && (
+          <div className="mb-2 flex flex-col gap-6">
+              <Carousel featuredProducts={carouselData} />
+              <RacunSection data={racunData} />
+          </div>
         )}
-        
-        <div className="text-center mb-4">
-             <p className="text-[10px] text-gray-300">Shoxped v8.7 - Wishlist Feature Added</p>
+
+        {/* KATEGORI STICKY */}
+        <div className="sticky top-[65px] z-[50] bg-gray-50/95 backdrop-blur-sm py-4 -mx-4 px-4 overflow-x-auto no-scrollbar border-b border-gray-200 shadow-sm">
+            <div className="flex gap-3">
+            {categories.map((cat) => (
+                <button 
+                  key={cat} 
+                  onClick={() => { setActiveCategory(cat); setQuery(""); }} 
+                  className={`whitespace-nowrap px-5 py-2 rounded-full text-xs font-bold border shadow-sm ${activeCategory === cat ? 'bg-[#ee4d2d] text-white border-[#ee4d2d]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                >
+                  {cat}
+                </button>
+            ))}
+            </div>
         </div>
 
-      <ShareButton />
+        <div className="flex items-center gap-2 mb-6 mt-6">
+          <span className="text-xl animate-bounce">🎁</span>
+          <h2 className="font-bold text-gray-800 text-lg">
+            {loading ? "Menyaring Database..." : (query || activeCategory !== "Semua" ? `Hasil Akurat: ${query || activeCategory}` : "Rekomendasi Shopee vs Tiktok")}
+          </h2>
+        </div>
+
+        {/* GRID PRODUK UTAMA */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          {products.slice(0, visibleCount).map((item) => (
+            <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col relative group">
+              <div className="bg-gray-200 relative aspect-square overflow-hidden">
+                <img src={item.image} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
+                <button onClick={() => isInWishlist(item.id) ? removeFromWishlist(item.id) : addToWishlist(item)} className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full shadow-sm z-10">
+                  {isInWishlist(item.id) ? <IconHeartSolid /> : <IconHeartOutline />}
+                </button>
+              </div>
+              <div className="p-3 flex flex-col flex-grow">
+                <h3 className="text-xs font-medium text-gray-800 line-clamp-2 mb-2">{item.title}</h3>
+                
+                {/* INFO HARGA (FIX WARNA TIKTOK CYAN) */}
+                <div className="space-y-1 mb-3 bg-gray-50 p-2 rounded-lg -mx-1">
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-[#ee4d2d] font-bold">Shopee</span>
+                    <span className="font-bold">{formatRupiah(item.shopeePrice)}</span>
+                  </div>
+                  <div className="flex justify-between text-[11px] border-t border-gray-200 pt-1 mt-1">
+                    <span className="text-[gray-800] font-bold">TikTok</span> {/* FIX: Warna Biru TikTok */}
+                    <span className="font-bold">{formatRupiah(item.tiktokPrice)}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-row gap-1 mt-auto"> 
+                    <a href={item.shopeeLink} target="_blank" rel="noreferrer" className="flex-1 text-[10px] font-bold py-1.5 rounded text-center bg-[#ee4d2d] text-white">Shopee</a>
+                    <a href={item.tiktokLink} target="_blank" rel="noreferrer" className="flex-1 text-[10px] font-bold py-1.5 rounded text-center bg-black text-white">TikTok</a>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div ref={observerTarget} className="py-12 w-full flex justify-center">
+            {loading ? <div className="w-8 h-8 border-4 border-[#ee4d2d] border-t-transparent rounded-full animate-spin"></div> : null}
+        </div>
       </div>
+
+      <ShareButtonFix />
+      <div className="hidden md:block"><Footer /></div>
     </div>
   );
 }

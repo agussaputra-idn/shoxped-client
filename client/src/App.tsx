@@ -1,39 +1,48 @@
-import { useEffect } from 'react';
-import { ref, runTransaction } from 'firebase/database';
-import { realtimeDb } from './firebase';
-import useRouteElements from './useRouteElements'; 
-// Import Logic Affiliate
-import { useAffiliateConverter } from './hooks/useAffiliateConverter';
-
-// --- [BARU] IMPORT PROVIDER WISHLIST ---
+import React from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { WishlistProvider } from './context/WishlistContext';
 
-function App() {
-  // 1. Panggil elemen router (Tampilan Website)
-  const routeElements = useRouteElements();
+// Import Komponen Navigasi
+import BottomNav from './components/BottomNav/BottomNav';
 
-  // 2. JALANKAN MESIN CUAN (Script Affiliate berjalan di background)
-  useAffiliateConverter();
+// Import Halaman
+import Home from './pages/Home/Home';
+import SecretAdmin from './pages/SecretAdmin';
+import Search from './pages/Search';
+import VideoPage from './pages/VideoPage';
+import Wishlist from './pages/Wishlist';
+import Profile from './pages/Profile';
 
-  // 3. Logic Live Tracking Visitor (TETAP ADA - TIDAK DIUBAH)
-  useEffect(() => {
-    const countVisitor = () => {
-      const visitorsRef = ref(realtimeDb, 'stats/totalVisitors');
-      runTransaction(visitorsRef, (currentCount) => {
-        return (currentCount || 0) + 1;
-      });
-    };
+function AppContent() {
+  const location = useLocation();
+  
+  // Logika agar BottomNav TIDAK muncul di halaman Admin (ruang-rahasia)
+  const showBottomNav = location.pathname !== '/ruang-rahasia';
 
-    countVisitor();
-  }, []);
-
-  // 4. Render Tampilan Website (DIBUNGKUS PROVIDER)
   return (
-    // Kita bungkus semuanya dengan WishlistProvider agar data tersimpan
-    <WishlistProvider>
-      <div>
-        {routeElements}
+    <div className="min-h-screen bg-white">
+      {/* Jika bukan halaman admin, beri padding bawah agar konten tidak tertutup Nav */}
+      <div className={showBottomNav ? "pb-20" : ""}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/video" element={<VideoPage />} />
+          <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/ruang-rahasia" element={<SecretAdmin />} />
+        </Routes>
       </div>
+
+      {/* Tampilkan BottomNav hanya jika bukan di ruang-rahasia */}
+      {showBottomNav && <BottomNav />}
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <WishlistProvider>
+      <AppContent />
     </WishlistProvider>
   );
 }

@@ -1,90 +1,55 @@
-import { useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-
-// Import Gambar
-import facebook from '../../assets/images/facebook.png';
-import instagram from '../../assets/images/instagram.png';
-import tiktok from '../../assets/images/tiktok.png';
-import youtube from '../../assets/images/youtube.png';
+import React from 'react';
 
 const Footer = () => {
-  // === SCRIPT AUTO SCROLL ===
-  const { pathname } = useLocation();
-  
-  useEffect(() => {
-    window.scrollTo(0, 0); 
-  }, [pathname]);
-
   return (
-    <footer className='bg-neutral-100 py-16'>
-      {/* Container Rata Tengah */}
-      <div className='container mx-auto px-4'>
-        
-        {/* GRID 3 KOLOM (Semua Rata Tengah) */}
-        <div className='grid grid-cols-1 md:grid-cols-3 gap-10 mb-10 text-center'>
+    /* hidden md:block agar hilang di mobile. bg-white agar bersih */
+    <footer className="hidden md:block bg-white border-t border-gray-100 mt-16">
+      {/* max-w-[1200px] mx-auto adalah kunci agar sejajar dengan konten atas */}
+      <div className="max-w-[900px] mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           
-          {/* === KOLOM 1: BRAND IDENTITY === */}
-          <div className='flex flex-col items-center'> 
-            {/* UPDATE WARNA: Pakai kode hex khusus biar cerah */}
-            <h2 className="text-2xl font-bold mb-4">
-              <span className="text-black">Shox</span>
-              <span className="text-[#FF6600]">ped</span>
-            </h2>
-            <p className="text-sm text-gray-500 leading-relaxed max-w-xs mx-auto">
-              Platform agregator perbandingan harga #1 di Indonesia. 
-              Temukan harga termurah dari Shopee & TikTok Shop dalam satu klik.
+          {/* KOLOM 1: BRAND */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-[#ee4d2d]">Shox<span className="text-black">ped</span></h1>
+            </div>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              Platform agregator perbandingan harga #1 di Indonesia. Bandingkan Shopee & TikTok Shop dalam satu klik.
             </p>
           </div>
 
-          {/* === KOLOM 2: INFORMASI LEGAL === */}
-          <div className='flex flex-col items-center'>
-            <p className='text-sm font-semibold text-gray-800 uppercase mb-4'>INFORMASI</p>
-            <div className='flex flex-col gap-3'>
-              {/* Hover pakai kode hex khusus */}
-              <Link to="/about-us" className='text-sm text-gray-600 hover:text-[#FF6600] transition-colors'>
-                Tentang Kami
-              </Link>
-              <Link to="/privacy-policy" className='text-sm text-gray-600 hover:text-[#FF6600] transition-colors'>
-                Kebijakan Privasi
-              </Link>
-              <Link to="/terms-conditions" className='text-sm text-gray-600 hover:text-[#FF6600] transition-colors'>
-                Syarat & Ketentuan
-              </Link>
-            </div>
+          {/* KOLOM 2: INFORMASI (LINK AKTIF) */}
+          <div>
+            <h4 className="font-bold text-gray-800 mb-4 uppercase text-xs tracking-wider">Informasi</h4>
+            <ul className="space-y-2 text-sm text-gray-600 font-medium">
+              <li><a href="/about" className="hover:text-[#ee4d2d] transition-colors">Tentang Kami</a></li>
+              <li><a href="/privacy" className="hover:text-[#ee4d2d] transition-colors">Kebijakan Privasi</a></li>
+              <li><a href="/terms" className="hover:text-[#ee4d2d] transition-colors">Syarat & Ketentuan</a></li>
+            </ul>
           </div>
 
-          {/* === KOLOM 3: SOCIAL MEDIA === */}
-          <div className='flex flex-col items-center'>
-            <p className='text-sm font-semibold text-gray-800 uppercase mb-4'>IKUTI KAMI</p>
-            <div className='flex flex-col gap-3 items-center'> 
-              <a href='https://www.facebook.com/share/17YdJNxgJ5/' target='_blank' rel='noopener noreferrer' className='flex items-center gap-3 text-sm text-gray-600 hover:text-[#FF6600] group'>
-                <img src={facebook} alt='facebook' width={20} height={20} className="group-hover:opacity-80"/>
-                <span>Facebook</span>
+          {/* KOLOM 3: SOSIAL MEDIA (LINK AKTIF) */}
+          <div>
+            <h4 className="font-bold text-gray-800 mb-4 uppercase text-xs tracking-wider">Ikuti Kami</h4>
+            <div className="flex flex-col gap-3">
+              <a href="https://facebook.com/shoxped" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#ee4d2d]">
+                <span className="w-5 h-5 bg-[#1877F2] rounded-full flex items-center justify-center text-white text-[10px]">f</span> Facebook
               </a>
-              <a href='https://www.instagram.com/shoxped?igsh=czZsYm5mNmlnZXk2' target='_blank' rel='noopener noreferrer' className='flex items-center gap-3 text-sm text-gray-600 hover:text-[#FF6600] group'>
-                <img src={instagram} alt='instagram' width={20} height={20} className="group-hover:opacity-80"/>
-                <span>Instagram</span>
+              <a href="https://instagram.com/shoxped" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#ee4d2d]">
+                <span className="w-5 h-5 bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 rounded-full flex items-center justify-center text-white text-[10px]">ig</span> Instagram
               </a>
-              <a href='http://tiktok.com/@shoxped' target='_blank' rel='noopener noreferrer' className='flex items-center gap-3 text-sm text-gray-600 hover:text-[#FF6600] group'>
-                <img src={tiktok} alt='tiktok' width={20} height={20} className="group-hover:opacity-80"/>
-                <span>Tiktok</span>
-              </a>
-              <a href='/' target='_blank' rel='noopener noreferrer' className='flex items-center gap-3 text-sm text-gray-600 hover:text-[#FF6600] group'>
-                <img src={youtube} alt='youtube' width={20} height={20} className="group-hover:opacity-80"/>
-                <span>Youtube</span>
+              <a href="https://tiktok.com/@shoxped" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#ee4d2d]">
+                <span className="w-5 h-5 bg-black rounded-full flex items-center justify-center text-white text-[10px]">tk</span> TikTok
               </a>
             </div>
           </div>
-          
         </div>
-        
-        <hr className="border-gray-200" />
 
-        <div className='mt-10 text-center text-xs text-gray-400'>
-          <p>© 2026 Shoxped. All Rights Reserved.</p>
-          <p className='mt-2'>Kontak: customer@support.shoxped.id</p>
-          <p className='mt-4 max-w-3xl mx-auto'>
-            **Disclaimer:** Shoxped adalah mesin pencari produk. Transaksi, pembayaran, dan pengiriman sepenuhnya ditangani oleh marketplace terkait (Shopee/TikTok).
+        {/* COPYRIGHT & DISCLAIMER */}
+        <div className="border-t border-gray-100 mt-12 pt-8 text-center">
+          <p className="text-xs text-gray-400">© 2026 Shoxped. All Rights Reserved.</p>
+          <p className="text-[10px] text-gray-300 mt-2 italic">
+            **Disclaimer:** Kami adalah mesin pencari, transaksi dilakukan di marketplace masing-masing.
           </p>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-// Struktur Data Produk yang disimpan
+// Struktur Data Produk
 interface Product {
   id: string;
   title: string;
@@ -10,6 +10,7 @@ interface Product {
   shopeeLink: string;
   finalTikTokLink: string;
   sales: any;
+  category?: string;
 }
 
 interface WishlistContextType {
@@ -22,8 +23,8 @@ interface WishlistContextType {
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
 export const WishlistProvider = ({ children }: { children: ReactNode }) => {
+  // Ambil data dari LocalStorage biar tidak hilang saat refresh
   const [wishlist, setWishlist] = useState<Product[]>(() => {
-    // Cek penyimpanan browser saat pertama buka
     try {
       const saved = localStorage.getItem('shoxped_wishlist');
       return saved ? JSON.parse(saved) : [];
@@ -32,14 +33,12 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
-  // Simpan otomatis setiap ada perubahan
   useEffect(() => {
     localStorage.setItem('shoxped_wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
 
   const addToWishlist = (product: Product) => {
     setWishlist((prev) => {
-      // Cek duplikat
       if (prev.some((item) => item.id === product.id)) return prev;
       return [...prev, product];
     });
@@ -62,6 +61,6 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
 
 export const useWishlist = () => {
   const context = useContext(WishlistContext);
-  if (!context) throw new Error('useWishlist error');
+  if (!context) throw new Error('useWishlist error: Provider tidak ditemukan');
   return context;
 };

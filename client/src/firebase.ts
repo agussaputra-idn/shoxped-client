@@ -1,27 +1,28 @@
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getDatabase } from "firebase/database"; // 👈 1. Import ini wajib ada
+import { getDatabase } from "firebase/database"; 
+import { getAnalytics } from "firebase/analytics"; 
 
+// 🔥 CONFIG PRODUKSI (SHOXPED ASLI) 🔥
 const firebaseConfig = {
-  apiKey: "AIzaSyAQYiRBjOIRzt5B9m7MYXNRsclvQn66h7U",
-  authDomain: "shoxped-security.firebaseapp.com",
-  projectId: "shoxped-security",
-  storageBucket: "shoxped-security.firebasestorage.app",
-  messagingSenderId: "181166563080",
-  appId: "1:181166563080:web:a036bffd3e3495a57596bd",
-  measurementId: "G-CT7QZESZ6B",
-  // 👇 2. Tambahkan URL Realtime Database ini (PENTING)
-  databaseURL: "https://shoxped-security-default-rtdb.asia-southeast1.firebasedatabase.app"
+  apiKey: "AIzaSyAi1NKoE5CkHgyo37j3MR1ea1-5kOID8h4",
+  authDomain: "shoxped-backup.firebaseapp.com",
+  databaseURL: "https://shoxped-backup-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "shoxped-backup",
+  storageBucket: "shoxped-backup.firebasestorage.app",
+  messagingSenderId: "487780280679",
+  appId: "1:487780280679:web:3751d15a274c15791ca7c2"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-const auth = getAuth(app);
-const db = getFirestore(app);        // Ini Database untuk Produk (Firestore)
-const realtimeDb = getDatabase(app); // 👈 3. Ini Database untuk Visitor (Realtime)
 
-// 4. Jangan lupa export realtimeDb-nya
+// Initialize Services
+const auth = getAuth(app);
+const db = getFirestore(app);        
+const realtimeDb = getDatabase(app); 
+const analytics = getAnalytics(app); // Analytics diaktifkan kembali karena ini production
+
+// Export services
 export { auth, db, realtimeDb, analytics };
