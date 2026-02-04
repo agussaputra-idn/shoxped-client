@@ -1,5 +1,5 @@
 import { db } from '../../firebase';
-import { collection, getDocs, query as firestoreQuery, where } from 'firebase/firestore';
+import { collection, getDocs, query as firestoreQuery, where, limit, orderBy } from 'firebase/firestore';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Carousel from '../../components/Carousel'; 
 import VideoFeed from '../../components/VideoFeed'; // FIX: Path diperbaiki agar tidak error merah
@@ -83,15 +83,22 @@ export default function Home() {
     });
   }, [ACCESSTRADE_ID]);
 
-  // --- LOGIKA FETCH DATABASE (PERBAIKAN URUTAN) ---
+  // --- LOGIKA FETCH DATABASE (DIOPTIMALKAN & ANTENG) ---
   const fetchFromDB = useCallback(async (searchQuery: string, category: string) => {
+    // Gunakan pengecekan loading di dalam, tapi jangan masukkan 'loading' ke dependency array di bawah
     setLoading(true);
     try {
       const productsRef = collection(db, "products");
-      let q = firestoreQuery(productsRef);
+      let q;
 
       if (category !== "Semua") {
-        q = firestoreQuery(productsRef, where("category", "==", category));
+        q = firestoreQuery(
+          productsRef, 
+          where("category", "==", category),
+          limit(24) // Pakai kelipatan grid (2, 3, 4) agar rapi
+        );
+      } else {
+        q = firestoreQuery(productsRef, limit(24));
       }
 
       const querySnapshot = await getDocs(q);
@@ -103,16 +110,13 @@ export default function Home() {
 
       const processed = processProducts(filteredData);
 
-      // --- LOGIKA RANDOM PRODUK (PENTING!) ---
-      // Kita acak urutan produk setiap kali data ditarik
+      // ACAK HANYA DI SINI (Sekali saja saat data masuk)
       const shuffledProducts = [...processed].sort(() => 0.5 - Math.random());
+      
       setProducts(shuffledProducts);
       
       if (category === "Semua" && !searchQuery) {
-        // Banner Carousel juga kita ambil 5 produk acak teratas
         setCarouselData(shuffledProducts.slice(0, 5));
-        
-        // RacunSection & VideoFeed juga ikut teracak otomatis
         const selectedRacun = shuffledProducts.slice(0, 10).map((item, idx) => ({
           ...item,
           platform: idx % 2 === 0 ? 'shopee' : 'tiktok',
@@ -125,6 +129,7 @@ export default function Home() {
     } finally { 
       setLoading(false); 
     }
+    // PENTING: Jangan masukkan 'loading' di sini agar tidak memicu loop acak
   }, [processProducts]);
 
   useEffect(() => {
