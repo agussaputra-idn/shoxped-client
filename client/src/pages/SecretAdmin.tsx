@@ -8,23 +8,28 @@ import Papa from 'papaparse';
 // --- HELPER: DETEKSI KATEGORI OTOMATIS (AI) ---
 const detectCategory = (title: string, originalCategory: string) => {
     const tLower = title.toLowerCase();
-    // Keywords
+    // Keywords disesuaikan dengan kategori Home.tsx
     const kwSepatu = ['sepatu', 'sneakers', 'sandal', 'boots', 'shoes', 'heels', 'wedges', 'flat', 'kets', 'slip on', 'loafers', 'trainers', 'running', 'sport', 'futsal', 'bola', 'crocs', 'baim', 'slop', 'sandals'];
     const kwTas = ['tas', 'bag', 'tote', 'ransel', 'dompet', 'backpack', 'clutch', 'waistbag', 'sling', 'shoulder', 'wallet', 'koper', 'duffel', 'handbag', 'selempang', 'pouch', 'travel', 'luggage'];
-    const kwKecantikan = ['serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 'cream', 'lotion', 'masker', 'essence', 'moisturizer', 'foundation', 'powder', 'bedak', 'lip', 'eye', 'hair', 'shampoo', 'sabun', 'body', 'parfum', 'perfume', 'fragrance', 'beauty', 'acne', 'jerawat', 'cleanser', 'micellar', 'wardah', 'somethinc', 'skintific', 'msglow', 'scarlett'];
-    const kwElektronik = ['hp', 'handphone', 'case', 'kabel', 'headset', 'charger', 'iphone', 'android', 'samsung', 'xiaomi', 'oppo', 'vivo', 'realme', 'infinix', 'laptop', 'mouse', 'keyboard', 'earphone', 'tws', 'speaker', 'bluetooth', 'powerbank', 'usb', 'monitor', 'tv', 'kamera', 'camera', 'tripod', 'watch', 'jam', 'smartwatch'];
-    const kwFashion = ['baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket', 'hoodie', 'sweater', 't-shirt', 'shirt', 'blouse', 'tunik', 'gamis', 'hijab', 'jilbab', 'batik', 'piyama', 'underwear', 'bra', 'cd', 'sarinah', 'pakaian', 'jeans', 'chino', 'kulot', 'cardigan', 'vest', 'blazer', 'setelan', 'polo', 'sock', 'kaos kaki', 'daster', 'mukena', 'ciput', 'manset'];
-    const kwRumah = ['kopi', 'coffee', 'gula', 'teh', 'sabun cuci', 'detergen', 'piring', 'gelas', 'botol', 'sapu', 'pel', 'rak', 'organizer', 'dapur', 'pisau', 'wajan', 'panci', 'sprei', 'bantal', 'guling', 'handuk', 'lampu'];
+    const kwKecantikan = ['serum', 'skincare', 'toner', 'facial', 'sunscreen', 'lipstik', 'cream', 'lotion', 'masker', 'essence', 'moisturizer', 'foundation', 'powder', 'bedak', 'hair', 'shampoo', 'sabun', 'body', 'parfum', 'perfume', 'beauty', 'acne', 'cleanser'];
+    const kwGadget = ['hp', 'handphone', 'case', 'kabel', 'headset', 'charger', 'iphone', 'android', 'samsung', 'xiaomi', 'oppo', 'vivo', 'realme', 'infinix', 'laptop', 'mouse', 'keyboard', 'earphone', 'tws', 'speaker', 'bluetooth', 'powerbank', 'usb', 'monitor', 'tv', 'kamera', 'tripod', 'smartwatch'];
+    const kwFashion = ['baju', 'kemeja', 'dress', 'kaos', 'celana', 'rok', 'jaket', 'hoodie', 'sweater', 't-shirt', 'shirt', 'blouse', 'tunik', 'gamis', 'hijab', 'jilbab', 'batik', 'piyama', 'pakaian', 'jeans', 'chino', 'kulot', 'cardigan', 'blazer', 'setelan', 'polo', 'daster', 'mukena'];
+    const kwRumah = ['kopi', 'coffee', 'gula', 'teh', 'sabun cuci', 'detergen', 'piring', 'gelas', 'botol', 'sapu', 'pel', 'rak', 'organizer', 'dapur', 'pisau', 'wajan', 'panci', 'sprei', 'bantal', 'guling', 'handuk', 'lampu', 'peralatan rumah'];
+    const kwMakanan = ['makanan', 'minuman', 'snack', 'camilan', 'keripik', 'cokelat', 'mie', 'instan', 'bumbu', 'sambal', 'frozen food'];
+    const kwAnak = ['bayi', 'anak', 'baby', 'kids', 'popok', 'dot', 'mainan', 'baju anak', 'setelan anak'];
 
-    if (kwSepatu.some(k => tLower.includes(k))) return "Sepatu";
-    if (kwTas.some(k => tLower.includes(k))) return "Tas";
-    if (kwKecantikan.some(k => tLower.includes(k))) return "Kecantikan";
-    if (kwElektronik.some(k => tLower.includes(k))) return "Elektronik";
+    if (kwSepatu.some(k => tLower.includes(k))) return "Sepatu Wanita"; // Default ke Wanita/Pria bisa disesuaikan manual nanti
+    if (kwTas.some(k => tLower.includes(k))) return "Tas Wanita";
+    if (kwKecantikan.some(k => tLower.includes(k))) return "Perawatan & Kecantikan";
+    if (kwGadget.some(k => tLower.includes(k))) return "Handphone & Aksesoris";
     if (kwFashion.some(k => tLower.includes(k))) return "Pakaian Wanita";
-    if (kwRumah.some(k => tLower.includes(k))) return "Rumah Tangga";
+    if (kwRumah.some(k => tLower.includes(k))) return "Perlengkapan Rumah";
+    if (kwMakanan.some(k => tLower.includes(k))) return "Makanan & Minuman";
+    if (kwAnak.some(k => tLower.includes(k))) return "Fashion Bayi & Anak";
     
+    // Jika ada kategori dari CSV, coba samakan formatnya
     if (originalCategory && originalCategory !== "General") return originalCategory;
-    return "Lainnya";
+    return "Aksesoris Fashion"; // Default jika tidak terdeteksi
 };
 
 export default function SecretAdmin() {
@@ -40,12 +45,24 @@ export default function SecretAdmin() {
   const [loadingData, setLoadingData] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  // STATE INPUT MANUAL
+  // STATE INPUT MANUAL (Default ke Tas Wanita)
   const [manualProduct, setManualProduct] = useState({
-      name: '', price: '', image: '', link: '', category: 'Sepatu', sold: '0'
+      name: '', price: '', image: '', link: '', category: 'Tas Wanita', sold: '0'
   });
 
-  const categories = ["Sepatu", "Pakaian Pria", "Pakaian Wanita", "Aksesoris", "Muslim", "Kecantikan", "Gadget", "Elektronik", "Rumah Tangga", "Lainnya"];
+  // DAFTAR KATEGORI SAMA PERSIS DENGAN HOME.TSX
+  const categories = [
+    "Tas Wanita", 
+    "Sepatu Wanita", 
+    "Sepatu Pria", 
+    "Aksesoris Fashion", 
+    "Fashion Bayi & Anak", 
+    "Makanan & Minuman", 
+    "Pakaian Wanita", 
+    "Perawatan & Kecantikan", 
+    "Handphone & Aksesoris", 
+    "Perlengkapan Rumah"
+  ];
 
   // --- AUTH & INIT ---
   useEffect(() => {
@@ -71,21 +88,19 @@ export default function SecretAdmin() {
         const querySnapshot = await getDocs(collection(db, "products"));
         const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setAllProducts(data);
-        console.log("Data loaded:", data.length);
     } catch (e) { console.error(e); }
     setLoadingData(false);
   };
 
-  // --- NEW FEATURE: SYNC BUTTON ---
   const handleSync = async () => {
     setLoadingData(true);
     await fetchAllProducts();
-    alert("Database Berhasil Disinkronkan! Total Produk: " + allProducts.length);
+    alert("Database Berhasil Disinkronkan!");
     setLoadingData(false);
   };
 
   const handleDeleteProduct = async (id: string) => {
-      if(!confirm("Yakin hapus?")) return;
+      if(!confirm("Yakin hapus produk ini?")) return;
       try {
           await deleteDoc(doc(db, "products", id));
           fetchAllProducts();
@@ -101,7 +116,7 @@ export default function SecretAdmin() {
             createdAt: serverTimestamp() 
         });
         alert("Produk Berhasil Disimpan!");
-        setManualProduct({ name: '', price: '', image: '', link: '', category: 'Sepatu', sold: '0' });
+        setManualProduct({ name: '', price: '', image: '', link: '', category: 'Tas Wanita', sold: '0' });
         fetchAllProducts();
     } catch (e) { alert("Gagal Simpan: " + e); }
   };
@@ -117,22 +132,22 @@ export default function SecretAdmin() {
         const rawData = results.data;
         const batch = writeBatch(db);
         rawData.forEach((item: any) => {
-            const rawTitle = item['Title'] || '';
-            // Buat ID unik dari nama produk
+            const rawTitle = item['Title'] || item['name'] || '';
             const docId = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 50);
             const data = {
                 name: rawTitle,
-                price: parseInt(item['Price']) || 0,
-                image: item['ItemCard__image src'] || '',
-                link: item['Affiliate Link'] || '',
-                category: detectCategory(rawTitle, item['Category']),
-                sold: item['Sales'] || '0'
+                price: parseInt(item['Price'] || item['price']) || 0,
+                image: item['ItemCard__image src'] || item['image'] || '',
+                link: item['Affiliate Link'] || item['link'] || '',
+                category: detectCategory(rawTitle, item['Category'] || item['category']),
+                sold: item['Sales'] || item['sold'] || '0',
+                createdAt: serverTimestamp()
             };
             const dRef = doc(db, "products", docId || Math.random().toString());
             batch.set(dRef, data);
         });
         await batch.commit();
-        alert("Upload Selesai!");
+        alert("Upload Masal Selesai!");
         setIsUploading(false);
         fetchAllProducts();
       }
@@ -164,7 +179,6 @@ export default function SecretAdmin() {
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Live Visitors</p>
                     <p className="text-sm font-black text-slate-800">{visitorCount.toLocaleString()}</p>
                 </div>
-                {/* TOMBOL SYNC DATABASE BARU */}
                 <button onClick={handleSync} className="bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-green-700 transition uppercase flex items-center gap-2">
                     <span>🔄</span> {loadingData ? 'Loading...' : 'Sync DB'}
                 </button>
@@ -205,7 +219,7 @@ export default function SecretAdmin() {
                                     <tr><th className="px-6 py-4">Produk</th><th className="px-6 py-4">Harga</th><th className="px-6 py-4">Kategori</th><th className="px-6 py-4 text-center">Aksi</th></tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 text-xs">
-                                    {allProducts.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, 50).map(p => (
+                                    {allProducts.filter(p => (p.name || '').toLowerCase().includes(searchTerm.toLowerCase())).slice(0, 50).map(p => (
                                         <tr key={p.id} className="hover:bg-slate-50 transition group">
                                             <td className="px-6 py-4 flex items-center gap-3">
                                                 <img src={p.image} className="w-10 h-10 rounded-lg object-cover" alt="p"/>
@@ -264,7 +278,7 @@ export default function SecretAdmin() {
                                 <h3 className="text-[10px] font-bold text-slate-800 line-clamp-2 mb-2">{manualProduct.name || 'Nama Produk...'}</h3>
                                 <div className="space-y-1 bg-slate-50 p-2 rounded-xl text-[9px] font-black">
                                     <div className="flex justify-between"><span className="text-orange-600">Shopee</span><span>Rp{Number(manualProduct.price).toLocaleString()}</span></div>
-                                    <div className="flex justify-between text-green-600 border-t pt-1 mt-1"><span>TikTok</span><span>Rp{Math.floor(Number(manualProduct.price) * 1.1).toLocaleString()}</span></div>
+                                    <div className="flex justify-between text-black border-t pt-1 mt-1"><span>TikTok</span><span>Rp{Math.floor(Number(manualProduct.price) * 1.1).toLocaleString()}</span></div>
                                 </div>
                             </div>
                         </div>
