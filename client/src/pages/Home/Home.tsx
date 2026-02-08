@@ -2,7 +2,7 @@ import { db } from '../../firebase';
 import { collection, getDocs, query as firestoreQuery, where } from 'firebase/firestore';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Carousel from '../../components/Carousel'; 
-import VideoFeed from '../../components/VideoFeed'; // FIX: Path diperbaiki agar tidak error merah
+import VideoFeed from '../../components/VideoFeed'; 
 import RacunSection from '../../components/RacunSection';
 import { useWishlist } from '../../context/WishlistContext';
 import Footer from '../../components/Footer/Footer';
@@ -56,34 +56,114 @@ export default function Home() {
     "Shoxped Jalan Ninjamu untuk Cari harga Termurah Shopee & TikTok."
   ];
 
-  // --- LOGIKA PROSES DATA (PERBAIKAN NaN & WARNA) ---
+  // --- LOGIKA OMNIVORA (HYBRID) ---
   const processProducts = useCallback((rawData: any[]) => {
     return rawData.map((data: any) => {
-      // Membersihkan harga dari karakter non-angka agar tidak NaN
+      // Pastikan harga adalah angka murni
       const rawPrice = data.price || data.Price || "0";
-      const price = typeof rawPrice === 'number' ? rawPrice : parseInt(rawPrice.toString().replace(/[^0-9]/g, '')) || 0;
+      const basePrice = typeof rawPrice === 'number' ? rawPrice : parseInt(rawPrice.toString().replace(/[^0-9]/g, '')) || 0;
       
-      const randomMarkup = 1.05 + Math.random() * 0.15; 
-      const tiktokPrice = Math.floor(price * randomMarkup);
+      const productName = data.name || data.Title || "Produk";
+      const dbLink = data.link || data['Affiliate Link'] || "";
+
+      let shopeePrice, tiktokPrice, shopeeLink, tiktokLink;
+
+      // ==========================================
+      // JIKA DATA DARI TIKTOK (JSON)
+      // ==========================================
+      if (data.platform === 'tiktok') {
+          tiktokPrice = basePrice;
+          shopeePrice = Math.floor(basePrice * 0.95); 
+          
+          // LINK TIKTOK: Pakai link resmi dari file JSON (sudah affiliate atid.me)
+          tiktokLink = dbLink; 
+
+          // LINK SHOPEE: Search Shopee + BUNGKUS ACCESSTRADE
+          const searchUrl = `https://shopee.co.id/search?keyword=${encodeURIComponent(productName)}`;
+          shopeeLink = `https://atid.me/adv.php?rk=${ACCESSTRADE_ID}&url=${encodeURIComponent(searchUrl)}`;
+      } 
       
-      const rawLink = data.link || data['Affiliate Link'] || "";
-      const affiliateLink = rawLink.includes("atid.me") ? rawLink : `https://atid.me/adv.php?rk=${ACCESSTRADE_ID}&url=${encodeURIComponent(rawLink)}`;
+      // ==========================================
+      // JIKA DATA DARI SHOPEE (CSV LAMA)
+      // ==========================================
+      else {
+          shopeePrice = basePrice;
+          const randomMarkup = 1.05 + Math.random() * 0.15;
+          tiktokPrice = Math.floor(basePrice * randomMarkup); 
+
+          // LINK SHOPEE: Pakai link affiliate asli
+          shopeeLink = dbLink.includes("atid.me") ? dbLink : `https://atid.me/adv.php?rk=${ACCESSTRADE_ID}&url=${encodeURIComponent(dbLink)}`;
+          
+          // LINK TIKTOK: Generate Search Link (Nanti ditangani handleTikTokBuy)
+          tiktokLink = `https://www.tiktok.com/search?q=${encodeURIComponent(productName)}`;
+      }
 
       return {
         ...data,
         id: data.id || Math.random().toString(36).substr(2, 9),
-        title: data.name || data.Title || "Produk",
-        shopeePrice: price,
-        tiktokPrice: tiktokPrice,
-        shopeeLink: affiliateLink, 
-        link: affiliateLink,       
-        tiktokLink: `https://www.tiktok.com/search?q=${encodeURIComponent(data.name || data.Title || "")}`,
+        title: productName,
+        shopeePrice,
+        tiktokPrice,
+        shopeeLink, 
+        tiktokLink,
         sales: data.sales || data.Sales || "Laris"
       };
     });
   }, [ACCESSTRADE_ID]);
 
-  // --- LOGIKA FETCH DATABASE (PERBAIKAN URUTAN) ---
+  // --- 🔥 HANDLE KLIK TOMBOL TIKTOK (CLEAN SEARCH & DEEP LINK) ---
+  const handleTikTokBuy = async (e: React.MouseEvent, product: any) => {
+    e.preventDefault(); 
+
+    const url = product.tiktokLink;
+    
+    // 1. JIKA LINK AFFILIATE ADA (Official TikTok Affiliate)
+    if (url && (url.includes('atid.me') || url.includes('shop.tiktok'))) {
+        window.open(url, '_blank');
+        return;
+    }
+
+    // 2. JIKA LINK KOSONG (Produk Shopee -> Cari di TikTok)
+    
+    // A. BERSIHKAN JUDUL (Agar hasil search akurat)
+    let cleanTitle = product.title
+        .replace(/\[.*?\]/g, '')      // Hapus [Apapun]
+        .replace(/\(.*?\)/g, '')      // Hapus (Apapun)
+        .replace(/COD|Murah|Viral|Promo|Terbaru|2024|2025|Original|Resmi|BPOM/gi, '') // Hapus kata spam
+        .replace(/[^a-zA-Z0-9\s]/g, ' ') // Hapus simbol aneh
+        .trim()
+        .replace(/\s+/g, ' '); // Hapus spasi ganda
+
+    // Ambil maksimal 5 kata pertama saja (Search engine suka yang ringkas)
+    cleanTitle = cleanTitle.split(' ').slice(0, 5).join(' ');
+
+    const queryName = encodeURIComponent(cleanTitle);
+    
+    // B. COPY TO CLIPBOARD (Fitur bantuan user)
+    try {
+        await navigator.clipboard.writeText(cleanTitle);
+    } catch (err) {
+        console.log("Clipboard error");
+    }
+
+    // C. EKSEKUSI DEEP LINK
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+        // Coba Buka App TikTok Langsung
+        window.location.href = `snssdk1128://search?keyword=${queryName}`;
+        
+        // Fallback ke Web
+        setTimeout(() => {
+            window.open(`https://www.tiktok.com/search?q=${queryName}`, '_blank');
+        }, 2500);
+    } else {
+        // Di Laptop
+        window.open(`https://www.tiktok.com/search?q=${queryName}`, '_blank');
+    }
+  };
+
+  // --- FETCH DATABASE ---
   const fetchFromDB = useCallback(async (searchQuery: string, category: string) => {
     setLoading(true);
     try {
@@ -102,17 +182,12 @@ export default function Home() {
         : serverData;
 
       const processed = processProducts(filteredData);
-
-      // --- LOGIKA RANDOM PRODUK (PENTING!) ---
-      // Kita acak urutan produk setiap kali data ditarik
       const shuffledProducts = [...processed].sort(() => 0.5 - Math.random());
+      
       setProducts(shuffledProducts);
       
       if (category === "Semua" && !searchQuery) {
-        // Banner Carousel juga kita ambil 5 produk acak teratas
         setCarouselData(shuffledProducts.slice(0, 5));
-        
-        // RacunSection & VideoFeed juga ikut teracak otomatis
         const selectedRacun = shuffledProducts.slice(0, 10).map((item, idx) => ({
           ...item,
           platform: idx % 2 === 0 ? 'shopee' : 'tiktok',
@@ -157,33 +232,16 @@ export default function Home() {
             <h1 className="text-2xl font-bold tracking-tight text-[#ee4d2d]"><span className="text-black">Shox</span>ped</h1>
           </div>
           <div className="flex-1 w-full max-w-[1200px]">
-  <form onSubmit={(e) => e.preventDefault()} className="flex w-full shadow-sm relative group">
-      <input 
-        type="text" 
-        value={query} 
-        onChange={(e) => setQuery(e.target.value)} 
-        placeholder="Cari produk akurat..." 
-        className="w-full h-10 px-4 pr-10 bg-gray-50 border border-gray-300 rounded-l-md text-sm focus:outline-none focus:border-[#ee4d2d]"
-      />
-      
-      {/* TOMBOL SILANG (Hanya muncul jika ada teks/query) */}
-      {query && (
-        <button
-          type="button"
-          onClick={() => setQuery("")}
-          className="absolute right-[70px] top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-          </svg>
-        </button>
-      )}
-
-      <button type="button" className="h-10 px-6 bg-[#ee4d2d] rounded-r-md flex items-center justify-center shrink-0">
-        <IconSearch />
-      </button>
-  </form>
-</div>
+            <form onSubmit={(e) => e.preventDefault()} className="flex w-full shadow-sm relative group">
+                <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari produk akurat..." className="w-full h-10 px-4 pr-10 bg-gray-50 border border-gray-300 rounded-l-md text-sm focus:outline-none focus:border-[#ee4d2d]" />
+                {query && (
+                  <button type="button" onClick={() => setQuery("")} className="absolute right-[70px] top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+                  </button>
+                )}
+                <button type="button" className="h-10 px-6 bg-[#ee4d2d] rounded-r-md flex items-center justify-center shrink-0"><IconSearch /></button>
+            </form>
+          </div>
         </div>
       </header>
 
@@ -192,7 +250,6 @@ export default function Home() {
       </div>
 
       <div className='w-full max-w-[1200px] mx-auto px-4 mt-6'>
-        {/* SECTION CAROUSEL, RACUN, & VIDEO FEED */}
         {query === "" && activeCategory === "Semua" && (
           <div className="mb-2 flex flex-col gap-6">
               <Carousel featuredProducts={carouselData} />
@@ -200,15 +257,10 @@ export default function Home() {
           </div>
         )}
 
-        {/* KATEGORI STICKY */}
         <div className="sticky top-[65px] z-[50] bg-gray-50/95 backdrop-blur-sm py-4 -mx-4 px-4 overflow-x-auto no-scrollbar border-b border-gray-200 shadow-sm">
             <div className="flex gap-3">
             {categories.map((cat) => (
-                <button 
-                  key={cat} 
-                  onClick={() => { setActiveCategory(cat); setQuery(""); }} 
-                  className={`whitespace-nowrap px-5 py-2 rounded-full text-xs font-bold border shadow-sm ${activeCategory === cat ? 'bg-[#ee4d2d] text-white border-[#ee4d2d]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'}`}
-                >
+                <button key={cat} onClick={() => { setActiveCategory(cat); setQuery(""); }} className={`whitespace-nowrap px-5 py-2 rounded-full text-xs font-bold border shadow-sm ${activeCategory === cat ? 'bg-[#ee4d2d] text-white border-[#ee4d2d]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'}`}>
                   {cat}
                 </button>
             ))}
@@ -222,38 +274,60 @@ export default function Home() {
           </h2>
         </div>
 
-        {/* GRID PRODUK UTAMA */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {products.slice(0, visibleCount).map((item) => (
-            <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col relative group">
-              <div className="bg-gray-200 relative aspect-square overflow-hidden">
-                <img src={item.image} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
-                <button onClick={() => isInWishlist(item.id) ? removeFromWishlist(item.id) : addToWishlist(item)} className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full shadow-sm z-10">
-                  {isInWishlist(item.id) ? <IconHeartSolid /> : <IconHeartOutline />}
-                </button>
-              </div>
-              <div className="p-3 flex flex-col flex-grow">
-                <h3 className="text-xs font-medium text-gray-800 line-clamp-2 mb-2">{item.title}</h3>
-                
-                {/* INFO HARGA (FIX WARNA TIKTOK CYAN) */}
-                <div className="space-y-1 mb-3 bg-gray-50 p-2 rounded-lg -mx-1">
-                  <div className="flex justify-between text-[11px]">
-                    <span className="text-[#ee4d2d] font-bold">Shopee</span>
-                    <span className="font-bold">{formatRupiah(item.shopeePrice)}</span>
-                  </div>
-                  <div className="flex justify-between text-[11px] border-t border-gray-200 pt-1 mt-1">
-                    <span className="text-[gray-800] font-bold">TikTok</span> {/* FIX: Warna Biru TikTok */}
-                    <span className="font-bold">{formatRupiah(item.tiktokPrice)}</span>
-                  </div>
-                </div>
+          {products.slice(0, visibleCount).map((item) => {
+            // HITUNG SELISIH HARGA UNTUK BADGE HEMAT
+            const diff = Math.abs(item.shopeePrice - item.tiktokPrice);
+            const showBadge = diff > 5000; // Hanya muncul jika hemat > Rp 5.000
 
-                <div className="flex flex-row gap-1 mt-auto"> 
-                    <a href={item.shopeeLink} target="_blank" rel="noreferrer" className="flex-1 text-[10px] font-bold py-1.5 rounded text-center bg-[#ee4d2d] text-white">Shopee</a>
-                    <a href={item.tiktokLink} target="_blank" rel="noreferrer" className="flex-1 text-[10px] font-bold py-1.5 rounded text-center bg-black text-white">TikTok</a>
+            return (
+              <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col relative group">
+                <div className="bg-gray-200 relative aspect-square overflow-hidden">
+                  <img src={item.image} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
+                  
+                  {/* --- BADGE HEMAT (EKSKLUSIF) --- */}
+                  {showBadge && (
+                    <div className="absolute top-0 left-0 bg-green-600 text-white text-[10px] font-black px-2 py-1 rounded-br-lg z-20 shadow-md animate-pulse">
+                      HEMAT {formatRupiah(diff)}
+                    </div>
+                  )}
+
+                  <button onClick={() => isInWishlist(item.id) ? removeFromWishlist(item.id) : addToWishlist(item)} className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full shadow-sm z-10">
+                    {isInWishlist(item.id) ? <IconHeartSolid /> : <IconHeartOutline />}
+                  </button>
+                  
+                </div>
+                <div className="p-3 flex flex-col flex-grow">
+                  <h3 className="text-xs font-medium text-gray-800 line-clamp-2 mb-2">{item.title}</h3>
+                  
+                  <div className="space-y-1 mb-3 bg-gray-50 p-2 rounded-lg -mx-1">
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-[#ee4d2d] font-bold">Shopee</span>
+                      <span className="font-bold">{formatRupiah(item.shopeePrice)}</span>
+                    </div>
+                    <div className="flex justify-between text-[11px] border-t border-gray-200 pt-1 mt-1">
+                      <span className="text-black font-bold">TikTok</span>
+                      <span className="font-bold">{formatRupiah(item.tiktokPrice)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-row gap-1 mt-auto"> 
+                      {/* BUTTON SHOPEE (WEB) */}
+                      <a href={item.shopeeLink} target="_blank" rel="noreferrer" className="flex-1 text-[10px] font-bold py-1.5 rounded text-center bg-[#ee4d2d] text-white">Shopee</a>
+                      
+                      {/* BUTTON TIKTOK (APP DEEP LINK + CLEAN SEARCH) */}
+                      <a 
+                        href={item.tiktokLink || "#"} 
+                        onClick={(e) => handleTikTokBuy(e, item)}
+                        className="flex-1 text-[10px] font-bold py-1.5 rounded text-center bg-black text-white hover:bg-gray-800 transition block"
+                      >
+                        TikTok
+                      </a>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div ref={observerTarget} className="py-12 w-full flex justify-center">
