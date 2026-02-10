@@ -6,7 +6,7 @@ import { useWishlist } from '../../context/WishlistContext';
 import Footer from '../../components/Footer/Footer';
 
 // ----------------------------------------------------------------------
-// KOMPONEN ICONS & UI KECIL (TETAP ADA)
+// KOMPONEN ICONS & UI KECIL
 // ----------------------------------------------------------------------
 const IconBagLogo = () => (
   <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -40,8 +40,8 @@ const ShareButtonFix = () => {
 // MAIN COMPONENT
 // ----------------------------------------------------------------------
 export default function Home() {
-  const [allProducts, setAllProducts] = useState<any[]>([]); // Data Mentah (Backup)
-  const [products, setProducts] = useState<any[]>([]);       // Data Tampil
+  const [allProducts, setAllProducts] = useState<any[]>([]); 
+  const [products, setProducts] = useState<any[]>([]);       
   const [racunData, setRacunData] = useState<any[]>([]); 
   const [carouselData, setCarouselData] = useState<any[]>([]); 
   const [loading, setLoading] = useState(true);
@@ -55,7 +55,6 @@ export default function Home() {
   const ACCESSTRADE_ID = "002bc7002mjl"; 
   const hooks = ["Cek harga Termurah Shopee vs TikTok Shop dalam satu klik!", "Belanja anti-boncos!", "Shoxped Jalan Ninjamu."];
 
-  // Helper: Pastikan Link Selalu HTTPS (Solusi Localhost)
   const ensureAbsoluteUrl = (url: string) => {
       if (!url) return "";
       let cleanUrl = url.trim();
@@ -64,7 +63,6 @@ export default function Home() {
       return cleanUrl;
   };
 
-  // 1. LOGIKA UTAMA: PROSES DATA PRODUK
   const processProducts = useCallback((rawData: any[]) => {
     return rawData.map((data: any) => {
       const rawPrice = data.price || data.Price || "0";
@@ -76,29 +74,23 @@ export default function Home() {
 
       let shopeePrice, tiktokPrice, shopeeLink, tiktokLink;
       
-      // Deteksi Sumber Data
       const isTikTokSource = data.platform === 'tiktok' || dbLink.includes('tiktok') || dbLink.includes('vt.tiktok');
 
       if (isTikTokSource) {
           tiktokPrice = basePrice;
           shopeePrice = Math.floor(basePrice * 0.95); 
-          
-          tiktokLink = dbLink; // ✅ Link Asli Affiliate TikTok
-          
+          tiktokLink = dbLink; // Link Asli
           const searchUrl = `https://shopee.co.id/search?keyword=${encodeURIComponent(productName)}`;
           shopeeLink = `https://atid.me/adv.php?rk=${ACCESSTRADE_ID}&url=${encodeURIComponent(searchUrl)}`;
       } else {
-          // Sumber Shopee / AccessTrade
           shopeePrice = basePrice;
           tiktokPrice = Math.floor(basePrice * (1.05 + Math.random() * 0.15));
-          
           if (dbLink.includes("atid.me")) {
               shopeeLink = dbLink;
           } else {
               shopeeLink = `https://atid.me/adv.php?rk=${ACCESSTRADE_ID}&url=${encodeURIComponent(dbLink)}`;
           }
-
-          // ✅ GENERATE LINK SEARCH TIKTOK (Agar tombol tidak kosong/localhost)
+          // Default ke Search Web (akan di-intercept oleh handleTikTokBuy untuk Mobile)
           tiktokLink = `https://www.tiktok.com/search?q=${encodeURIComponent(productName)}`;
       }
 
@@ -115,19 +107,16 @@ export default function Home() {
     });
   }, [ACCESSTRADE_ID]);
 
-  // 2. FETCH DATA DARI FILE JSON (Solusi Build Size)
+  // Fetch Data
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        // Pastikan products.json sudah ada di folder public/
         const response = await fetch('/products.json');
         if (!response.ok) throw new Error("Gagal load data");
         const jsonData = await response.json();
         const processed = processProducts(jsonData);
-        
-        setAllProducts(processed); // Simpan master data
-        
+        setAllProducts(processed); 
         const shuffled = [...processed].sort(() => 0.5 - Math.random());
         setProducts(shuffled);
         setCarouselData(shuffled.slice(0, 5));
@@ -141,11 +130,10 @@ export default function Home() {
     loadData();
   }, [processProducts]);
 
-  // 3. FILTERING (Search & Category)
+  // Filtering
   useEffect(() => {
     if (allProducts.length === 0) return;
     let filtered = allProducts;
-
     if (activeCategory !== "Semua") {
         filtered = filtered.filter((p: any) => {
             const cat = p.category || p.Category || "";
@@ -153,40 +141,45 @@ export default function Home() {
             return cat === activeCategory; 
         });
     }
-
     if (query) {
         filtered = filtered.filter((p: any) => (p.name || p.Title || "").toLowerCase().includes(query.toLowerCase()));
     }
-
     setProducts(filtered);
     setVisibleCount(40);
   }, [query, activeCategory, allProducts]);
 
-  // 4. HANDLE KLIK TIKTOK (Deep Link)
+  // --- 🔥 PERBAIKAN DEEP LINK SEARCH ---
   const handleTikTokBuy = async (e: React.MouseEvent, product: any) => {
-    // Mobile logic only
+    // Mobile Only Interception
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
     if (isMobile) {
         e.preventDefault(); e.stopPropagation();
         
-        // Cek apakah ini link search hasil generate atau link affiliate asli
         const targetUrl = product.tiktokLink;
+        // Cek apakah ini link Search hasil generate?
         const isSearch = targetUrl.includes('tiktok.com/search');
 
         if (isSearch) {
-            // Logic Deep Link untuk Search
+            // BERSIHKAN KEYWORD
             let cleanTitle = product.title.replace(/[^a-zA-Z0-9\s]/g, ' ').trim().replace(/\s+/g, ' ').split(' ').slice(0, 5).join(' ');
             const queryName = encodeURIComponent(cleanTitle);
             
-            window.location.href = `tiktok://search?q=${queryName}`;
-            setTimeout(() => { if (!document.hidden) window.location.href = targetUrl; }, 1500);
+            // COPY KEYWORD (Jaga-jaga)
+            if (navigator && navigator.clipboard) { try { await navigator.clipboard.writeText(cleanTitle); } catch (err) {} }
+
+            // 🔥 DISINI KUNCINYA: 'q=' diganti jadi 'keyword=' untuk App Deep Link
+            const appDeepLink = `tiktok://search?keyword=${queryName}`;
+            const webFallback = `https://www.tiktok.com/search?q=${queryName}`;
+
+            window.location.href = appDeepLink;
+            setTimeout(() => { if (!document.hidden) window.location.href = webFallback; }, 1500);
         } else {
-            // Logic Deep Link untuk Direct URL
+            // Jika Link Affiliate Asli (Direct)
             window.location.href = targetUrl;
         }
     }
-    // Desktop: biarkan <a> tag bekerja (open new tab)
+    // Desktop: Normal behavior (New Tab)
   };
 
   useEffect(() => { const interval = setInterval(() => { setHookIndex((p) => (p + 1) % hooks.length); }, 4500); return () => clearInterval(interval); }, [hooks.length]);
@@ -197,7 +190,6 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 pb-24 font-sans text-gray-800">
-      {/* HEADER */}
       <header className="sticky top-0 z-[60] bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-[1200px] mx-auto px-4 py-3 flex items-center justify-between gap-4"> 
           <div className="hidden md:flex items-center gap-1 cursor-pointer shrink-0" onClick={() => window.location.reload()}>
@@ -215,7 +207,6 @@ export default function Home() {
 
       <div className="bg-white py-3 border-b border-gray-100 text-center px-4"><p className="text-sm font-semibold text-gray-700">💡 {hooks[hookIndex]}</p></div>
 
-      {/* MAIN CONTENT */}
       <div className='w-full max-w-[1200px] mx-auto px-4 mt-6'>
         {query === "" && activeCategory === "Semua" && (<div className="mb-2 flex flex-col gap-6"><Carousel featuredProducts={carouselData} /><RacunSection data={racunData} /></div>)}
 
@@ -225,7 +216,6 @@ export default function Home() {
 
         <div className="flex items-center gap-2 mb-6 mt-6"><span className="text-xl animate-bounce">🎁</span><h2 className="font-bold text-gray-800 text-lg">{loading ? "Membuka Gudang Promo..." : (query || activeCategory !== "Semua" ? `Hasil Akurat: ${query || activeCategory}` : "Rekomendasi Shopee vs Tiktok")}</h2></div>
 
-        {/* PRODUCT GRID */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {products.slice(0, visibleCount).map((item) => {
             const diff = Math.abs(item.shopeePrice - item.tiktokPrice);
@@ -244,10 +234,7 @@ export default function Home() {
                     <div className="flex justify-between text-[11px] border-t border-gray-200 pt-1 mt-1"><span className="text-black font-bold">TikTok</span><span className="font-bold">{formatRupiah(item.tiktokPrice)}</span></div>
                   </div>
                   <div className="flex flex-row gap-1 mt-auto"> 
-                      {/* LINK SHOPEE */}
                       <a href={item.shopeeLink} target="_blank" rel="noreferrer" className="flex-1 text-[10px] font-bold py-1.5 rounded text-center bg-[#ee4d2d] text-white hover:bg-orange-600 transition">Shopee</a>
-                      
-                      {/* LINK TIKTOK */}
                       <a 
                         href={item.tiktokLink} 
                         target="_blank"
@@ -258,7 +245,6 @@ export default function Home() {
                         TikTok
                       </a>
                   </div>
-                  {/* DISCLAIMER LENGKAP */}
                   <p className="text-[8px] text-gray-400 text-center mt-2 leading-tight">Harga dapat berubah sewaktu-waktu. Cek harga real-time, klik tombol Shopee atau Tiktok diatas.</p>
                 </div>
               </div>
