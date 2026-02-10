@@ -1,11 +1,12 @@
-import { db } from '../../firebase';
-import { collection, getDocs, query as firestoreQuery, where } from 'firebase/firestore';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Carousel from '../../components/Carousel'; 
 import VideoFeed from '../../components/VideoFeed'; 
 import RacunSection from '../../components/RacunSection';
 import { useWishlist } from '../../context/WishlistContext';
 import Footer from '../../components/Footer/Footer';
+
+// --- GUDANG DATA (JSON LOKAL) ---
+import localProductsData from '../../data/products.json'; 
 
 // --- ICONS & LOGO ---
 const IconBagLogo = () => (
@@ -15,7 +16,6 @@ const IconBagLogo = () => (
     <path d="M38 55C38 55 42 65 50 65C58 65 62 55 62 55" stroke="white" strokeWidth="6" strokeLinecap="round"/>
   </svg>
 );
-
 const IconSearch = () => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-white"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>);
 const IconHeartOutline = () => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-gray-400"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>);
 const IconHeartSolid = () => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-[#ee4d2d]"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" /></svg>);
@@ -56,46 +56,58 @@ export default function Home() {
     "Shoxped Jalan Ninjamu untuk Cari harga Termurah Shopee & TikTok."
   ];
 
-  // --- LOGIKA OMNIVORA (HYBRID) ---
+  // --- HELPER: PASTIKAN LINK SELALU HTTPS (ANTI LOCALHOST) ---
+  const ensureAbsoluteUrl = (url: string) => {
+      if (!url) return "";
+      let cleanUrl = url.trim();
+      if (cleanUrl.startsWith("//")) return "https:" + cleanUrl;
+      if (!cleanUrl.startsWith("http")) return "https://" + cleanUrl;
+      return cleanUrl;
+  };
+
   const processProducts = useCallback((rawData: any[]) => {
     return rawData.map((data: any) => {
-      // Pastikan harga adalah angka murni
       const rawPrice = data.price || data.Price || "0";
       const basePrice = typeof rawPrice === 'number' ? rawPrice : parseInt(rawPrice.toString().replace(/[^0-9]/g, '')) || 0;
-      
       const productName = data.name || data.Title || "Produk";
-      const dbLink = data.link || data['Affiliate Link'] || "";
+      
+      // Ambil link mentah dari database
+      let dbLink = data.link || data['Affiliate Link'] || "";
+      dbLink = ensureAbsoluteUrl(dbLink); 
 
       let shopeePrice, tiktokPrice, shopeeLink, tiktokLink;
 
-      // ==========================================
-      // JIKA DATA DARI TIKTOK (JSON)
-      // ==========================================
-      if (data.platform === 'tiktok') {
+      // --- LOGIKA UTAMA (AFFILIATE FIRST) ---
+
+      // CEK 1: APAKAH INI LINK TIKTOK ASLI? (Prioritas Utama)
+      // Ciri: platform 'tiktok' ATAU ada kata 'tiktok' di link
+      const isTikTokSource = data.platform === 'tiktok' || dbLink.includes('tiktok') || dbLink.includes('vt.tiktok');
+
+      if (isTikTokSource) {
           tiktokPrice = basePrice;
           shopeePrice = Math.floor(basePrice * 0.95); 
           
-          // LINK TIKTOK: Pakai link resmi dari file JSON (sudah affiliate atid.me)
+          // 🔥 GUNAKAN LINK AFFILIATE TIKTOK YANG ADA DI DATABASE
           tiktokLink = dbLink; 
-
-          // LINK SHOPEE: Search Shopee + BUNGKUS ACCESSTRADE
+          
+          // Link Shopee kita generate Search Link
           const searchUrl = `https://shopee.co.id/search?keyword=${encodeURIComponent(productName)}`;
           shopeeLink = `https://atid.me/adv.php?rk=${ACCESSTRADE_ID}&url=${encodeURIComponent(searchUrl)}`;
       } 
-      
-      // ==========================================
-      // JIKA DATA DARI SHOPEE (CSV LAMA)
-      // ==========================================
       else {
+          // SUMBER DARI SHOPEE / LAZADA / DLL
           shopeePrice = basePrice;
-          const randomMarkup = 1.05 + Math.random() * 0.15;
-          tiktokPrice = Math.floor(basePrice * randomMarkup); 
-
-          // LINK SHOPEE: Pakai link affiliate asli
-          shopeeLink = dbLink.includes("atid.me") ? dbLink : `https://atid.me/adv.php?rk=${ACCESSTRADE_ID}&url=${encodeURIComponent(dbLink)}`;
+          tiktokPrice = Math.floor(basePrice * (1.05 + Math.random() * 0.15));
           
-          // LINK TIKTOK: Generate Search Link (Nanti ditangani handleTikTokBuy)
-          tiktokLink = `https://www.tiktok.com/search?q=${encodeURIComponent(productName)}`;
+          // Gunakan Link Shopee Affiliate
+          if (dbLink.includes("atid.me")) {
+              shopeeLink = dbLink;
+          } else {
+              shopeeLink = `https://atid.me/adv.php?rk=${ACCESSTRADE_ID}&url=${encodeURIComponent(dbLink)}`;
+          }
+
+          // Link TikTok KOSONG -> Trigger Search Algorithm
+          tiktokLink = ""; 
       }
 
       return {
@@ -104,108 +116,106 @@ export default function Home() {
         title: productName,
         shopeePrice,
         tiktokPrice,
-        shopeeLink, 
-        tiktokLink,
+        shopeeLink: ensureAbsoluteUrl(shopeeLink),
+        tiktokLink: tiktokLink, // Bisa URL Asli (https://...) atau Kosong ("")
         sales: data.sales || data.Sales || "Laris"
       };
     });
   }, [ACCESSTRADE_ID]);
 
-  // --- 🔥 HANDLE KLIK TOMBOL TIKTOK (CLEAN SEARCH & DEEP LINK) ---
+  // --- HANDLE KLIK TOMBOL TIKTOK ---
   const handleTikTokBuy = async (e: React.MouseEvent, product: any) => {
     e.preventDefault(); 
+    e.stopPropagation();
 
-    const url = product.tiktokLink;
-    
-    // 1. JIKA LINK AFFILIATE ADA (Official TikTok Affiliate)
-    if (url && (url.includes('atid.me') || url.includes('shop.tiktok'))) {
-        window.open(url, '_blank');
+    // 1. JIKA ADA LINK TIKTOK AFFILIATE (Database) -> BUKA LANGSUNG!
+    // Ini menangani link seperti shop.tiktok.com atau atid.me yang mengarah ke TikTok
+    if (product.tiktokLink && product.tiktokLink.length > 10) {
+        // Gunakan location.href agar di HP bisa deep-link ke App TikTok
+        window.location.href = ensureAbsoluteUrl(product.tiktokLink);
         return;
     }
 
-    // 2. JIKA LINK KOSONG (Produk Shopee -> Cari di TikTok)
-    
-    // A. BERSIHKAN JUDUL (Agar hasil search akurat)
+    // 2. JIKA TIDAK ADA LINK -> LAKUKAN PENCARIAN (SEARCH)
+    // Ini hanya untuk produk yang asalnya dari Shopee tapi user ingin cari di TikTok
     let cleanTitle = product.title
-        .replace(/\[.*?\]/g, '')      // Hapus [Apapun]
-        .replace(/\(.*?\)/g, '')      // Hapus (Apapun)
-        .replace(/COD|Murah|Viral|Promo|Terbaru|2024|2025|Original|Resmi|BPOM/gi, '') // Hapus kata spam
-        .replace(/[^a-zA-Z0-9\s]/g, ' ') // Hapus simbol aneh
+        .replace(/\[.*?\]/g, '')      
+        .replace(/\(.*?\)/g, '')      
+        .replace(/COD|Murah|Viral|Promo|Terbaru|2024|2025|Original|Resmi|BPOM/gi, '') 
+        .replace(/[^a-zA-Z0-9\s]/g, ' ') 
         .trim()
-        .replace(/\s+/g, ' '); // Hapus spasi ganda
+        .replace(/\s+/g, ' '); 
 
-    // Ambil maksimal 5 kata pertama saja (Search engine suka yang ringkas)
     cleanTitle = cleanTitle.split(' ').slice(0, 5).join(' ');
-
     const queryName = encodeURIComponent(cleanTitle);
     
-    // B. COPY TO CLIPBOARD (Fitur bantuan user)
-    try {
-        await navigator.clipboard.writeText(cleanTitle);
-    } catch (err) {
-        console.log("Clipboard error");
+    if (navigator && navigator.clipboard) {
+        try { await navigator.clipboard.writeText(cleanTitle); } catch (err) {}
     }
 
-    // C. EKSEKUSI DEEP LINK
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     if (isMobile) {
-        // Coba Buka App TikTok Langsung
-        window.location.href = `snssdk1128://search?keyword=${queryName}`;
-        
-        // Fallback ke Web
+        // Skema App Deep Link
+        const appLink = `tiktok://search?q=${queryName}`; 
+        const webLink = `https://www.tiktok.com/search?q=${queryName}`;
+
+        window.location.href = appLink;
+
         setTimeout(() => {
-            window.open(`https://www.tiktok.com/search?q=${queryName}`, '_blank');
-        }, 2500);
+            if (!document.hidden) {
+                window.location.href = webLink;
+            }
+        }, 1500);
     } else {
-        // Di Laptop
         window.open(`https://www.tiktok.com/search?q=${queryName}`, '_blank');
     }
   };
 
-  // --- FETCH DATABASE ---
-  const fetchFromDB = useCallback(async (searchQuery: string, category: string) => {
+  // --- FETCH & FILTER DATA ---
+  const fetchFromLocal = useCallback((searchQuery: string, category: string) => {
     setLoading(true);
-    try {
-      const productsRef = collection(db, "products");
-      let q = firestoreQuery(productsRef);
+    setTimeout(() => {
+        let filteredData = localProductsData;
 
-      if (category !== "Semua") {
-        q = firestoreQuery(productsRef, where("category", "==", category));
-      }
+        // Filter Kategori
+        if (category !== "Semua") {
+             filteredData = filteredData.filter((p: any) => {
+                const cat = p.category || p.Category || "";
+                if(category === "Tas Wanita" && cat === "601450") return true;
+                return cat === category; 
+             });
+        }
 
-      const querySnapshot = await getDocs(q);
-      const serverData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      const filteredData = searchQuery 
-        ? serverData.filter((p: any) => (p.name || p.Title || "").toLowerCase().includes(searchQuery.toLowerCase()))
-        : serverData;
+        // Filter Search Query
+        if (searchQuery) {
+            filteredData = filteredData.filter((p: any) => 
+                (p.name || p.Title || "").toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
 
-      const processed = processProducts(filteredData);
-      const shuffledProducts = [...processed].sort(() => 0.5 - Math.random());
-      
-      setProducts(shuffledProducts);
-      
-      if (category === "Semua" && !searchQuery) {
-        setCarouselData(shuffledProducts.slice(0, 5));
-        const selectedRacun = shuffledProducts.slice(0, 10).map((item, idx) => ({
-          ...item,
-          platform: idx % 2 === 0 ? 'shopee' : 'tiktok',
-          price: idx % 2 === 0 ? item.shopeePrice : item.tiktokPrice
-        }));
-        setRacunData(selectedRacun);
-      }
-    } catch (error) { 
-      console.error("Firestore Fetch Error:", error); 
-    } finally { 
-      setLoading(false); 
-    }
+        const processed = processProducts(filteredData);
+        const shuffledProducts = [...processed].sort(() => 0.5 - Math.random());
+
+        setProducts(shuffledProducts);
+
+        if (category === "Semua" && !searchQuery) {
+            setCarouselData(shuffledProducts.slice(0, 5));
+            const selectedRacun = shuffledProducts.slice(0, 10).map((item, idx) => ({
+                ...item,
+                platform: idx % 2 === 0 ? 'shopee' : 'tiktok',
+                price: idx % 2 === 0 ? item.shopeePrice : item.tiktokPrice
+            }));
+            setRacunData(selectedRacun);
+        }
+        setLoading(false);
+    }, 500); 
   }, [processProducts]);
 
   useEffect(() => {
-    const timer = setTimeout(() => { setVisibleCount(40); fetchFromDB(query, activeCategory); }, 500);
-    return () => clearTimeout(timer);
-  }, [query, activeCategory, fetchFromDB]);
+    setVisibleCount(40); 
+    fetchFromLocal(query, activeCategory);
+  }, [query, activeCategory, fetchFromLocal]);
 
   useEffect(() => {
     const interval = setInterval(() => { setHookIndex((p) => (p + 1) % hooks.length); }, 4500);
@@ -221,7 +231,7 @@ export default function Home() {
   }, [loading]);
 
   const formatRupiah = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
-  const categories = ["Semua", "Tas Wanita", "Sepatu Wanita", "Sepatu Pria", "Aksesoris Fashion", "Fashion Bayi & Anak", "Makanan & Minuman", "Pakaian Wanita", "Perawatan & Kecantikan", "Handphone & Aksesoris", "Perlengkapan Rumah"];
+  const categories = ["Semua", "Tas Wanita", "Fashion Muslim", "Sepatu Wanita", "Sepatu Pria", "Aksesoris Fashion", "Fashion Bayi & Anak", "Makanan & Minuman", "Pakaian Wanita", "Perawatan & Kecantikan", "Handphone & Aksesoris", "Perlengkapan Rumah"];
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 pb-24 font-sans text-gray-800">
@@ -270,22 +280,20 @@ export default function Home() {
         <div className="flex items-center gap-2 mb-6 mt-6">
           <span className="text-xl animate-bounce">🎁</span>
           <h2 className="font-bold text-gray-800 text-lg">
-            {loading ? "Menyaring Database..." : (query || activeCategory !== "Semua" ? `Hasil Akurat: ${query || activeCategory}` : "Rekomendasi Shopee vs Tiktok")}
+            {loading ? "Membuka Gudang Promo..." : (query || activeCategory !== "Semua" ? `Hasil Akurat: ${query || activeCategory}` : "Rekomendasi Shopee vs Tiktok")}
           </h2>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {products.slice(0, visibleCount).map((item) => {
-            // HITUNG SELISIH HARGA UNTUK BADGE HEMAT
             const diff = Math.abs(item.shopeePrice - item.tiktokPrice);
-            const showBadge = diff > 5000; // Hanya muncul jika hemat > Rp 5.000
+            const showBadge = diff > 5000; 
 
             return (
               <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col relative group">
                 <div className="bg-gray-200 relative aspect-square overflow-hidden">
                   <img src={item.image} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
                   
-                  {/* --- BADGE HEMAT (EKSKLUSIF) --- */}
                   {showBadge && (
                     <div className="absolute top-0 left-0 bg-green-600 text-white text-[10px] font-black px-2 py-1 rounded-br-lg z-20 shadow-md animate-pulse">
                       HEMAT {formatRupiah(diff)}
@@ -312,18 +320,23 @@ export default function Home() {
                   </div>
 
                   <div className="flex flex-row gap-1 mt-auto"> 
-                      {/* BUTTON SHOPEE (WEB) */}
-                      <a href={item.shopeeLink} target="_blank" rel="noreferrer" className="flex-1 text-[10px] font-bold py-1.5 rounded text-center bg-[#ee4d2d] text-white">Shopee</a>
+                      {/* 🔥 LINK SHOPEE */}
+                      <a href={item.shopeeLink} target="_blank" rel="noreferrer" className="flex-1 text-[10px] font-bold py-1.5 rounded text-center bg-[#ee4d2d] text-white hover:bg-orange-600 transition">Shopee</a>
                       
-                      {/* BUTTON TIKTOK (APP DEEP LINK + CLEAN SEARCH) */}
-                      <a 
-                        href={item.tiktokLink || "#"} 
+                      {/* 🔥 LINK TIKTOK */}
+                      <div 
                         onClick={(e) => handleTikTokBuy(e, item)}
-                        className="flex-1 text-[10px] font-bold py-1.5 rounded text-center bg-black text-white hover:bg-gray-800 transition block"
+                        className="flex-1 text-[10px] font-bold py-1.5 rounded text-center bg-black text-white hover:bg-gray-800 transition cursor-pointer select-none"
                       >
                         TikTok
-                      </a>
+                      </div>
                   </div>
+                  
+                  {/* DISCLAIMER LENGKAP */}
+                  <p className="text-[8px] text-gray-400 text-center mt-2 leading-tight">
+                    Harga dapat berubah sewaktu-waktu. Cek harga real-time, klik tombol Shopee atau Tiktok diatas.
+                  </p>
+
                 </div>
               </div>
             );
