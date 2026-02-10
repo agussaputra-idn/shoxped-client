@@ -6,7 +6,7 @@ import { useWishlist } from '../../context/WishlistContext';
 import Footer from '../../components/Footer/Footer';
 
 // ----------------------------------------------------------------------
-// KOMPONEN ICONS & UI KECIL
+// 1. KOMPONEN ICONS (JANGAN DIHAPUS)
 // ----------------------------------------------------------------------
 const IconBagLogo = () => (
   <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -37,7 +37,20 @@ const ShareButtonFix = () => {
 };
 
 // ----------------------------------------------------------------------
-// MAIN COMPONENT
+// 2. HELPER: FISHER-YATES SHUFFLE (PENGACAK)
+// ----------------------------------------------------------------------
+function shuffleArray(array: any[]) {
+  let currentIndex = array.length,  randomIndex;
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+  }
+  return array;
+}
+
+// ----------------------------------------------------------------------
+// 3. MAIN COMPONENT (BERSIH TANPA DEBUG PANEL)
 // ----------------------------------------------------------------------
 export default function Home() {
   const [allProducts, setAllProducts] = useState<any[]>([]); 
@@ -72,6 +85,14 @@ export default function Home() {
       let dbLink = data.link || data['Affiliate Link'] || "";
       dbLink = ensureAbsoluteUrl(dbLink); 
 
+      // 🔥 FIX GAMBAR: Cek semua kemungkinan key gambar
+      let imageUrl = data.image || data.Image || data['Image URL'] || data['img'] || data['image_url'] || "";
+      
+      // Fallback Image jika kosong
+      if (!imageUrl || imageUrl.length < 5) {
+          imageUrl = "https://placehold.co/400?text=No+Image"; 
+      }
+
       let shopeePrice, tiktokPrice, shopeeLink, tiktokLink;
       
       const isTikTokSource = data.platform === 'tiktok' || dbLink.includes('tiktok') || dbLink.includes('vt.tiktok');
@@ -79,7 +100,7 @@ export default function Home() {
       if (isTikTokSource) {
           tiktokPrice = basePrice;
           shopeePrice = Math.floor(basePrice * 0.95); 
-          tiktokLink = dbLink; // Link Asli
+          tiktokLink = dbLink; 
           const searchUrl = `https://shopee.co.id/search?keyword=${encodeURIComponent(productName)}`;
           shopeeLink = `https://atid.me/adv.php?rk=${ACCESSTRADE_ID}&url=${encodeURIComponent(searchUrl)}`;
       } else {
@@ -90,7 +111,6 @@ export default function Home() {
           } else {
               shopeeLink = `https://atid.me/adv.php?rk=${ACCESSTRADE_ID}&url=${encodeURIComponent(dbLink)}`;
           }
-          // Default ke Search Web (akan di-intercept oleh handleTikTokBuy untuk Mobile)
           tiktokLink = `https://www.tiktok.com/search?q=${encodeURIComponent(productName)}`;
       }
 
@@ -98,6 +118,8 @@ export default function Home() {
         ...data,
         id: data.id || Math.random().toString(36).substr(2, 9),
         title: productName,
+        price: basePrice,
+        image: imageUrl, 
         shopeePrice,
         tiktokPrice,
         shopeeLink: ensureAbsoluteUrl(shopeeLink),
@@ -107,33 +129,43 @@ export default function Home() {
     });
   }, [ACCESSTRADE_ID]);
 
-  // Fetch Data
+  // LOAD DATA & SHUFFLE
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
         const response = await fetch('/products.json');
         if (!response.ok) throw new Error("Gagal load data");
+        
         const jsonData = await response.json();
         const processed = processProducts(jsonData);
-        setAllProducts(processed); 
-        const shuffled = [...processed].sort(() => 0.5 - Math.random());
-        setProducts(shuffled);
-        setCarouselData(shuffled.slice(0, 5));
-        setRacunData(shuffled.slice(0, 10).map((item, idx) => ({...item, platform: idx%2===0?'shopee':'tiktok', price: idx%2===0?item.shopeePrice:item.tiktokPrice})));
+        
+        // 🔥 ACAK DATA (SHUFFLE) SETIAP KALI LOAD
+        const randomizedData = shuffleArray([...processed]); 
+        
+        setAllProducts(randomizedData); 
+        setProducts(randomizedData);
+        setCarouselData(randomizedData.slice(0, 5));
+        setRacunData(randomizedData.slice(10, 20).map((item, idx) => ({
+            ...item, 
+            platform: idx % 2 === 0 ? 'shopee' : 'tiktok', 
+            price: idx % 2 === 0 ? item.shopeePrice : item.tiktokPrice
+        })));
+        
         setLoading(false);
       } catch (error) {
-        console.error("Error:", error);
+        console.error("Error loading products:", error);
         setLoading(false);
       }
     };
     loadData();
   }, [processProducts]);
 
-  // Filtering
+  // FILTERING
   useEffect(() => {
     if (allProducts.length === 0) return;
-    let filtered = allProducts;
+    let filtered = allProducts; 
+
     if (activeCategory !== "Semua") {
         filtered = filtered.filter((p: any) => {
             const cat = p.category || p.Category || "";
@@ -141,45 +173,32 @@ export default function Home() {
             return cat === activeCategory; 
         });
     }
+
     if (query) {
         filtered = filtered.filter((p: any) => (p.name || p.Title || "").toLowerCase().includes(query.toLowerCase()));
     }
+
     setProducts(filtered);
     setVisibleCount(40);
   }, [query, activeCategory, allProducts]);
 
-  // --- 🔥 PERBAIKAN DEEP LINK SEARCH ---
   const handleTikTokBuy = async (e: React.MouseEvent, product: any) => {
-    // Mobile Only Interception
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
     if (isMobile) {
         e.preventDefault(); e.stopPropagation();
-        
         const targetUrl = product.tiktokLink;
-        // Cek apakah ini link Search hasil generate?
         const isSearch = targetUrl.includes('tiktok.com/search');
 
         if (isSearch) {
-            // BERSIHKAN KEYWORD
             let cleanTitle = product.title.replace(/[^a-zA-Z0-9\s]/g, ' ').trim().replace(/\s+/g, ' ').split(' ').slice(0, 5).join(' ');
             const queryName = encodeURIComponent(cleanTitle);
             
-            // COPY KEYWORD (Jaga-jaga)
-            if (navigator && navigator.clipboard) { try { await navigator.clipboard.writeText(cleanTitle); } catch (err) {} }
-
-            // 🔥 DISINI KUNCINYA: 'q=' diganti jadi 'keyword=' untuk App Deep Link
-            const appDeepLink = `tiktok://search?keyword=${queryName}`;
-            const webFallback = `https://www.tiktok.com/search?q=${queryName}`;
-
-            window.location.href = appDeepLink;
-            setTimeout(() => { if (!document.hidden) window.location.href = webFallback; }, 1500);
+            window.location.href = `tiktok://search?keyword=${queryName}`;
+            setTimeout(() => { if (!document.hidden) window.location.href = targetUrl; }, 1500);
         } else {
-            // Jika Link Affiliate Asli (Direct)
             window.location.href = targetUrl;
         }
     }
-    // Desktop: Normal behavior (New Tab)
   };
 
   useEffect(() => { const interval = setInterval(() => { setHookIndex((p) => (p + 1) % hooks.length); }, 4500); return () => clearInterval(interval); }, [hooks.length]);
@@ -223,7 +242,13 @@ export default function Home() {
             return (
               <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col relative group">
                 <div className="bg-gray-200 relative aspect-square overflow-hidden">
-                  <img src={item.image} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
+                  <img 
+                    src={item.image} 
+                    alt={item.title} 
+                    className="w-full h-full object-cover" 
+                    loading="lazy"
+                    onError={(e: any) => { e.target.onerror = null; e.target.src = "https://placehold.co/400?text=Gambar+Rusak"; }} 
+                  />
                   {showBadge && (<div className="absolute top-0 left-0 bg-green-600 text-white text-[10px] font-black px-2 py-1 rounded-br-lg z-20 shadow-md animate-pulse">HEMAT {formatRupiah(diff)}</div>)}
                   <button onClick={() => isInWishlist(item.id) ? removeFromWishlist(item.id) : addToWishlist(item)} className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full shadow-sm z-10">{isInWishlist(item.id) ? <IconHeartSolid /> : <IconHeartOutline />}</button>
                 </div>
