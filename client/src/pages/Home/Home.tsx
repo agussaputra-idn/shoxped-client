@@ -205,7 +205,7 @@ export default function Home() {
   useEffect(() => { const observer = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && !loading) setVisibleCount((prev) => prev + 40); }, { threshold: 0.1 }); if (observerTarget.current) observer.observe(observerTarget.current); return () => { if (observerTarget.current) observer.unobserve(observerTarget.current); }; }, [loading]);
 
   const formatRupiah = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
-  const categories = ["Semua", "Tas Wanita", "Fashion Muslim", "Sepatu Wanita", "Sepatu Pria", "Aksesoris Fashion", "Fashion Bayi & Anak", "Makanan & Minuman", "Pakaian Wanita", "Perawatan & Kecantikan", "Handphone & Aksesoris", "Perlengkapan Rumah"];
+  const categories = ["Semua", "Fashion Muslim","Pakaian Wanita", "Perawatan & Kecantikan", "Tas Wanita", "Handphone & Aksesoris", "Elektronik", "Sepatu Wanita", "Pakaian Pria", "Sepatu Pria", "Aksesoris Fashion", "Fashion Bayi & Anak", "Makanan & Minuman", "Perlengkapan Rumah"];
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 pb-24 font-sans text-gray-800">

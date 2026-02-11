@@ -9,7 +9,7 @@ import Papa from 'papaparse';
 // KATEGORI WAJIB SAMA PERSIS DENGAN SHOXPED
 const CATEGORY_LIST = [
     "Tas Wanita", "Sepatu Wanita", "Sepatu Pria", "Aksesoris Fashion", 
-    "Fashion Bayi & Anak", "Makanan & Minuman", "Pakaian Wanita", 
+    "Fashion Bayi & Anak", "Makanan & Minuman", "Pakaian Wanita", "Pakaian Pria", "Elektronik",
     "Perawatan & Kecantikan", "Handphone & Aksesoris", "Perlengkapan Rumah", "Fashion Muslim"
 ];
 
@@ -27,6 +27,8 @@ const detectCategoryAuto = (title: string) => {
     if (tLower.includes('serum') || tLower.includes('cream') || tLower.includes('sabun') || tLower.includes('skincare') || tLower.includes('lipstik') || tLower.includes('parfum')) return "Perawatan & Kecantikan";
     if (tLower.includes('bayi') || tLower.includes('anak') || tLower.includes('kids')) return "Fashion Bayi & Anak";
     if (tLower.includes('makanan') || tLower.includes('snack') || tLower.includes('kripik') || tLower.includes('basreng')) return "Makanan & Minuman";
+    if (tLower.includes('tv ') || tLower.includes('televisi') || tLower.includes('kulkas') || tLower.includes('mesin cuci') || tLower.includes('kipas angin') || tLower.includes('laptop') || tLower.includes('notebook') || tLower.includes('kamera') || tLower.includes('drone') || tLower.includes('speaker') || tLower.includes('printer') || tLower.includes('proyektor')) return "Elektronik";
+    if (tLower.includes('kemeja pria') || tLower.includes('kaos pria') || tLower.includes('celana pria') || tLower.includes('jaket pria') || tLower.includes('batik pria') || tLower.includes('jas') || tLower.includes('boxer') || tLower.includes('celana pendek pria') || tLower.includes('hoodie pria')) return "Pakaian Pria";
     
     return "Aksesoris Fashion"; // Default terakhir
 };
