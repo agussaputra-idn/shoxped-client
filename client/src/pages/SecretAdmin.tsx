@@ -8,7 +8,7 @@ import Papa from 'papaparse';
 
 // KATEGORI WAJIB SAMA PERSIS DENGAN SHOXPED
 const CATEGORY_LIST = [
-    "Tas Wanita", "Sepatu Wanita", "Sepatu Pria", "Aksesoris Fashion", 
+    "Tas Wanita", "Sepatu Wanita", "Otomotif", "Komputer & Aksesoris", "Sepatu Pria", "Aksesoris Fashion", 
     "Fashion Bayi & Anak", "Makanan & Minuman", "Pakaian Wanita", "Pakaian Pria", "Elektronik",
     "Perawatan & Kecantikan", "Handphone & Aksesoris", "Perlengkapan Rumah", "Fashion Muslim"
 ];
@@ -29,7 +29,9 @@ const detectCategoryAuto = (title: string) => {
     if (tLower.includes('makanan') || tLower.includes('snack') || tLower.includes('kripik') || tLower.includes('basreng')) return "Makanan & Minuman";
     if (tLower.includes('tv ') || tLower.includes('televisi') || tLower.includes('kulkas') || tLower.includes('mesin cuci') || tLower.includes('kipas angin') || tLower.includes('laptop') || tLower.includes('notebook') || tLower.includes('kamera') || tLower.includes('drone') || tLower.includes('speaker') || tLower.includes('printer') || tLower.includes('proyektor')) return "Elektronik";
     if (tLower.includes('kemeja pria') || tLower.includes('kaos pria') || tLower.includes('celana pria') || tLower.includes('jaket pria') || tLower.includes('batik pria') || tLower.includes('jas') || tLower.includes('boxer') || tLower.includes('celana pendek pria') || tLower.includes('hoodie pria')) return "Pakaian Pria";
-    
+    if (tLower.includes('laptop') || tLower.includes('notebook') || tLower.includes('macbook') || tLower.includes('asus') || tLower.includes('acer') || tLower.includes('lenovo') || tLower.includes('mouse') || tLower.includes('keyboard') || tLower.includes('monitor') || tLower.includes('pc gaming') || tLower.includes('flashdisk') || tLower.includes('harddisk') || tLower.includes('ssd') || tLower.includes('ram ') || tLower.includes('vga') || tLower.includes('motherboard') || tLower.includes('printer') || tLower.includes('tinta') || tLower.includes('wifi') || tLower.includes('router') || tLower.includes('modem') || tLower.includes('pad')) return "Komputer & Aksesoris";
+    if (tLower.includes('helm') || tLower.includes('motor') || tLower.includes('mobil') || tLower.includes('oli ') || tLower.includes('ban ') || tLower.includes('knalpot') || tLower.includes('spion') || tLower.includes('sarung tangan') || tLower.includes('jas hujan') || tLower.includes('aki ') || tLower.includes('kampas') || tLower.includes('busi') || tLower.includes('karburator') || tLower.includes('sticker') || tLower.includes('stiker') || tLower.includes('dashboard')) return "Otomotif";
+
     return "Aksesoris Fashion"; // Default terakhir
 };
 
