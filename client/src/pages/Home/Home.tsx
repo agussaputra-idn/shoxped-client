@@ -221,7 +221,12 @@ export default function Home() {
     "Pakaian Pria",          // ✅ Tambahan
     "Elektronik",            // ✅ Tambahan
     "Otomotif",              // ✅ Tambahan
-    "Komputer & Aksesoris"   // ✅ Tambahan
+    "Komputer & Aksesoris",  // ✅ Tambahan
+    "Tas Pria",
+    "Olahraga & Outdoor",
+    "Jam Tangan",
+    "Fotografi",
+    "Hobi & Koleksi"
 ];
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 pb-24 font-sans text-gray-800">

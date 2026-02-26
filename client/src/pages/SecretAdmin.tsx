@@ -10,17 +10,36 @@ import Papa from 'papaparse';
 const CATEGORY_LIST = [
     "Tas Wanita", "Sepatu Wanita", "Otomotif", "Komputer & Aksesoris", "Sepatu Pria", "Aksesoris Fashion", 
     "Fashion Bayi & Anak", "Makanan & Minuman", "Pakaian Wanita", "Pakaian Pria", "Elektronik",
-    "Perawatan & Kecantikan", "Handphone & Aksesoris", "Perlengkapan Rumah", "Fashion Muslim"
+    "Perawatan & Kecantikan", "Handphone & Aksesoris", "Perlengkapan Rumah", "Fashion Muslim",
+    // 👇 5 KATEGORI BARU DITAMBAHKAN DI SINI 👇
+    "Hobi & Koleksi", "Fotografi", "Jam Tangan", "Olahraga & Outdoor", "Tas Pria" 
 ];
 
 // FUNGSI DETEKSI (Hanya dipakai jika user pilih "Auto Detect")
 const detectCategoryAuto = (title: string) => {
     const tLower = title.toLowerCase();
     
-    if (tLower.includes('iphone') || tLower.includes('samsung') || tLower.includes('infinix') || tLower.includes('xiaomi') || tLower.includes('vivo') || tLower.includes('oppo') || tLower.includes('realme') || tLower.includes('case') || tLower.includes('casing') || tLower.includes('tempered') || tLower.includes('charger') || tLower.includes('kabel data') || tLower.includes('headset') || tLower.includes('earphone') || tLower.includes('powerbank')) return "Handphone & Aksesoris";
+    // 🔥 5 KATEGORI BARU DENGAN KEYWORD SUPER LENGKAP 🔥
 
-    if (tLower.includes('gamis') || tLower.includes('hijab') || tLower.includes('jilbab') || tLower.includes('mukena') || tLower.includes('koko') || tLower.includes('bergo') || tLower.includes('khimar') || tLower.includes('pashmina')) return "Fashion Muslim";
+    // 1. FOTOGRAFI (Cegah kamera masuk ke Elektronik)
+    if (tLower.includes('kamera') || tLower.includes('lensa') || tLower.includes('tripod') || tLower.includes('dslr') || tLower.includes('mirrorless') || tLower.includes('ring light') || tLower.includes('gimbal') || tLower.includes('drone') || tLower.includes('kertas foto') || tLower.includes('softbox') || tLower.includes('roll film') || tLower.includes('printer foto') || tLower.includes('tas kamera') || tLower.includes('casing kamera') || tLower.includes('battery grip') || tLower.includes('monopod') || tLower.includes('kartu memori') || tLower.includes('stabilizer') || tLower.includes('flash kamera') || tLower.includes('lighting studio') || tLower.includes('fotografi')) return "Fotografi";
     
+    // 2. JAM TANGAN
+    if (tLower.includes('jam tangan') || tLower.includes('arloji') || tLower.includes('smartwatch') || tLower.includes('strap jam') || tLower.includes('casio') || tLower.includes('seiko') || tLower.includes('rolex') || tLower.includes('jam dinding') || tLower.includes('jam couple') || tLower.includes('jam pria') || tLower.includes('jam wanita') || tLower.includes('kotak jam')) return "Jam Tangan";
+
+    // 3. OLAHRAGA & OUTDOOR (Cegah sepatu futsal/bola masuk ke Sepatu Pria)
+    if (tLower.includes('tenda') || tLower.includes('camping') || tLower.includes('sepeda') || tLower.includes('pancing') || tLower.includes('raket') || tLower.includes('bola ') || tLower.includes('yoga') || tLower.includes('dumbbell') || tLower.includes('jersey') || tLower.includes('olahraga') || tLower.includes('hiking') || tLower.includes('renang') || tLower.includes('kacamata renang') || tLower.includes('futsal') || tLower.includes('basket') || tLower.includes('voli') || tLower.includes('bulu tangkis') || tLower.includes('tenis') || tLower.includes('tinju') || tLower.includes('bela diri') || tLower.includes('golf') || tLower.includes('baseball') || tLower.includes('softball') || tLower.includes('billiard') || tLower.includes('selancar') || tLower.includes('diving') || tLower.includes('pilates') || tLower.includes('fitness') || tLower.includes('dart') || tLower.includes('sepatu olahraga') || tLower.includes('sepatu bola') || tLower.includes('sepatu futsal') || tLower.includes('matras yoga') || tLower.includes('panjat tebing') || tLower.includes('panahan')) return "Olahraga & Outdoor";
+
+    // 4. HOBI & KOLEKSI (Termasuk Kebutuhan Hewan Peliharaan)
+    if (tLower.includes('mainan') || tLower.includes('figure') || tLower.includes('diecast') || tLower.includes('gundam') || tLower.includes('lego') || tLower.includes('hot wheels') || tLower.includes('puzzle') || tLower.includes('gitar') || tLower.includes('alat musik') || tLower.includes('koleksi') || tLower.includes('rubik') || tLower.includes('board game') || tLower.includes('makanan kucing') || tLower.includes('makanan anjing') || tLower.includes('makanan hewan') || tLower.includes('whiskas') || tLower.includes('kandang') || tLower.includes('pasir kucing') || tLower.includes('pet shop') || tLower.includes('hewan peliharaan') || tLower.includes('grooming') || tLower.includes('cd ') || tLower.includes('dvd') || tLower.includes('bluray') || tLower.includes('piringan hitam') || tLower.includes('album foto') || tLower.includes('mesin jahit') || tLower.includes('benang rajut') || tLower.includes('action figure')) return "Hobi & Koleksi";
+
+    // 5. TAS PRIA (Cegah ransel/tas selempang pria masuk ke Tas Wanita)
+    if (tLower.includes('tas pria') || tLower.includes('ransel') || tLower.includes('waist bag') || tLower.includes('tas selempang pria') || tLower.includes('koper') || tLower.includes('backpack') || tLower.includes('tas gunung') || tLower.includes('tas bahu pria') || tLower.includes('dompet pria') || tLower.includes('tas pinggang') || tLower.includes('tas laptop') || tLower.includes('clutch pria') || tLower.includes('tote bag pria') || tLower.includes('tas kerja pria')) return "Tas Pria";
+
+
+    // ⬇️ KODE BAWAAN LAMA (TIDAK ADA YANG DIUBAH) ⬇️
+    if (tLower.includes('iphone') || tLower.includes('samsung') || tLower.includes('infinix') || tLower.includes('xiaomi') || tLower.includes('vivo') || tLower.includes('oppo') || tLower.includes('realme') || tLower.includes('case') || tLower.includes('casing') || tLower.includes('tempered') || tLower.includes('charger') || tLower.includes('kabel data') || tLower.includes('headset') || tLower.includes('earphone') || tLower.includes('powerbank')) return "Handphone & Aksesoris";
+    if (tLower.includes('gamis') || tLower.includes('hijab') || tLower.includes('jilbab') || tLower.includes('mukena') || tLower.includes('koko') || tLower.includes('bergo') || tLower.includes('khimar') || tLower.includes('pashmina')) return "Fashion Muslim";
     if (tLower.includes('sepatu') || tLower.includes('sneakers')) return tLower.includes('wanita') ? "Sepatu Wanita" : "Sepatu Pria";
     if (tLower.includes('tas') || tLower.includes('bag') || tLower.includes('dompet')) return "Tas Wanita";
     if (tLower.includes('baju') || tLower.includes('dress') || tLower.includes('kemeja') || tLower.includes('blouse') || tLower.includes('kaos')) return "Pakaian Wanita";
