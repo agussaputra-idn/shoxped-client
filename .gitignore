@@ -1,7 +1,52 @@
+# 1. LOGS & DEPENDENCIES (SAMPAH)
 node_modules/
-robot/
-server/chrome_data/
-.DS_Store
-*.csv
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 2. BUILD OUTPUT (HASIL JADI)
 dist/
-server/products.json
+dist-ssr/
+coverage/
+
+# 3. ENVIRONMENT VARIABLES (SANGAT PENTING!)
+# Jangan sampai API Key atau setting rahasia naik ke GitHub
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 4. OS FILES (METADATA LAPTOP)
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 5. SCRAPING DATA & TEMP FILES (DATA MENTAH)
+# Kita ignore file hasil scraping agar tidak memenuhi GitHub
+server/chrome_data/
+*.csv
+# Ignore file JSON hasil scraping (tapi jangan ignore package.json!)
+BURST_*.json
+FIXED_*.json
+TURTLE_*.json
+FULL_*.json
+CHAMELEON_*.json
+EMERGENCY_*.json
+TURBO_*.json
+backup/
+temp/
+
+# 6. EDITOR CONFIG
+.vscode/
+.idea/
+*.suo
+*.ntvs
+*.njsproj
+*.sln
+*.sw?server/products.json

@@ -1,83 +1,60 @@
-// Import paket
 const express = require('express');
-const axios = require('axios');
 const cors = require('cors');
-require('dotenv').config();
-
-// Inisialisasi server
+const fs = require('fs');
 const app = express();
+const PORT = 5000;
+
 app.use(cors());
+app.use(express.json());
 
-// Ambil KEDUA kunci dari file .env
-const INVOLVE_API_KEY = process.env.MY_INVOLVE_ASIA_API_KEY;
-const INvolve_API_SECRET = process.env.MY_INVOLVE_ASIA_API_SECRET; // Nama variabel diperbaiki
+console.log("⏳ Sedang memuat database... (Tahan sebentar)");
+let products = [];
+try {
+    const rawData = fs.readFileSync('./products.json', 'utf8');
+    products = JSON.parse(rawData);
+    console.log(`✅ DATABASE SIAP! Total: ${products.length.toLocaleString()} Produk.`);
+} catch (err) {
+    console.error("❌ ERROR FATAL: Database rusak!", err.message);
+}
 
-// Variabel untuk menyimpan token sementara kita
-let currentAccessToken = null;
+// === FUNGSI PENCARIAN (REVISI: LIMIT DIPERBESAR) ===
+const handleSearch = (req, res) => {
+    const query = req.query.q ? req.query.q.toLowerCase() : "";
+    console.log(`🔎 SEARCH: "${query}"`);
 
-// --- LANGKAH 1: FUNGSI OTENTIKASI ---
-const authenticate = async () => {
-  console.log("Mencoba mendapatkan token sementara dari Involve Asia...");
-  try {
-    const data = new URLSearchParams();
-    data.append('key', INVOLVE_API_KEY);
-    data.append('secret', INvolve_API_SECRET); // Menggunakan variabel yang diperbaiki
+    if (!query) return res.json([]);
 
-    const response = await axios.post(
-      'https://api.involve.asia/api/authenticate',
-      data,
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json'
-        }
-      }
-    );
+    const results = products.filter(p => {
+        const name = p.name ? p.name.toLowerCase() : "";
+        const brand = p.brand ? p.brand.toLowerCase() : "";
+        const cat = p.category ? p.category.toLowerCase() : "";
+        return name.includes(query) || brand.includes(query) || cat.includes(query);
+    });
 
-    currentAccessToken = response.data.data.token;
-    console.log("✅✅✅ SUKSES OTENTIKASI! Token berhasil didapat. (dari .env) ✅✅✅");
-
-  } catch (error) {
-    console.error("❌❌❌ GAGAL OTENTIKASI (dari .env):", error.response ? error.response.data : error.message);
-  }
+    // 👉 JEBOL BATAS: Kirim sampai 2000 produk (Bukan 50 lagi)
+    res.json(results.slice(0, 2000));
 };
 
-// --- LANGKAH 2: FUNGSI PENCARIAN ---
-app.get('/api/search', async (req, res) => {
-  try {
-    if (!currentAccessToken) {
-      console.error("Error: Token belum siap. Coba restart server.");
-      return res.status(500).json({ error: 'Server belum siap, token tidak ada.' });
-    }
-    const keyword = req.query.keyword;
-    if (!keyword) {
-      return res.status(400).json({ error: 'Keyword pencarian dibutuhkan' });
-    }
-    console.log(`Menerima permintaan pencarian untuk: ${keyword}`);
-    const dataUntukInvolveAsia = {
-      "filters[offer_name]": keyword,
-      "filters[offer_country]": "Indonesia"
-    };
-    const response = await axios.post(
-      "https://api.involve.asia/api/offers/all",
-      dataUntukInvolveAsia,
-      {
-        headers: {
-          'Authorization': `Bearer ${currentAccessToken}`,
-          'Accept': 'application/json'
+// === FUNGSI REKOMENDASI (REVISI: LIMIT DIPERBESAR) ===
+const handleRecommendations = (req, res) => {
+    const randomProducts = [];
+    if (products.length > 0) {
+        // 👉 JEBOL BATAS: Kirim 500 produk acak untuk halaman depan
+        const limit = Math.min(500, products.length);
+        for (let i = 0; i < limit; i++) {
+            const r = Math.floor(Math.random() * products.length);
+            randomProducts.push(products[r]);
         }
-      }
-    );
-    res.json(response.data);
-  } catch (error) {
-    console.error("Error memanggil API offers:", error.response ? error.response.data : error.message);
-    res.status(500).json({ error: 'Gagal mengambil data dari server' });
-  }
-});
+    }
+    console.log(`🎁 REKOMENDASI: Mengirim ${randomProducts.length} produk.`);
+    res.json(randomProducts);
+};
 
-// Jalankan server
-const PORT = 8080;
-app.listen(PORT, async () => {
-  console.log(`Server proxy "Shoxped" berjalan di http://localhost:${PORT}`);
-  await authenticate();
+app.get('/api/search', handleSearch);
+app.get('/api/products', handleRecommendations);
+app.get('/search', handleSearch);
+app.get('/products', handleRecommendations);
+
+app.listen(PORT, () => {
+    console.log(`🚀 SERVER SHOXPED v3.0 (UNLIMITED) RUNNING ON PORT ${PORT}`);
 });
