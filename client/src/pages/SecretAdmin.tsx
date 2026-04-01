@@ -1,43 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse'; 
 
-/* ==================================================================================
-   🔴 SECRET ADMIN - V14 (MANUAL CATEGORY OVERRIDE)
-   Fitur: Dropdown Pilihan Kategori untuk memaksa jenis produk saat upload
-   ================================================================================== */
-
-// KATEGORI WAJIB SAMA PERSIS DENGAN SHOXPED
 const CATEGORY_LIST = [
     "Tas Wanita", "Sepatu Wanita", "Otomotif", "Komputer & Aksesoris", "Sepatu Pria", "Aksesoris Fashion", 
     "Fashion Bayi & Anak", "Makanan & Minuman", "Pakaian Wanita", "Pakaian Pria", "Elektronik",
     "Perawatan & Kecantikan", "Handphone & Aksesoris", "Perlengkapan Rumah", "Fashion Muslim",
-    // 👇 5 KATEGORI BARU DITAMBAHKAN DI SINI 👇
     "Hobi & Koleksi", "Fotografi", "Jam Tangan", "Olahraga & Outdoor", "Tas Pria" 
 ];
 
-// FUNGSI DETEKSI (Hanya dipakai jika user pilih "Auto Detect")
 const detectCategoryAuto = (title: string) => {
     const tLower = title.toLowerCase();
-    
-    // 🔥 5 KATEGORI BARU DENGAN KEYWORD SUPER LENGKAP 🔥
-
-    // 1. FOTOGRAFI (Cegah kamera masuk ke Elektronik)
     if (tLower.includes('kamera') || tLower.includes('lensa') || tLower.includes('tripod') || tLower.includes('dslr') || tLower.includes('mirrorless') || tLower.includes('ring light') || tLower.includes('gimbal') || tLower.includes('drone') || tLower.includes('kertas foto') || tLower.includes('softbox') || tLower.includes('roll film') || tLower.includes('printer foto') || tLower.includes('tas kamera') || tLower.includes('casing kamera') || tLower.includes('battery grip') || tLower.includes('monopod') || tLower.includes('kartu memori') || tLower.includes('stabilizer') || tLower.includes('flash kamera') || tLower.includes('lighting studio') || tLower.includes('fotografi')) return "Fotografi";
-    
-    // 2. JAM TANGAN
     if (tLower.includes('jam tangan') || tLower.includes('arloji') || tLower.includes('smartwatch') || tLower.includes('strap jam') || tLower.includes('casio') || tLower.includes('seiko') || tLower.includes('rolex') || tLower.includes('jam dinding') || tLower.includes('jam couple') || tLower.includes('jam pria') || tLower.includes('jam wanita') || tLower.includes('kotak jam')) return "Jam Tangan";
-
-    // 3. OLAHRAGA & OUTDOOR (Cegah sepatu futsal/bola masuk ke Sepatu Pria)
     if (tLower.includes('tenda') || tLower.includes('camping') || tLower.includes('sepeda') || tLower.includes('pancing') || tLower.includes('raket') || tLower.includes('bola ') || tLower.includes('yoga') || tLower.includes('dumbbell') || tLower.includes('jersey') || tLower.includes('olahraga') || tLower.includes('hiking') || tLower.includes('renang') || tLower.includes('kacamata renang') || tLower.includes('futsal') || tLower.includes('basket') || tLower.includes('voli') || tLower.includes('bulu tangkis') || tLower.includes('tenis') || tLower.includes('tinju') || tLower.includes('bela diri') || tLower.includes('golf') || tLower.includes('baseball') || tLower.includes('softball') || tLower.includes('billiard') || tLower.includes('selancar') || tLower.includes('diving') || tLower.includes('pilates') || tLower.includes('fitness') || tLower.includes('dart') || tLower.includes('sepatu olahraga') || tLower.includes('sepatu bola') || tLower.includes('sepatu futsal') || tLower.includes('matras yoga') || tLower.includes('panjat tebing') || tLower.includes('panahan')) return "Olahraga & Outdoor";
-
-    // 4. HOBI & KOLEKSI (Termasuk Kebutuhan Hewan Peliharaan)
     if (tLower.includes('mainan') || tLower.includes('figure') || tLower.includes('diecast') || tLower.includes('gundam') || tLower.includes('lego') || tLower.includes('hot wheels') || tLower.includes('puzzle') || tLower.includes('gitar') || tLower.includes('alat musik') || tLower.includes('koleksi') || tLower.includes('rubik') || tLower.includes('board game') || tLower.includes('makanan kucing') || tLower.includes('makanan anjing') || tLower.includes('makanan hewan') || tLower.includes('whiskas') || tLower.includes('kandang') || tLower.includes('pasir kucing') || tLower.includes('pet shop') || tLower.includes('hewan peliharaan') || tLower.includes('grooming') || tLower.includes('cd ') || tLower.includes('dvd') || tLower.includes('bluray') || tLower.includes('piringan hitam') || tLower.includes('album foto') || tLower.includes('mesin jahit') || tLower.includes('benang rajut') || tLower.includes('action figure')) return "Hobi & Koleksi";
-
-    // 5. TAS PRIA (Cegah ransel/tas selempang pria masuk ke Tas Wanita)
     if (tLower.includes('tas pria') || tLower.includes('ransel') || tLower.includes('waist bag') || tLower.includes('tas selempang pria') || tLower.includes('koper') || tLower.includes('backpack') || tLower.includes('tas gunung') || tLower.includes('tas bahu pria') || tLower.includes('dompet pria') || tLower.includes('tas pinggang') || tLower.includes('tas laptop') || tLower.includes('clutch pria') || tLower.includes('tote bag pria') || tLower.includes('tas kerja pria')) return "Tas Pria";
-
-
-    // ⬇️ KODE BAWAAN LAMA (TIDAK ADA YANG DIUBAH) ⬇️
     if (tLower.includes('iphone') || tLower.includes('samsung') || tLower.includes('infinix') || tLower.includes('xiaomi') || tLower.includes('vivo') || tLower.includes('oppo') || tLower.includes('realme') || tLower.includes('case') || tLower.includes('casing') || tLower.includes('tempered') || tLower.includes('charger') || tLower.includes('kabel data') || tLower.includes('headset') || tLower.includes('earphone') || tLower.includes('powerbank')) return "Handphone & Aksesoris";
     if (tLower.includes('gamis') || tLower.includes('hijab') || tLower.includes('jilbab') || tLower.includes('mukena') || tLower.includes('koko') || tLower.includes('bergo') || tLower.includes('khimar') || tLower.includes('pashmina')) return "Fashion Muslim";
     if (tLower.includes('sepatu') || tLower.includes('sneakers')) return tLower.includes('wanita') ? "Sepatu Wanita" : "Sepatu Pria";
@@ -50,11 +27,9 @@ const detectCategoryAuto = (title: string) => {
     if (tLower.includes('kemeja pria') || tLower.includes('kaos pria') || tLower.includes('celana pria') || tLower.includes('jaket pria') || tLower.includes('batik pria') || tLower.includes('jas') || tLower.includes('boxer') || tLower.includes('celana pendek pria') || tLower.includes('hoodie pria')) return "Pakaian Pria";
     if (tLower.includes('laptop') || tLower.includes('notebook') || tLower.includes('macbook') || tLower.includes('asus') || tLower.includes('acer') || tLower.includes('lenovo') || tLower.includes('mouse') || tLower.includes('keyboard') || tLower.includes('monitor') || tLower.includes('pc gaming') || tLower.includes('flashdisk') || tLower.includes('harddisk') || tLower.includes('ssd') || tLower.includes('ram ') || tLower.includes('vga') || tLower.includes('motherboard') || tLower.includes('printer') || tLower.includes('tinta') || tLower.includes('wifi') || tLower.includes('router') || tLower.includes('modem') || tLower.includes('pad')) return "Komputer & Aksesoris";
     if (tLower.includes('helm') || tLower.includes('motor') || tLower.includes('mobil') || tLower.includes('oli ') || tLower.includes('ban ') || tLower.includes('knalpot') || tLower.includes('spion') || tLower.includes('sarung tangan') || tLower.includes('jas hujan') || tLower.includes('aki ') || tLower.includes('kampas') || tLower.includes('busi') || tLower.includes('karburator') || tLower.includes('sticker') || tLower.includes('stiker') || tLower.includes('dashboard')) return "Otomotif";
-
-    return "Aksesoris Fashion"; // Default terakhir
+    return "Aksesoris Fashion";
 };
 
-// Helper: Cari kolom
 const findColumn = (fileKeys: string[], candidates: string[]) => {
     for (const candidate of candidates) {
         const match = fileKeys.find(k => k.toLowerCase().replace(/"/g, '').trim() === candidate.toLowerCase());
@@ -75,8 +50,6 @@ export default function SecretAdmin() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
-  
-  // 🔥 STATE BARU: PILIHAN KATEGORI UPLOAD
   const [selectedUploadCategory, setSelectedUploadCategory] = useState('Auto Detect');
 
   const totalProducts = accumulatedProducts.length;
@@ -87,6 +60,15 @@ export default function SecretAdmin() {
   const [manualProduct, setManualProduct] = useState({
       name: '', price: '', image: '', link: '', category: 'Tas Wanita', sold: '0', platform: 'shopee'
   });
+
+  // 🔥 FUNGSI BARU UNTUK UPDATE OTOMATIS 🔥
+  const triggerUpdate = async () => {
+      try {
+          // Ganti 'shoxped_mantap_2026' dengan token Anda di Vercel
+          await fetch('/api/revalidate?secret=shoxped_mantap_2026');
+          console.log("Web Updated!");
+      } catch (err) { console.error(err); }
+  };
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -113,9 +95,10 @@ export default function SecretAdmin() {
     alert("✅ File products.json siap!");
   };
 
-  const handleDeleteProduct = (id: string) => {
+  const handleDeleteProduct = async (id: string) => {
       if(!confirm("Yakin hapus produk ini?")) return;
       setAccumulatedProducts(prev => prev.filter(p => p.id !== id));
+      await triggerUpdate(); // Auto update web
   };
 
   const handleHardReset = () => {
@@ -124,11 +107,13 @@ export default function SecretAdmin() {
   };
 
   const handleEditClick = (product: any) => { setEditingProduct(product); };
-  const handleSaveEdit = () => {
+  
+  const handleSaveEdit = async () => {
       if (!editingProduct) return;
       setAccumulatedProducts(prev => prev.map(p => p.id === editingProduct.id ? editingProduct : p));
+      await triggerUpdate(); // 🔥 Auto update web saat edit
       setEditingProduct(null);
-      alert("✅ Perubahan Disimpan!");
+      alert("✅ Perubahan Disimpan & Web Diperbarui!");
   };
 
   const handleManualSubmit = async (e: React.FormEvent) => {
@@ -136,7 +121,8 @@ export default function SecretAdmin() {
     const newId = Math.random().toString(36).substr(2, 9);
     const newItem = { ...manualProduct, id: newId, price: Number(manualProduct.price), createdAt: new Date().toISOString() };
     setAccumulatedProducts(prev => [newItem, ...prev]);
-    alert("Produk Manual Ditambahkan!");
+    await triggerUpdate(); // 🔥 Auto update web saat tambah manual
+    alert("Produk Manual Ditambahkan & Web Diperbarui!");
     setManualProduct({ name: '', price: '', image: '', link: '', category: 'Tas Wanita', sold: '0', platform: 'shopee' });
   };
 
@@ -150,11 +136,12 @@ export default function SecretAdmin() {
     if (!file) return;
     setIsUploading(true);
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
         try {
             const json = JSON.parse(e.target?.result as string);
             if (!Array.isArray(json)) { alert("Format salah!"); setIsUploading(false); return; }
             setAccumulatedProducts(json);
+            await triggerUpdate(); // Auto update web saat muat DB
             alert(`✅ Database dimuat: ${json.length} produk.`);
             setIsUploading(false);
         } catch (error) { alert("File rusak!"); setIsUploading(false); }
@@ -162,7 +149,6 @@ export default function SecretAdmin() {
     reader.readAsText(file);
   };
 
-  // --- V14: UPLOAD WITH CATEGORY OVERRIDE ---
   const handleCsvUpload = async (event: any) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -182,7 +168,6 @@ export default function SecretAdmin() {
     
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        
         const sniffDelimiter = await new Promise<string>((resolve) => {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -204,16 +189,10 @@ export default function SecretAdmin() {
                 complete: (results) => {
                     const rawData = results.data;
                     if (rawData.length === 0) { resolve(); return; }
-
                     const keys = Object.keys(rawData[0] as any);
                     let colTitle = findColumn(keys, candidates.title);
                     let colLink = findColumn(keys, candidates.link);
-
-                    if (!colTitle || !colLink) {
-                        failedReports.push(`File: ${file.name} - Gagal Deteksi Kolom Title/Link`);
-                        resolve(); return;
-                    }
-
+                    if (!colTitle || !colLink) { failedReports.push(`File: ${file.name} - Gagal Deteksi Kolom Title/Link`); resolve(); return; }
                     let colImage = findColumn(keys, candidates.image);
                     let colPrice = findColumn(keys, candidates.price);
                     let colSold = findColumn(keys, candidates.sold);
@@ -223,33 +202,15 @@ export default function SecretAdmin() {
                     rawData.forEach((item: any) => {
                         const rawTitle = cleanText(item[colTitle!] || '');
                         if (rawTitle.length < 2) return; 
-
                         let rawPrice = item[colPrice!] || '0';
                         if (typeof rawPrice === 'string') rawPrice = rawPrice.replace(/[^0-9]/g, ''); 
                         const finalPrice = parseInt(rawPrice) || 0;
-
                         let finalImage = item[colImage!] || '';
                         if(!finalImage && item['w-full src']) finalImage = item['w-full src']; 
                         if(!finalImage && item['max-w-none src']) finalImage = item['max-w-none src']; 
-                        
-                        // 🔥 LOGIKA KATEGORI V14 🔥
-                        let finalCategory = "Aksesoris Fashion";
-                        
-                        if (selectedUploadCategory !== 'Auto Detect') {
-                            // 1. JIKA USER PILIH MANUAL -> PAKSA PAKAI ITU
-                            finalCategory = selectedUploadCategory;
-                        } else {
-                            // 2. JIKA AUTO -> DETEKSI DARI JUDUL
-                            const catFromFile = colCat ? item[colCat] : "";
-                            finalCategory = detectCategoryAuto(rawTitle);
-                        }
-                        
-                        let platform = 'shopee';
-                        if (file.name.toLowerCase().includes('lazada')) platform = 'lazada';
-                        if (file.name.toLowerCase().includes('tiktok')) platform = 'tiktok';
-
+                        let finalCategory = selectedUploadCategory !== 'Auto Detect' ? selectedUploadCategory : detectCategoryAuto(rawTitle);
+                        let platform = file.name.toLowerCase().includes('lazada') ? 'lazada' : (file.name.toLowerCase().includes('tiktok') ? 'tiktok' : 'shopee');
                         let docId = item[colMerchantId!] || Math.random().toString(36).substr(2, 9);
-
                         totalNewItems.push({
                             id: docId, name: rawTitle, price: finalPrice, image: finalImage,
                             link: item[colLink!] || '', category: finalCategory, 
@@ -268,23 +229,16 @@ export default function SecretAdmin() {
     const uniqueItems: any[] = [];
     const seenKeys = new Set();
     let dupeCount = 0;
-
     allCandidates.forEach(item => {
         const key = `${item.name.toLowerCase().trim()}-${item.price}`;
         if (!seenKeys.has(key)) { seenKeys.add(key); uniqueItems.push(item); } else { dupeCount++; }
     });
 
     setAccumulatedProducts(uniqueItems);
+    await triggerUpdate(); // 🔥 Auto update web setelah CSV Upload
     setIsUploading(false);
-
-    if (totalNewItems.length > 0) {
-        alert(`✅ IMPOR SUKSES!\nKategori Dipilih: ${selectedUploadCategory}\nProduk Masuk: ${totalNewItems.length}\nDuplikat: ${dupeCount}`);
-    } else {
-        alert(`❌ GAGAL! Laporan:\n${failedReports.join('\n')}`);
-    }
+    if (totalNewItems.length > 0) alert(`✅ SUKSES!\nProduk Masuk: ${totalNewItems.length}\nWeb Diperbarui!`);
   };
-
-  const handleJsonUpload = (event: any) => { /* Sama seperti sebelumnya */ };
 
   const filteredData = accumulatedProducts.filter(p => (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()));
   const displayData = filteredData.slice(0, 50); 
@@ -330,22 +284,13 @@ export default function SecretAdmin() {
                 
                 <div className="bg-white p-6 rounded-2xl shadow border">
                     <h3 className="font-bold text-sm mb-4">2. IMPORT DATA (ALL-IN-ONE)</h3>
-                    
-                    {/* 🔥 FITUR BARU: PILIH KATEGORI 🔥 */}
                     <div className="mb-4">
                         <label className="text-[10px] font-bold text-gray-500 mb-1 block">TENTUKAN KATEGORI FILE INI:</label>
-                        <select 
-                            value={selectedUploadCategory} 
-                            onChange={(e) => setSelectedUploadCategory(e.target.value)}
-                            className="w-full p-2 text-xs border border-orange-300 rounded bg-orange-50 font-bold text-orange-800"
-                        >
+                        <select value={selectedUploadCategory} onChange={(e) => setSelectedUploadCategory(e.target.value)} className="w-full p-2 text-xs border border-orange-300 rounded bg-orange-50 font-bold text-orange-800">
                             <option value="Auto Detect">⚡ Auto Detect (Sesuai Judul)</option>
-                            {CATEGORY_LIST.map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                            ))}
+                            {CATEGORY_LIST.map(cat => ( <option key={cat} value={cat}>{cat}</option> ))}
                         </select>
                     </div>
-
                     <div className="space-y-3">
                         <label className="flex items-center gap-2 bg-orange-50 border border-orange-200 p-3 rounded-lg cursor-pointer hover:bg-orange-100">
                             <span className="text-xl">📂</span>
@@ -356,7 +301,6 @@ export default function SecretAdmin() {
                     {isUploading && <p className="text-xs text-center mt-2 text-blue-600 font-bold animate-pulse">Sedang Memproses...</p>}
                 </div>
                 
-                {/* Bagian Input Manual & Tabel (Kode disingkat, isi tetap sama seperti V13) */}
                  <div className="bg-white p-6 rounded-2xl shadow border"><h3 className="font-bold text-sm mb-4">3. INPUT MANUAL</h3><form onSubmit={handleManualSubmit} className="space-y-3"><input type="text" placeholder="Nama Produk" className="w-full p-2 text-xs border rounded bg-gray-50" value={manualProduct.name} onChange={e => setManualProduct({...manualProduct, name: e.target.value})} required /><input type="number" placeholder="Harga" className="w-full p-2 text-xs border rounded bg-gray-50" value={manualProduct.price} onChange={e => setManualProduct({...manualProduct, price: e.target.value})} required /><select className="w-full p-2 text-xs border rounded bg-gray-50" value={manualProduct.category} onChange={e => setManualProduct({...manualProduct, category: e.target.value})}>{CATEGORY_LIST.map(c => <option key={c} value={c}>{c}</option>)}</select><input type="text" placeholder="Link Produk" className="w-full p-2 text-xs border rounded bg-gray-50" value={manualProduct.link} onChange={e => setManualProduct({...manualProduct, link: e.target.value})} required /><input type="text" placeholder="Link Gambar" className="w-full p-2 text-xs border rounded bg-gray-50" value={manualProduct.image} onChange={e => setManualProduct({...manualProduct, image: e.target.value})} required /><button className="w-full py-2 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700">TAMBAH ITEM</button></form></div>
             </div>
              <div className="lg:col-span-2 bg-white rounded-2xl shadow border overflow-hidden flex flex-col h-[800px] relative">
