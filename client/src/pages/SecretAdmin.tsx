@@ -11,7 +11,7 @@ const CATEGORY_LIST = [
 const detectCategoryAuto = (title: string) => {
     const tLower = title.toLowerCase();
     if (tLower.includes('kamera') || tLower.includes('lensa') || tLower.includes('tripod') || tLower.includes('dslr') || tLower.includes('mirrorless') || tLower.includes('ring light') || tLower.includes('gimbal') || tLower.includes('drone') || tLower.includes('kertas foto') || tLower.includes('softbox') || tLower.includes('roll film') || tLower.includes('printer foto') || tLower.includes('tas kamera') || tLower.includes('casing kamera') || tLower.includes('battery grip') || tLower.includes('monopod') || tLower.includes('kartu memori') || tLower.includes('stabilizer') || tLower.includes('flash kamera') || tLower.includes('lighting studio') || tLower.includes('fotografi')) return "Fotografi";
-    if (tLower.includes('jam tangan') || tLower.includes('arloji') || tLower.includes('smartwatch') || tLower.includes('strap jam') || tLower.includes('casio') || tLower.includes('seiko') || tLower.includes('rolex') || tLower.includes('jam dinding') || tLower.includes('jam couple') || tLower.includes('jam pria') || tLower.includes('jam wanita') || tLower.includes('kotak jam')) return "Jam Tangan";
+    if (tLower.includes('jam tangan') || tLower.includes('arloji') || tLower.includes('smartwatch') || tLower.includes('strap jam') || tLower.includes('casio') || tLower.includes('seiko') || tLower.includes('rolex') || tLower.includes('jam dinding') || tLower.includes('jam couple') || tLower.includes('jam pria') || tLower.includes('jam wanita') || tLower.includes('kotam jam')) return "Jam Tangan";
     if (tLower.includes('tenda') || tLower.includes('camping') || tLower.includes('sepeda') || tLower.includes('pancing') || tLower.includes('raket') || tLower.includes('bola ') || tLower.includes('yoga') || tLower.includes('dumbbell') || tLower.includes('jersey') || tLower.includes('olahraga') || tLower.includes('hiking') || tLower.includes('renang') || tLower.includes('kacamata renang') || tLower.includes('futsal') || tLower.includes('basket') || tLower.includes('voli') || tLower.includes('bulu tangkis') || tLower.includes('tenis') || tLower.includes('tinju') || tLower.includes('bela diri') || tLower.includes('golf') || tLower.includes('baseball') || tLower.includes('softball') || tLower.includes('billiard') || tLower.includes('selancar') || tLower.includes('diving') || tLower.includes('pilates') || tLower.includes('fitness') || tLower.includes('dart') || tLower.includes('sepatu olahraga') || tLower.includes('sepatu bola') || tLower.includes('sepatu futsal') || tLower.includes('matras yoga') || tLower.includes('panjat tebing') || tLower.includes('panahan')) return "Olahraga & Outdoor";
     if (tLower.includes('mainan') || tLower.includes('figure') || tLower.includes('diecast') || tLower.includes('gundam') || tLower.includes('lego') || tLower.includes('hot wheels') || tLower.includes('puzzle') || tLower.includes('gitar') || tLower.includes('alat musik') || tLower.includes('koleksi') || tLower.includes('rubik') || tLower.includes('board game') || tLower.includes('makanan kucing') || tLower.includes('makanan anjing') || tLower.includes('makanan hewan') || tLower.includes('whiskas') || tLower.includes('kandang') || tLower.includes('pasir kucing') || tLower.includes('pet shop') || tLower.includes('hewan peliharaan') || tLower.includes('grooming') || tLower.includes('cd ') || tLower.includes('dvd') || tLower.includes('bluray') || tLower.includes('piringan hitam') || tLower.includes('album foto') || tLower.includes('mesin jahit') || tLower.includes('benang rajut') || tLower.includes('action figure')) return "Hobi & Koleksi";
     if (tLower.includes('tas pria') || tLower.includes('ransel') || tLower.includes('waist bag') || tLower.includes('tas selempang pria') || tLower.includes('koper') || tLower.includes('backpack') || tLower.includes('tas gunung') || tLower.includes('tas bahu pria') || tLower.includes('dompet pria') || tLower.includes('tas pinggang') || tLower.includes('tas laptop') || tLower.includes('clutch pria') || tLower.includes('tote bag pria') || tLower.includes('tas kerja pria')) return "Tas Pria";
@@ -61,10 +61,9 @@ export default function SecretAdmin() {
       name: '', price: '', image: '', link: '', category: 'Tas Wanita', sold: '0', platform: 'shopee'
   });
 
-  // 🔥 FUNGSI BARU UNTUK UPDATE OTOMATIS 🔥
+  // FUNGSI UPDATE WEB OTOMATIS
   const triggerUpdate = async () => {
       try {
-          // Ganti 'shoxped_mantap_2026' dengan token Anda di Vercel
           await fetch('/api/revalidate?secret=shoxped_mantap_2026');
           console.log("Web Updated!");
       } catch (err) { console.error(err); }
@@ -98,7 +97,7 @@ export default function SecretAdmin() {
   const handleDeleteProduct = async (id: string) => {
       if(!confirm("Yakin hapus produk ini?")) return;
       setAccumulatedProducts(prev => prev.filter(p => p.id !== id));
-      await triggerUpdate(); // Auto update web
+      await triggerUpdate();
   };
 
   const handleHardReset = () => {
@@ -111,18 +110,32 @@ export default function SecretAdmin() {
   const handleSaveEdit = async () => {
       if (!editingProduct) return;
       setAccumulatedProducts(prev => prev.map(p => p.id === editingProduct.id ? editingProduct : p));
-      await triggerUpdate(); // 🔥 Auto update web saat edit
+      await triggerUpdate();
       setEditingProduct(null);
       alert("✅ Perubahan Disimpan & Web Diperbarui!");
   };
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // OTOMATISASI LINK AFFILIATE ACCESSTRADE
+    let finalLink = manualProduct.link;
+    if (finalLink.includes('shopee.co.id')) {
+        finalLink = `https://atid.me/002bc7002mjl?url=${encodeURIComponent(finalLink)}`;
+    }
+
     const newId = Math.random().toString(36).substr(2, 9);
-    const newItem = { ...manualProduct, id: newId, price: Number(manualProduct.price), createdAt: new Date().toISOString() };
+    const newItem = { 
+        ...manualProduct, 
+        id: newId, 
+        link: finalLink, 
+        price: Number(manualProduct.price), 
+        createdAt: new Date().toISOString() 
+    };
+
     setAccumulatedProducts(prev => [newItem, ...prev]);
-    await triggerUpdate(); // 🔥 Auto update web saat tambah manual
-    alert("Produk Manual Ditambahkan & Web Diperbarui!");
+    await triggerUpdate();
+    alert("Produk Berhasil Ditambah & Link Affiliate Terpasang!");
     setManualProduct({ name: '', price: '', image: '', link: '', category: 'Tas Wanita', sold: '0', platform: 'shopee' });
   };
 
@@ -141,7 +154,7 @@ export default function SecretAdmin() {
             const json = JSON.parse(e.target?.result as string);
             if (!Array.isArray(json)) { alert("Format salah!"); setIsUploading(false); return; }
             setAccumulatedProducts(json);
-            await triggerUpdate(); // Auto update web saat muat DB
+            await triggerUpdate();
             alert(`✅ Database dimuat: ${json.length} produk.`);
             setIsUploading(false);
         } catch (error) { alert("File rusak!"); setIsUploading(false); }
@@ -211,9 +224,16 @@ export default function SecretAdmin() {
                         let finalCategory = selectedUploadCategory !== 'Auto Detect' ? selectedUploadCategory : detectCategoryAuto(rawTitle);
                         let platform = file.name.toLowerCase().includes('lazada') ? 'lazada' : (file.name.toLowerCase().includes('tiktok') ? 'tiktok' : 'shopee');
                         let docId = item[colMerchantId!] || Math.random().toString(36).substr(2, 9);
+                        
+                        // Link Auto Affiliate di CSV
+                        let finalLink = item[colLink!] || '';
+                        if (finalLink.includes('shopee.co.id')) {
+                            finalLink = `https://atid.me/002bc7002mjl?url=${encodeURIComponent(finalLink)}`;
+                        }
+
                         totalNewItems.push({
                             id: docId, name: rawTitle, price: finalPrice, image: finalImage,
-                            link: item[colLink!] || '', category: finalCategory, 
+                            link: finalLink, category: finalCategory, 
                             sold: colSold ? (item[colSold] || 'Laris') : 'Laris',
                             platform: platform, createdAt: new Date().toISOString()
                         });
@@ -235,7 +255,7 @@ export default function SecretAdmin() {
     });
 
     setAccumulatedProducts(uniqueItems);
-    await triggerUpdate(); // 🔥 Auto update web setelah CSV Upload
+    await triggerUpdate();
     setIsUploading(false);
     if (totalNewItems.length > 0) alert(`✅ SUKSES!\nProduk Masuk: ${totalNewItems.length}\nWeb Diperbarui!`);
   };
