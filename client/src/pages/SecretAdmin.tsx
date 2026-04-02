@@ -52,16 +52,10 @@ export default function SecretAdmin() {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [selectedUploadCategory, setSelectedUploadCategory] = useState('Auto Detect');
 
-  const totalProducts = accumulatedProducts.length;
-  const shopeeCount = accumulatedProducts.filter(p => p.platform === 'shopee').length;
-  const tiktokCount = accumulatedProducts.filter(p => p.platform === 'tiktok').length;
-  const lazadaCount = accumulatedProducts.filter(p => p.platform === 'lazada').length;
-
   const [manualProduct, setManualProduct] = useState({
       name: '', price: '', image: '', link: '', category: 'Tas Wanita', sold: '0', platform: 'shopee'
   });
 
-  // FUNGSI UPDATE WEB OTOMATIS
   const triggerUpdate = async () => {
       try {
           await fetch('/api/revalidate?secret=shoxped_mantap_2026');
@@ -118,25 +112,33 @@ export default function SecretAdmin() {
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // OTOMATISASI LINK AFFILIATE ACCESSTRADE
     let finalLink = manualProduct.link;
     if (finalLink.includes('shopee.co.id')) {
         finalLink = `https://atid.me/002bc7002mjl?url=${encodeURIComponent(finalLink)}`;
     }
 
-    const newId = Math.random().toString(36).substr(2, 9);
     const newItem = { 
         ...manualProduct, 
-        id: newId, 
         link: finalLink, 
-        price: Number(manualProduct.price), 
-        createdAt: new Date().toISOString() 
+        price: Number(manualProduct.price) 
     };
 
-    setAccumulatedProducts(prev => [newItem, ...prev]);
-    await triggerUpdate();
-    alert("Produk Berhasil Ditambah & Link Affiliate Terpasang!");
-    setManualProduct({ name: '', price: '', image: '', link: '', category: 'Tas Wanita', sold: '0', platform: 'shopee' });
+    try {
+        const response = await fetch('/api/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newItem)
+        });
+
+        if (response.ok) {
+            setAccumulatedProducts(prev => [newItem, ...prev]);
+            await triggerUpdate();
+            alert("✅ SUKSES! Produk tersimpan di Cloud & Web diperbarui.");
+            setManualProduct({ name: '', price: '', image: '', link: '', category: 'Tas Wanita', sold: '0', platform: 'shopee' });
+        }
+    } catch (err) {
+        alert("Gagal menyimpan ke database cloud");
+    }
   };
 
   const cleanText = (text: string) => {
@@ -225,7 +227,6 @@ export default function SecretAdmin() {
                         let platform = file.name.toLowerCase().includes('lazada') ? 'lazada' : (file.name.toLowerCase().includes('tiktok') ? 'tiktok' : 'shopee');
                         let docId = item[colMerchantId!] || Math.random().toString(36).substr(2, 9);
                         
-                        // Link Auto Affiliate di CSV
                         let finalLink = item[colLink!] || '';
                         if (finalLink.includes('shopee.co.id')) {
                             finalLink = `https://atid.me/002bc7002mjl?url=${encodeURIComponent(finalLink)}`;
@@ -248,16 +249,15 @@ export default function SecretAdmin() {
     const allCandidates = [...accumulatedProducts, ...totalNewItems];
     const uniqueItems: any[] = [];
     const seenKeys = new Set();
-    let dupeCount = 0;
     allCandidates.forEach(item => {
         const key = `${item.name.toLowerCase().trim()}-${item.price}`;
-        if (!seenKeys.has(key)) { seenKeys.add(key); uniqueItems.push(item); } else { dupeCount++; }
+        if (!seenKeys.has(key)) { seenKeys.add(key); uniqueItems.push(item); }
     });
 
     setAccumulatedProducts(uniqueItems);
     await triggerUpdate();
     setIsUploading(false);
-    if (totalNewItems.length > 0) alert(`✅ SUKSES!\nProduk Masuk: ${totalNewItems.length}\nWeb Diperbarui!`);
+    alert(`✅ SUKSES! Web Diperbarui!`);
   };
 
   const filteredData = accumulatedProducts.filter(p => (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()));
@@ -267,7 +267,7 @@ export default function SecretAdmin() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0f172a]">
         <div className="w-full max-w-md p-8 bg-[#1e293b] rounded-2xl shadow-2xl border border-white/10 text-center text-white">
-            <h2 className="text-2xl font-black mb-6 uppercase tracking-widest">Shoxped Offline</h2>
+            <h2 className="text-2xl font-black mb-6 uppercase tracking-widest">Shoxped Admin</h2>
             <form onSubmit={handleLogin} className="space-y-4 text-slate-800 mt-4">
                 <input type="text" placeholder="User" className="w-full p-4 rounded-xl outline-none" value={email} onChange={e => setEmail(e.target.value)} />
                 <input type="password" placeholder="Password" className="w-full p-4 rounded-xl outline-none" value={password} onChange={e => setPassword(e.target.value)} />
@@ -292,9 +292,9 @@ export default function SecretAdmin() {
 
       <div className="max-w-7xl mx-auto px-4 mt-8 grid gap-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-slate-800 text-white p-6 rounded-2xl shadow"><p className="text-xs font-bold text-slate-400">TOTAL PRODUK</p><h2 className="text-3xl font-black text-yellow-400">{totalProducts.toLocaleString()}</h2></div>
-            <div className="bg-white p-6 rounded-2xl shadow border"><p className="text-xs font-bold text-slate-400">SHOPEE / LAZADA</p><h2 className="text-3xl font-black text-orange-600">{shopeeCount + lazadaCount}</h2></div>
-            <div className="bg-white p-6 rounded-2xl shadow border"><p className="text-xs font-bold text-slate-400">TIKTOK</p><h2 className="text-3xl font-black text-black">{tiktokCount.toLocaleString()}</h2></div>
+            <div className="bg-slate-800 text-white p-6 rounded-2xl shadow"><p className="text-xs font-bold text-slate-400">TOTAL PRODUK</p><h2 className="text-3xl font-black text-yellow-400">{accumulatedProducts.length.toLocaleString()}</h2></div>
+            <div className="bg-white p-6 rounded-2xl shadow border"><p className="text-xs font-bold text-slate-400">SHOPEE / LAZADA</p><h2 className="text-3xl font-black text-orange-600">{accumulatedProducts.filter(p => p.platform === 'shopee' || p.platform === 'lazada').length}</h2></div>
+            <div className="bg-white p-6 rounded-2xl shadow border"><p className="text-xs font-bold text-slate-400">TIKTOK</p><h2 className="text-3xl font-black text-black">{accumulatedProducts.filter(p => p.platform === 'tiktok').length.toLocaleString()}</h2></div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -318,14 +318,13 @@ export default function SecretAdmin() {
                             <input type="file" accept=".csv" multiple onChange={handleCsvUpload} disabled={isUploading} className="hidden"/>
                         </label>
                     </div>
-                    {isUploading && <p className="text-xs text-center mt-2 text-blue-600 font-bold animate-pulse">Sedang Memproses...</p>}
                 </div>
                 
                  <div className="bg-white p-6 rounded-2xl shadow border"><h3 className="font-bold text-sm mb-4">3. INPUT MANUAL</h3><form onSubmit={handleManualSubmit} className="space-y-3"><input type="text" placeholder="Nama Produk" className="w-full p-2 text-xs border rounded bg-gray-50" value={manualProduct.name} onChange={e => setManualProduct({...manualProduct, name: e.target.value})} required /><input type="number" placeholder="Harga" className="w-full p-2 text-xs border rounded bg-gray-50" value={manualProduct.price} onChange={e => setManualProduct({...manualProduct, price: e.target.value})} required /><select className="w-full p-2 text-xs border rounded bg-gray-50" value={manualProduct.category} onChange={e => setManualProduct({...manualProduct, category: e.target.value})}>{CATEGORY_LIST.map(c => <option key={c} value={c}>{c}</option>)}</select><input type="text" placeholder="Link Produk" className="w-full p-2 text-xs border rounded bg-gray-50" value={manualProduct.link} onChange={e => setManualProduct({...manualProduct, link: e.target.value})} required /><input type="text" placeholder="Link Gambar" className="w-full p-2 text-xs border rounded bg-gray-50" value={manualProduct.image} onChange={e => setManualProduct({...manualProduct, image: e.target.value})} required /><button className="w-full py-2 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700">TAMBAH ITEM</button></form></div>
             </div>
              <div className="lg:col-span-2 bg-white rounded-2xl shadow border overflow-hidden flex flex-col h-[800px] relative">
                 <div className="p-4 border-b flex justify-between items-center bg-gray-50"><h3 className="font-bold text-sm">DAFTAR PRODUK ({accumulatedProducts.length})</h3><input type="text" placeholder="Cari Judul / Kategori..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="px-3 py-1.5 rounded-lg border text-xs w-64"/></div>
-                <div className="flex-1 overflow-y-auto"><table className="w-full text-left"><thead className="bg-gray-100 text-[10px] font-bold text-gray-500 sticky top-0 z-10"><tr><th className="p-3">PRODUK</th><th className="p-3">HARGA</th><th className="p-3">KATEGORI</th><th className="p-3 text-center">AKSI</th></tr></thead><tbody className="text-xs divide-y">{displayData.map((item, idx) => (<tr key={item.id || idx} className="hover:bg-orange-50"><td className="p-3 flex items-center gap-3"><img src={item.image} className="w-8 h-8 rounded bg-gray-200 object-cover" onError={(e:any)=>e.target.src='https://via.placeholder.com/50'}/><div className="w-64"><p className="line-clamp-1 font-medium">{item.name}</p><span className={`text-[9px] px-1.5 py-0.5 rounded text-white ${item.platform==='tiktok'?'bg-black':(item.platform==='lazada'?'bg-blue-600':'bg-orange-500')}`}>{item.platform}</span></div></td><td className="p-3 font-bold">Rp{item.price.toLocaleString()}</td><td className="p-3"><span className="bg-gray-100 px-2 py-1 rounded text-[10px] text-gray-600">{item.category}</span></td><td className="p-3 text-center flex justify-center gap-2"><button onClick={() => handleEditClick(item)} className="text-blue-500 hover:text-blue-700 font-bold text-[10px] border border-blue-200 px-2 py-1 rounded hover:bg-blue-50">✏️ EDIT</button><button onClick={() => handleDeleteProduct(item.id)} className="text-red-500 hover:text-red-700 font-bold text-[10px] border border-red-200 px-2 py-1 rounded hover:bg-red-50">🗑️</button></td></tr>))}{displayData.length === 0 && (<tr><td colSpan={4} className="p-8 text-center text-gray-400">Belum ada data.</td></tr>)}</tbody></table></div>
+                <div className="flex-1 overflow-y-auto"><table className="w-full text-left"><thead className="bg-gray-100 text-[10px] font-bold text-gray-500 sticky top-0 z-10"><tr><th className="p-3">PRODUK</th><th className="p-3">HARGA</th><th className="p-3">KATEGORI</th><th className="p-3 text-center">AKSI</th></tr></thead><tbody className="text-xs divide-y">{displayData.map((item, idx) => (<tr key={item.id || idx} className="hover:bg-orange-50"><td className="p-3 flex items-center gap-3"><img src={item.image} className="w-8 h-8 rounded bg-gray-200 object-cover" onError={(e:any)=>e.target.src='https://via.placeholder.com/50'}/><div className="w-64"><p className="line-clamp-1 font-medium">{item.name}</p></div></td><td className="p-3 font-bold">Rp{item.price.toLocaleString()}</td><td className="p-3"><span className="bg-gray-100 px-2 py-1 rounded text-[10px] text-gray-600">{item.category}</span></td><td className="p-3 text-center flex justify-center gap-2"><button onClick={() => handleEditClick(item)} className="text-blue-500 hover:text-blue-700 font-bold text-[10px] border border-blue-200 px-2 py-1 rounded hover:bg-blue-50">✏️ EDIT</button><button onClick={() => handleDeleteProduct(item.id)} className="text-red-500 hover:text-red-700 font-bold text-[10px] border border-red-200 px-2 py-1 rounded hover:bg-red-50">🗑️</button></td></tr>))}{displayData.length === 0 && (<tr><td colSpan={4} className="p-8 text-center text-gray-400">Belum ada data.</td></tr>)}</tbody></table></div>
                 {editingProduct && (<div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in duration-200"><h3 className="font-bold text-lg mb-4">Edit Produk</h3><div className="space-y-3"><div><label className="text-[10px] font-bold text-gray-500">Nama Produk</label><input className="w-full p-2 text-xs border rounded" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} /></div><div><label className="text-[10px] font-bold text-gray-500">Harga</label><input type="number" className="w-full p-2 text-xs border rounded" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: Number(e.target.value)})} /></div><div><label className="text-[10px] font-bold text-gray-500">Kategori</label><select className="w-full p-2 text-xs border rounded" value={editingProduct.category} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})}>{CATEGORY_LIST.map(c => <option key={c} value={c}>{c}</option>)}</select></div><div><label className="text-[10px] font-bold text-gray-500">Link Affiliate</label><input className="w-full p-2 text-xs border rounded" value={editingProduct.link} onChange={e => setEditingProduct({...editingProduct, link: e.target.value})} /></div></div><div className="flex gap-2 mt-6"><button onClick={() => setEditingProduct(null)} className="flex-1 py-2 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded">BATAL</button><button onClick={handleSaveEdit} className="flex-1 py-2 text-xs font-bold bg-green-600 text-white hover:bg-green-700 rounded shadow-lg">SIMPAN PERUBAHAN</button></div></div></div>)}
             </div>
         </div>
