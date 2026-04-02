@@ -1,9 +1,11 @@
 import { MongoClient } from 'mongodb';
 
 const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri);
 
 export default async function handler(req, res) {
+  // Buat client di dalam handler agar koneksi lebih bersih untuk serverless
+  const client = new MongoClient(uri);
+
   try {
     await client.connect();
     const database = client.db('shoxped_db');
@@ -24,7 +26,14 @@ export default async function handler(req, res) {
       });
       return res.status(201).json(result);
     }
+    
+    // Jika ada method lain (misal PUT/DELETE) yang belum diatur
+    return res.status(405).json({ message: 'Method Not Allowed' });
+
   } catch (error) {
     return res.status(500).json({ message: error.message });
+  } finally {
+    // 🔥 SANGAT PENTING: Tutup koneksi setelah selesai
+    await client.close();
   }
 }

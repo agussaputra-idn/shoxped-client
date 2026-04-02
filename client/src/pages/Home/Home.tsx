@@ -129,18 +129,19 @@ export default function Home() {
     });
   }, [ACCESSTRADE_ID]);
 
-  // LOAD DATA & SHUFFLE
+  // LOAD DATA DARI MONGODB & SHUFFLE
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/products.json');
-        if (!response.ok) throw new Error("Gagal load data");
+        // 🔥 SEKARANG MEMBACA DARI API MONGODB, BUKAN FILE JSON LAGI 🔥
+        const response = await fetch('/api/products'); 
+        if (!response.ok) throw new Error("Gagal load data dari Cloud");
         
         const jsonData = await response.json();
         const processed = processProducts(jsonData);
         
-        // 🔥 ACAK DATA (SHUFFLE) SETIAP KALI LOAD
+        // Tetap menggunakan pengacak (shuffle) sesuai keinginan Bapak
         const randomizedData = shuffleArray([...processed]); 
         
         setAllProducts(randomizedData); 
@@ -154,7 +155,7 @@ export default function Home() {
         
         setLoading(false);
       } catch (error) {
-        console.error("Error loading products:", error);
+        console.error("Error loading products from MongoDB:", error);
         setLoading(false);
       }
     };
